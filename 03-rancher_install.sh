@@ -16,27 +16,6 @@ echo
 printf '%s\n' "${HOSTS[@]}"
 echo
 
-#Selection du package manager à utiliser pour les futures commandes
-
-while true; do
-   read -p "${bold}Package manager type? (zypper/yum/apt) ${normal}" pkg_mgr_type
-   case $pkg_mgr_type in
-      [zypper]* )
-            echo $pkg_mgr_type
-            echo
-            break;;
-      [yum]* ) 
-            echo $pkg_mgr_type
-            echo
-	    break;;
-      [apt]* ) 
-            echo $pkg_mgr_type
-            echo
-	    break;;
-      * ) echo "Please answer: zypper or yum or apt.";;
-    esac
-done
-
 # Fonction generique de question (yes / no)
 
 question_yn() {

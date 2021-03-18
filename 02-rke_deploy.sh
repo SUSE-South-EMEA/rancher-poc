@@ -16,27 +16,6 @@ echo
 printf '%s\n' "${HOSTS[@]}"
 echo
 
-#Selection du package manager à utiliser pour les futures commandes
-
-while true; do
-   read -p "${bold}Package manager type? (zypper/yum/apt) ${normal}" pkg_mgr_type
-   case $pkg_mgr_type in
-      [zypper]* )
-            echo $pkg_mgr_type
-            echo
-            break;;
-      [yum]* ) 
-            echo $pkg_mgr_type
-            echo
-	    break;;
-      [apt]* ) 
-            echo $pkg_mgr_type
-            echo
-	    break;;
-      * ) echo "Please answer: zypper or yum or apt.";;
-    esac
-done
-
 # Fonction generique de question (yes / no)
 
 question_yn() {
@@ -65,9 +44,21 @@ mv rke_linux-amd64 ~/bin/rke
 }
 
 ## RKE CONFIG
-DESC_RKE_CONFIG="Configuration de RKE?${bold}"
+DESC_RKE_CONFIG="Creation du fichier de configuration "cluster.yml"? \n Version K8S: $KUBERNETES_VERSION${bold}"
 COMMAND_RKE_CONFIG() {
-rke config
+echo "nodes:" > ./cluster.yml
+for m in ${HOSTS[*]}; do
+  echo """- address: ${m}
+  role:
+  - controlplane
+  - etcd
+  - worker
+  user: root""" >> ./cluster.yml
+done
+echo "kubernetes_version: \"$KUBERNETES_VERSION\"" >> ./cluster.yml
+echo "ingress:" >> ./cluster.yml
+echo "  provider: nginx" >> ./cluster.yml
+#rke config
 }
 
 ## RKE DEPLOY
@@ -82,10 +73,11 @@ COMMAND_KUBECONFIG() {
 export KUBECONFIG=$PWD/kube_config_cluster.yml
 mkdir -p ~/.kube/
 cp $PWD/kube_config_cluster.yml ~/.kube/config
+chmod 600 ~/.kube/config
 }
 
 ## INSTALL HELM
-DESC_HELM_INSTALL="Installation de HELM?${bold}"
+DESC_HELM_INSTALL="Installation de HELM? \n Helm Version: ${HELM_VERSION}${bold}"
 COMMAND_HELM_INSTALL() {
 curl -O https://get.helm.sh/helm-v${HELM_VERSION}-linux-amd64.tar.gz
 tar zxvf helm-v${HELM_VERSION}-linux-amd64.tar.gz
@@ -112,4 +104,4 @@ question_yn "$DESC_HELM_REPOS" COMMAND_HELM_REPOS
 
 echo
 echo "-- FIN --"
-echo "Prochaine étape XXX"
+echo "Prochaine étape 03-rancher_install.sh"

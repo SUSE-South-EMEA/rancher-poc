@@ -72,7 +72,7 @@ done;
 }
 
 ## SSH CONNECT TESTING
-DESC_SSH_CONNECT_TEST="Deploiement de la clef publique vers les noeuds?${bold}"
+DESC_SSH_CONNECT_TEST="Test de connexion en masse?${bold}"
 COMMAND_SSH_CONNECT_TEST() {
 for h in ${HOSTS[*]}; do ssh $h "hostname -f" ; done;
 }
@@ -86,13 +86,15 @@ done
 }
 
 ## ADDING REPOSITORIES
-DESC_ADDREPOS="Ajout des repos containers-modules sur les noeuds${bold}"
+DESC_ADDREPOS="Ajout des repos containers-modules sur les noeuds et en local?${bold}"
 COMMAND_ADDREPOS() {
 for h in ${HOSTS[*]}
   do ssh $h "echo ; hostname -f ; echo ; zypper ref ; 
-#zypper ar -G http://suma01/ks/dist/child/sle-module-containers15-sp2-pool-x86_64/sles15sp2 containers_product ; 
-#zypper ar -G http://suma01/ks/dist/child/sle-module-containers15-sp2-updates-x86_64/sles15sp2 containers_updates" 
+zypper ar -G http://suma01/ks/dist/child/sle-module-containers15-sp2-pool-x86_64/sles15sp2 containers_product ; 
+zypper ar -G http://suma01/ks/dist/child/sle-module-containers15-sp2-updates-x86_64/sles15sp2 containers_updates" 
 done
+zypper ar -G http://suma01/ks/dist/child/sle-module-containers15-sp2-pool-x86_64/sles15sp2 containers_product
+zypper ar -G http://suma01/ks/dist/child/sle-module-containers15-sp2-updates-x86_64/sles15sp2 containers_updates
 }
 
 ## ALL NODES UPDATE 
@@ -120,7 +122,7 @@ for h in ${HOSTS[*]}; do ssh $h "echo && hostname -f && ping -c1 registry.suse.c
 echo
 echo -e "Reseau de Stockage:"
 echo -e "Sauf pour la machine admin (isolation réseau)"
-for h in ${HOSTS[*]}; do ssh $h "echo && hostname -f && ping -c1 $CEPH_MON1 > /dev/null  && echo 'Ceph Monitor 1: OK' || echo 'Ceph Monitor 1: FAIL'"; done;
+for h in ${HOSTS[*]}; do ssh $h "echo && hostname -f && ping -c1 $STORAGE_TARGET > /dev/null  && echo 'Ceph Monitor 1: OK' || echo 'Ceph Monitor 1: FAIL'"; done;
 }
 
 ## DOCKER INSTALL
@@ -164,4 +166,4 @@ question_yn "$DESC_K8S_TOOLS" COMMAND_K8S_TOOLS
 
 echo
 echo "-- FIN --"
-echo "Prochaine étape XXX"
+echo "Prochaine étape 02-rke_deploy.sh"
