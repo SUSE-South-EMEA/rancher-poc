@@ -186,39 +186,26 @@ question_yn "$DESC_SSH_DEPLOY" COMMAND_SSH_DEPLOY
 question_yn "$DESC_SSH_CONNECT_TEST" COMMAND_SSH_CONNECT_TEST
 
 if [[ $pkg_mgr_type -eq "zypper" ]]
-then question_yn "$DESC_REPOS" COMMAND_REPOS_ZYPPER
-elif [[ $pkg_mgr_type -eq "yum" ]]
-then question_yn "$DESC_REPOS" COMMAND_REPOS_YUM
-fi
+then 
+question_yn "$DESC_REPOS" COMMAND_REPOS_ZYPPER
+question_yn "$DESC_ADDREPOS" COMMAND_ADDREPOS_ZYPPER
+question_yn "$DESC_NODES_UPDATE" COMMAND_NODES_UPDATE_ZYPPER
+question_yn "$DESC_DOCKER_INSTALL" COMMAND_DOCKER_INSTALL_ZYPPER
+question_yn "$DESC_K8S_TOOLS" COMMAND_K8S_TOOLS_ZYPPER
 
-if [[ $pkg_mgr_type -eq "zypper" ]]
-then question_yn "$DESC_ADDREPOS" COMMAND_ADDREPOS_ZYPPER
 elif [[ $pkg_mgr_type -eq "yum" ]]
-then question_yn "$DESC_ADDREPOS" COMMAND_ADDREPOS_YUM
-fi
-
-if [[ $pkg_mgr_type -eq "zypper" ]]
-then question_yn "$DESC_NODES_UPDATE" COMMAND_NODES_UPDATE_ZYPPER
-elif [[ $pkg_mgr_type -eq "yum" ]]
-then question_yn "$DESC_NODES_UPDATE" COMMAND_NODES_UPDATE_YUM
+then
+question_yn "$DESC_REPOS" COMMAND_REPOS_YUM
+question_yn "$DESC_ADDREPOS" COMMAND_ADDREPOS_YUM
+question_yn "$DESC_NODES_UPDATE" COMMAND_NODES_UPDATE_YUM
+question_yn "$DESC_DOCKER_INSTALL" COMMAND_DOCKER_INSTALL_YUM
+question_yn "$DESC_K8S_TOOLS" COMMAND_K8S_TOOLS_YUM
 fi
 
 question_yn "$DESC_CHECK_TIME" COMMAND_CHECK_TIME
 question_yn "$DESC_CHECK_ACCESS" COMMAND_CHECK_ACCESS
-
-if [[ $pkg_mgr_type -eq "zypper" ]]
-then question_yn "$DESC_DOCKER_INSTALL" COMMAND_DOCKER_INSTALL_YUM
-elif [[ $pkg_mgr_type -eq "yum" ]]
-then question_yn "$DESC_DOCKER_INSTALL" COMMAND_DOCKER_INSTALL_ZYPPER
-fi
-
 question_yn "$DESC_IPFORWARD_ACTIVATE" COMMAND_IPFORWARD_ACTIVATE
 question_yn "$DESC_NO_SWAP" COMMAND_NO_SWAP
-
-if [[ $pkg_mgr_type -eq "zypper" ]]
-then question_yn "$DESC_K8S_TOOLS" COMMAND_K8S_TOOLS_ZYPPER
-elif [[ $pkg_mgr_type -eq "yum" ]]
-then question_yn "$DESC_K8S_TOOLS" COMMAND_K8S_TOOLS_YUM
 
 echo
 echo "-- FIN --"
