@@ -78,16 +78,21 @@ for h in ${HOSTS[*]}; do ssh $h "hostname -f" ; done;
 }
 
 ## LISTE DES REPOSITORIES
-DESC_REPOS="Liste des repos sur les noeuds${bold}"
-COMMAND_REPOS() {
+DESC_REPOS="$pkg_mgr_type - Liste des repos sur les noeuds${bold}"
+COMMAND_REPOS_ZYPPER() {
 for h in ${HOSTS[*]}
   do ssh $h "echo && hostname -f && echo && zypper lr"; 
 done
 }
+COMMAND_REPOS_YUM() {
+for h in ${HOSTS[*]}
+  do ssh $h "echo && hostname -f && echo && yum repolist"; 
+done
+}
 
 ## ADDING REPOSITORIES
-DESC_ADDREPOS="Ajout des repos containers-modules sur les noeuds et en local?${bold}"
-COMMAND_ADDREPOS() {
+DESC_ADDREPOS="$pkg_mgr_type - Ajout des repos containers-modules sur les noeuds et en local?${bold}"
+COMMAND_ADDREPOS_ZYPPER() {
 for h in ${HOSTS[*]}
   do ssh $h "echo ; hostname -f ; echo ; zypper ref ; 
 zypper ar -G http://suma01/ks/dist/child/sle-module-containers15-sp2-pool-x86_64/sles15sp2 containers_product ; 
@@ -97,15 +102,33 @@ zypper ar -G http://suma01/ks/dist/child/sle-module-containers15-sp2-pool-x86_64
 zypper ar -G http://suma01/ks/dist/child/sle-module-containers15-sp2-updates-x86_64/sles15sp2 containers_updates
 }
 
+COMMAND_ADDREPOS_YUM() {
+cat <<EOF > /etc/yum.repos.d/kubernetes.repo
+[kubernetes]
+name=Kubernetes
+baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
+enabled=1
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+EOF
+}
+
 ## ALL NODES UPDATE 
-DESC_NODES_UPDATE="Mise à jour de tous les noeuds?${bold}"
-COMMAND_NODES_UPDATE() {
+DESC_NODES_UPDATE="$pkg_mgr_type - Mise à jour de tous les noeuds?${bold}"
+COMMAND_NODES_UPDATE_ZYPPER() {
 for h in ${HOSTS[*]}
   do ssh $h "echo ; hostname -f ; echo ; zypper ref ; zypper --non-interactive up"
 done;
 for h in ${HOSTS[*]}
   do ssh $h "echo ; zypper ps" 
 done
+}
+
+COMMAND_NODES_UPDATE_YUM() {
+for h in ${HOSTS[*]}
+  do ssh $h "echo ; hostname -f ; echo ; yum clean all ; yum -y update"
+done;
 }
 
 ## CHECK TIME
@@ -126,9 +149,13 @@ for h in ${HOSTS[*]}; do ssh $h "echo && hostname -f && ping -c1 $STORAGE_TARGET
 }
 
 ## DOCKER INSTALL
-DESC_DOCKER_INSTALL="Installation, activation et demarrage de Docker sur les noeuds?${bold}"
-COMMAND_DOCKER_INSTALL() {
+DESC_DOCKER_INSTALL="$pkg_mgr_type - Installation, activation et demarrage de Docker sur les noeuds?${bold}"
+COMMAND_DOCKER_INSTALL_ZYPPER() {
 for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; zypper ref ; zypper --non-interactive in docker"; done;
+for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; systemctl enable docker ; systemctl start docker ; echo "Docker is activated""; done;
+}
+COMMAND_DOCKER_INSTALL_YUM() {
+for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; yum clean all ; yum install -y docker"; done;
 for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; systemctl enable docker ; systemctl start docker ; echo "Docker is activated""; done;
 }
 
@@ -146,23 +173,52 @@ for h in ${HOSTS[*]};do ssh $h "echo; hostname -f; grep swap /etc/fstab; swapoff
 }
 
 ## OUTILS K8S
-DESC_K8S_TOOLS="Installation des outils Kubernetes en local?${bold}"
-COMMAND_K8S_TOOLS() {
+DESC_K8S_TOOLS="$pkg_mgr_type - Installation des outils Kubernetes en local?${bold}"
+COMMAND_K8S_TOOLS_ZYPPER() {
 zypper -n in kubernetes1.18-client
+}
+COMMAND_K8S_TOOLS_YUM() {
+yum install -y kubectl
 }
 
 question_yn "$DESC_SSH_KEYS" COMMAND_SSH_KEYS
 question_yn "$DESC_SSH_DEPLOY" COMMAND_SSH_DEPLOY
 question_yn "$DESC_SSH_CONNECT_TEST" COMMAND_SSH_CONNECT_TEST
-question_yn "$DESC_REPOS" COMMAND_REPOS
-question_yn "$DESC_ADDREPOS" COMMAND_ADDREPOS
-question_yn "$DESC_NODES_UPDATE" COMMAND_NODES_UPDATE
+
+if [[ $pkg_mgr_type -eq "zypper" ]]
+then question_yn "$DESC_REPOS" COMMAND_REPOS_ZYPPER
+elif [[ $pkg_mgr_type -eq "yum" ]]
+then question_yn "$DESC_REPOS" COMMAND_REPOS_YUM
+fi
+
+if [[ $pkg_mgr_type -eq "zypper" ]]
+then question_yn "$DESC_ADDREPOS" COMMAND_ADDREPOS_ZYPPER
+elif [[ $pkg_mgr_type -eq "yum" ]]
+then question_yn "$DESC_ADDREPOS" COMMAND_ADDREPOS_YUM
+fi
+
+if [[ $pkg_mgr_type -eq "zypper" ]]
+then question_yn "$DESC_NODES_UPDATE" COMMAND_NODES_UPDATE_ZYPPER
+elif [[ $pkg_mgr_type -eq "yum" ]]
+then question_yn "$DESC_NODES_UPDATE" COMMAND_NODES_UPDATE_YUM
+fi
+
 question_yn "$DESC_CHECK_TIME" COMMAND_CHECK_TIME
 question_yn "$DESC_CHECK_ACCESS" COMMAND_CHECK_ACCESS
-question_yn "$DESC_DOCKER_INSTALL" COMMAND_DOCKER_INSTALL
+
+if [[ $pkg_mgr_type -eq "zypper" ]]
+then question_yn "$DESC_DOCKER_INSTALL" COMMAND_DOCKER_INSTALL_YUM
+elif [[ $pkg_mgr_type -eq "yum" ]]
+then question_yn "$DESC_DOCKER_INSTALL" COMMAND_DOCKER_INSTALL_ZYPPER
+fi
+
 question_yn "$DESC_IPFORWARD_ACTIVATE" COMMAND_IPFORWARD_ACTIVATE
 question_yn "$DESC_NO_SWAP" COMMAND_NO_SWAP
-question_yn "$DESC_K8S_TOOLS" COMMAND_K8S_TOOLS
+
+if [[ $pkg_mgr_type -eq "zypper" ]]
+then question_yn "$DESC_K8S_TOOLS" COMMAND_K8S_TOOLS_ZYPPER
+elif [[ $pkg_mgr_type -eq "yum" ]]
+then question_yn "$DESC_K8S_TOOLS" COMMAND_K8S_TOOLS_YUM
 
 echo
 echo "-- FIN --"
