@@ -1,4 +1,4 @@
-# Workshop CaaSP v4
+# Rancher PoC - High Availability
 
 ## Agenda
 

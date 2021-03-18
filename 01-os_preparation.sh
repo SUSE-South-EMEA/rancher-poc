@@ -130,6 +130,25 @@ for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; zypper ref ; zypper --non-
 for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; systemctl enable docker ; systemctl start docker ; echo "Docker is activated""; done;
 }
 
+## ACTIVATION IP FORWARDING
+DESC_IPFORWARD_ACTIVATE="Activation de l'IP forwarding?${bold}"
+COMMAND_IPFORWARD_ACTIVATE() {
+  for h in ${HOSTS[*]}; do ssh $h "echo; hostname -f; sed -i 's/net.ipv4.ip_forward.*/net.ipv4.ip_forward = 1/g' /etc/sysctl.conf; sed '/^#/d' /etc/sysctl.conf" ; done
+}
+
+## DESACTIVATION DU SWAP
+DESC_NO_SWAP="Desactivation du swap?${bold}"
+COMMAND_NO_SWAP() {
+for h in ${HOSTS[*]};do ssh $h 'sed -i "/swap/ s/defaults/&,noauto/" /etc/fstab';done
+for h in ${HOSTS[*]};do ssh $h "echo; hostname -f; grep swap /etc/fstab; swapoff -a; free -g";done
+}
+
+## OUTILS K8S
+DESC_K8S_TOOLS="Installation des outils Kubernetes en local?${bold}"
+COMMAND_K8S_TOOLS() {
+zypper -n in kubernetes1.18-client
+}
+
 question_yn "$DESC_SSH_KEYS" COMMAND_SSH_KEYS
 question_yn "$DESC_SSH_DEPLOY" COMMAND_SSH_DEPLOY
 question_yn "$DESC_SSH_CONNECT_TEST" COMMAND_SSH_CONNECT_TEST
@@ -139,6 +158,9 @@ question_yn "$DESC_NODES_UPDATE" COMMAND_NODES_UPDATE
 question_yn "$DESC_CHECK_TIME" COMMAND_CHECK_TIME
 question_yn "$DESC_CHECK_ACCESS" COMMAND_CHECK_ACCESS
 question_yn "$DESC_DOCKER_INSTALL" COMMAND_DOCKER_INSTALL
+question_yn "$DESC_IPFORWARD_ACTIVATE" COMMAND_IPFORWARD_ACTIVATE
+question_yn "$DESC_NO_SWAP" COMMAND_NO_SWAP
+question_yn "$DESC_K8S_TOOLS" COMMAND_K8S_TOOLS
 
 echo
 echo "-- FIN --"
