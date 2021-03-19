@@ -22,15 +22,15 @@ while true; do
    read -p "${bold}Package manager type? (zypper/yum/apt) ${normal}" pkg_mgr_type
    case $pkg_mgr_type in
       [zypper]* )
-            echo $pkg_mgr_type
+            echo "$pkg_mgr_type selected."
             echo
             break;;
       [yum]* ) 
-            echo $pkg_mgr_type
+            echo "$pkg_mgr_type selected."
             echo
 	    break;;
       [apt]* ) 
-            echo $pkg_mgr_type
+            echo "$pkg_mgr_type selected."
             echo
 	    break;;
       * ) echo "Please answer: zypper or yum or apt.";;
@@ -44,6 +44,7 @@ while true; do
    echo -e "${bold}---\n $1 ${normal}"
    echo -e "${bold}---\n Commande:\n ${normal}"
    declare -f $2
+   echo
    read -p " ${bold}Executer ? (y/n) ${normal}" yn
    echo
    case $yn in
@@ -86,7 +87,7 @@ done
 }
 COMMAND_REPOS_YUM() {
 for h in ${HOSTS[*]}
-  do ssh $h "echo && hostname -f && echo && yum repolist"; 
+  do ssh $h "echo && hostname -f && echo && yum repolist all"; 
 done
 }
 
@@ -103,6 +104,31 @@ zypper ar -G http://suma01/ks/dist/child/sle-module-containers15-sp2-updates-x86
 }
 
 COMMAND_ADDREPOS_YUM() {
+
+for h in ${HOSTS[*]}
+  do ssh $h "echo ; hostname -f ; echo
+cat  > /etc/yum.repos.d/res7.repo <<EOF
+[res7]
+name=res7
+baseurl=http://suma01/ks/dist/child/res7-x86_64/rhel76
+enabled=1
+gpgcheck=0
+EOF
+cat  > /etc/yum.repos.d/res7-iso.repo <<EOF
+[res7-iso]
+name=res7.6-ISO
+baseurl=http://suma01/ks/dist/child/rhel76-iso/rhel76
+enabled=1
+gpgcheck=0
+EOF
+cat  > /etc/yum.repos.d/res7-suma.repo <<EOF
+[res7-SUMA]
+name=res7-SUMA_BOOTSTRAP
+baseurl=http://suma01/ks/dist/child/res7-suse-manager-tools-x86_64/rhel76
+enabled=1
+gpgcheck=0
+EOF"
+done
 cat <<EOF > /etc/yum.repos.d/kubernetes.repo
 [kubernetes]
 name=Kubernetes
@@ -145,7 +171,7 @@ for h in ${HOSTS[*]}; do ssh $h "echo && hostname -f && ping -c1 registry.suse.c
 echo
 echo -e "Reseau de Stockage:"
 echo -e "Sauf pour la machine admin (isolation réseau)"
-for h in ${HOSTS[*]}; do ssh $h "echo && hostname -f && ping -c1 $STORAGE_TARGET > /dev/null  && echo 'Ceph Monitor 1: OK' || echo 'Ceph Monitor 1: FAIL'"; done;
+for h in ${HOSTS[*]}; do ssh $h "echo && hostname -f && ping -c1 $STORAGE_TARGET > /dev/null  && echo 'Acces Stockage: OK' || echo 'Acces Stockage: FAIL'"; done;
 }
 
 ## DOCKER INSTALL
@@ -185,7 +211,7 @@ question_yn "$DESC_SSH_KEYS" COMMAND_SSH_KEYS
 question_yn "$DESC_SSH_DEPLOY" COMMAND_SSH_DEPLOY
 question_yn "$DESC_SSH_CONNECT_TEST" COMMAND_SSH_CONNECT_TEST
 
-if [[ $pkg_mgr_type -eq "zypper" ]]
+if [[ $pkg_mgr_type == 'zypper' ]]
 then 
 question_yn "$DESC_REPOS" COMMAND_REPOS_ZYPPER
 question_yn "$DESC_ADDREPOS" COMMAND_ADDREPOS_ZYPPER
@@ -193,7 +219,7 @@ question_yn "$DESC_NODES_UPDATE" COMMAND_NODES_UPDATE_ZYPPER
 question_yn "$DESC_DOCKER_INSTALL" COMMAND_DOCKER_INSTALL_ZYPPER
 question_yn "$DESC_K8S_TOOLS" COMMAND_K8S_TOOLS_ZYPPER
 
-elif [[ $pkg_mgr_type -eq "yum" ]]
+elif [[ $pkg_mgr_type == 'yum' ]]
 then
 question_yn "$DESC_REPOS" COMMAND_REPOS_YUM
 question_yn "$DESC_ADDREPOS" COMMAND_ADDREPOS_YUM
