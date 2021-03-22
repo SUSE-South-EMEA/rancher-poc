@@ -1,2 +1,3 @@
+cluster.yml
 *.rkestate
 kube_config_cluster.yml
