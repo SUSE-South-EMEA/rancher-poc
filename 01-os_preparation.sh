@@ -188,7 +188,9 @@ for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; systemctl enable docker ; 
 for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; useradd -G docker ${DOCKER_USER} && echo \"${DOCKER_USER} user is created\" || echo \"Failed to create ${DOCKER_USER} user\" && mkdir /home/${DOCKER_USER}/.ssh && chown ${DOCKER_USER}:${DOCKER_USER} /home/${DOCKER_USER}/.ssh && chmod 700 /home/${DOCKER_USER}/.ssh && cp /root/.ssh/authorized_keys /home/${DOCKER_USER}/.ssh/ && chown ${DOCKER_USER}:${DOCKER_USER} /home/${DOCKER_USER}/.ssh/authorized_keys && chmod 600 /home/${DOCKER_USER}/.ssh/authorized_keys "; done;
 }
 COMMAND_DOCKER_INSTALL_YUM() {
-for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; yum install -y docker"; done;
+for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; yum install -y http://mirror.centos.org/centos/7/extras/x86_64/Packages/container-selinux-2.107-3.el7.noarch.rpm"; done;
+for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; yum install -y http://mirror.centos.org/centos/7/extras/x86_64/Packages/slirp4netns-0.4.3-4.el7_8.x86_64.rpm"; done;
+for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; curl -s https://releases.rancher.com/install-docker/${DOCKER_VERSION}.sh | /bin/bash"; done;
 for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; systemctl enable docker ; systemctl start docker && echo 'Docker is activated' || echo 'Docker could not start'"; done;
 for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; useradd -G docker ${DOCKER_USER} && echo \"${DOCKER_USER} user is created\" || echo \"Failed to create ${DOCKER_USER} user\" && mkdir /home/${DOCKER_USER}/.ssh && chown ${DOCKER_USER}:${DOCKER_USER} /home/${DOCKER_USER}/.ssh && chmod 700 /home/${DOCKER_USER}/.ssh && cp /root/.ssh/authorized_keys /home/${DOCKER_USER}/.ssh/ && chown ${DOCKER_USER}:${DOCKER_USER} /home/${DOCKER_USER}/.ssh/authorized_keys && chmod 600 /home/${DOCKER_USER}/.ssh/authorized_keys "; done;
 }

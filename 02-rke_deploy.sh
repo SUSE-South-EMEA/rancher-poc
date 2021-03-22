@@ -36,9 +36,9 @@ done
 }
 
 ## RKE INSTALL
-DESC_RKE_INSTALL="Installation de RKE en local?${bold}"
+DESC_RKE_INSTALL="Installation de RKE en local? \n RKE version: ${RKE_VERSION}${bold}"
 COMMAND_RKE_INSTALL() {
-curl -LO https://github.com/rancher/rke/releases/download/v1.2.1/rke_linux-amd64
+curl -LO https://github.com/rancher/rke/releases/download/${RKE_VERSION}/rke_linux-amd64
 chmod +x rke_linux-amd64
 mv rke_linux-amd64 /usr/local/bin/rke
 }
