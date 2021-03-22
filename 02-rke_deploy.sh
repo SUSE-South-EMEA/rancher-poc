@@ -40,7 +40,7 @@ DESC_RKE_INSTALL="Installation de RKE en local?${bold}"
 COMMAND_RKE_INSTALL() {
 curl -LO https://github.com/rancher/rke/releases/download/v1.2.1/rke_linux-amd64
 chmod +x rke_linux-amd64
-mv rke_linux-amd64 ~/bin/rke
+mv rke_linux-amd64 /usr/local/bin/rke
 }
 
 ## RKE CONFIG
@@ -53,7 +53,7 @@ for m in ${HOSTS[*]}; do
   - controlplane
   - etcd
   - worker
-  user: root""" >> ./cluster.yml
+  user: ${DOCKER_USER}""" >> ./cluster.yml
 done
 echo "kubernetes_version: \"$KUBERNETES_VERSION\"" >> ./cluster.yml
 echo "ingress:" >> ./cluster.yml
@@ -81,7 +81,7 @@ DESC_HELM_INSTALL="Installation de HELM? \n Helm Version: ${HELM_VERSION}${bold}
 COMMAND_HELM_INSTALL() {
 curl -O https://get.helm.sh/helm-v${HELM_VERSION}-linux-amd64.tar.gz
 tar zxvf helm-v${HELM_VERSION}-linux-amd64.tar.gz
-mv linux-amd64/helm ~/bin/helm
+mv linux-amd64/helm /usr/local/bin/helm
 rm -rf linux-amd64/
 rm helm-v${HELM_VERSION}-linux-amd64.tar.gz
 }

@@ -129,6 +129,11 @@ enabled=1
 gpgcheck=0
 EOF"
 done
+}
+
+## YUM SPECIFIC REPO FOR K8S TOOLS 
+DESC_ADDREPOS_YUM_K8STOOLS="$pkg_mgr_type - Ajout du repo public pour les outils K8S (kubectl...)?${bold}"
+COMMAND_ADDREPOS_YUM_K8STOOLS() {
 cat <<EOF > /etc/yum.repos.d/kubernetes.repo
 [kubernetes]
 name=Kubernetes
@@ -138,6 +143,7 @@ gpgcheck=1
 repo_gpgcheck=1
 gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
 EOF
+echo -e "Repo for K8S Tools has been added."
 }
 
 ## ALL NODES UPDATE 
@@ -153,14 +159,14 @@ done
 
 COMMAND_NODES_UPDATE_YUM() {
 for h in ${HOSTS[*]}
-  do ssh $h "echo ; hostname -f ; echo ; yum clean all ; yum -y update"
+  do ssh $h "echo ; hostname -f ; echo ; yum -y update"
 done;
 }
 
 ## CHECK TIME
 DESC_CHECK_TIME="Verification de la date & heure sur les noeuds?${bold}"
 COMMAND_CHECK_TIME() {
-for h in ${HOSTS[*]}; do ssh $h "echo && hostname -f && chronyc sources"; done;
+for h in ${HOSTS[*]}; do ssh $h "echo && hostname -f && chronyc -a tracking |grep 'Leap status'"; done;
 }
 
 ## CHECK ACCESS - INTERNET/PROXY/REGISTRY
@@ -178,11 +184,13 @@ for h in ${HOSTS[*]}; do ssh $h "echo && hostname -f && ping -c1 $STORAGE_TARGET
 DESC_DOCKER_INSTALL="$pkg_mgr_type - Installation, activation et demarrage de Docker sur les noeuds?${bold}"
 COMMAND_DOCKER_INSTALL_ZYPPER() {
 for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; zypper ref ; zypper --non-interactive in docker"; done;
-for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; systemctl enable docker ; systemctl start docker ; echo "Docker is activated""; done;
+for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; systemctl enable docker ; systemctl start docker && echo 'Docker is activated' || echo 'Docker could not start'"; done;
+for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; useradd -G docker ${DOCKER_USER} && echo \"${DOCKER_USER} user is created\" || echo \"Failed to create ${DOCKER_USER} user\" && mkdir /home/${DOCKER_USER}/.ssh && chown ${DOCKER_USER}:${DOCKER_USER} /home/${DOCKER_USER}/.ssh && chmod 700 /home/${DOCKER_USER}/.ssh && cp /root/.ssh/authorized_keys /home/${DOCKER_USER}/.ssh/ && chown ${DOCKER_USER}:${DOCKER_USER} /home/${DOCKER_USER}/.ssh/authorized_keys && chmod 600 /home/${DOCKER_USER}/.ssh/authorized_keys "; done;
 }
 COMMAND_DOCKER_INSTALL_YUM() {
-for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; yum clean all ; yum install -y docker"; done;
-for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; systemctl enable docker ; systemctl start docker ; echo "Docker is activated""; done;
+for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; yum install -y docker"; done;
+for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; systemctl enable docker ; systemctl start docker && echo 'Docker is activated' || echo 'Docker could not start'"; done;
+for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; useradd -G docker ${DOCKER_USER} && echo \"${DOCKER_USER} user is created\" || echo \"Failed to create ${DOCKER_USER} user\" && mkdir /home/${DOCKER_USER}/.ssh && chown ${DOCKER_USER}:${DOCKER_USER} /home/${DOCKER_USER}/.ssh && chmod 700 /home/${DOCKER_USER}/.ssh && cp /root/.ssh/authorized_keys /home/${DOCKER_USER}/.ssh/ && chown ${DOCKER_USER}:${DOCKER_USER} /home/${DOCKER_USER}/.ssh/authorized_keys && chmod 600 /home/${DOCKER_USER}/.ssh/authorized_keys "; done;
 }
 
 ## ACTIVATION IP FORWARDING
@@ -223,6 +231,7 @@ elif [[ $pkg_mgr_type == 'yum' ]]
 then
 question_yn "$DESC_REPOS" COMMAND_REPOS_YUM
 question_yn "$DESC_ADDREPOS" COMMAND_ADDREPOS_YUM
+question_yn "$DESC_ADDREPOS_YUM_K8STOOLS" COMMAND_ADDREPOS_YUM_K8STOOLS
 question_yn "$DESC_NODES_UPDATE" COMMAND_NODES_UPDATE_YUM
 question_yn "$DESC_DOCKER_INSTALL" COMMAND_DOCKER_INSTALL_YUM
 question_yn "$DESC_K8S_TOOLS" COMMAND_K8S_TOOLS_YUM
