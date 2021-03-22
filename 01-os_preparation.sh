@@ -182,6 +182,7 @@ for h in ${HOSTS[*]}; do ssh $h "echo && hostname -f && ping -c1 $STORAGE_TARGET
 
 ## DOCKER INSTALL
 DESC_DOCKER_INSTALL="$pkg_mgr_type - Installation, activation et demarrage de Docker sur les noeuds?${bold}"
+DESC_DOCKER_INSTALL_YUM="$pkg_mgr_type - Installation, activation et demarrage de Docker sur les noeuds?\n Docker version: ${DOCKER_VERSION}${bold}"
 COMMAND_DOCKER_INSTALL_ZYPPER() {
 for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; zypper ref ; zypper --non-interactive in docker"; done;
 for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; systemctl enable docker ; systemctl start docker && echo 'Docker is activated' || echo 'Docker could not start'"; done;
@@ -235,7 +236,7 @@ question_yn "$DESC_REPOS" COMMAND_REPOS_YUM
 question_yn "$DESC_ADDREPOS" COMMAND_ADDREPOS_YUM
 question_yn "$DESC_ADDREPOS_YUM_K8STOOLS" COMMAND_ADDREPOS_YUM_K8STOOLS
 question_yn "$DESC_NODES_UPDATE" COMMAND_NODES_UPDATE_YUM
-question_yn "$DESC_DOCKER_INSTALL" COMMAND_DOCKER_INSTALL_YUM
+question_yn "$DESC_DOCKER_INSTALL_YUM" COMMAND_DOCKER_INSTALL_YUM
 question_yn "$DESC_K8S_TOOLS" COMMAND_K8S_TOOLS_YUM
 fi
 
