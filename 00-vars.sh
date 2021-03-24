@@ -2,6 +2,9 @@
 HOST_LIST_FILE=./hosts.list
 STORAGE_TARGET="192.168.1.11"
 DOCKER_VERSION="19.03"  # options [19.03|20.10]
+_HTTP_PROXY="squid:3128"
+_HTTPS_PROXY="squid:3128"
+_NO_PROXY="127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,cattle-system.svc"
 
 # 02-rke_deploy.sh
 DOCKER_USER="rkedeploy"

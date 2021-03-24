@@ -78,6 +78,20 @@ COMMAND_SSH_CONNECT_TEST() {
 for h in ${HOSTS[*]}; do ssh $h "hostname -f" ; done;
 }
 
+## SET PROXY
+DESC_SET_PROXY="Des variables PROXY sont definies dans le fichier ./00-vars.sh. Appliquer ces parametres ? \n _HTTP_PROXY=${_HTTP_PROXY} \n _HTTPS_PROXY=${_HTTPS_PROXY} \n _NO_PROXY=${_NO_PROXY}${bold}"
+COMMAND_SET_PROXY() {
+for h in ${HOSTS[*]}
+  do ssh $h "echo ; hostname -f ; echo
+cat  > /etc/profile.d/proxy.sh <<EOF
+export http_proxy=http://${_HTTP_PROXY}
+export https_proxy=http://${_HTTPS_PROXY}
+export no_proxy=${_NO_PROXY}
+EOF
+echo 'Parametres Proxy ajoutes dans /etc/profile.d/proxy.sh'"
+done
+}
+
 ## LISTE DES REPOSITORIES
 DESC_REPOS="$pkg_mgr_type - Liste des repos sur les noeuds${bold}"
 COMMAND_REPOS_ZYPPER() {
@@ -221,6 +235,11 @@ yum install -y kubectl
 question_yn "$DESC_SSH_KEYS" COMMAND_SSH_KEYS
 question_yn "$DESC_SSH_DEPLOY" COMMAND_SSH_DEPLOY
 question_yn "$DESC_SSH_CONNECT_TEST" COMMAND_SSH_CONNECT_TEST
+
+if [[ ! -z ${_HTTP_PROXY} ]] || [[ ! -z ${_HTTPS_PROXY} ]] || [[ ! -z ${_NO_PROXY} ]]
+then
+question_yn "$DESC_SET_PROXY" COMMAND_SET_PROXY
+fi
 
 if [[ $pkg_mgr_type == 'zypper' ]]
 then 
