@@ -82,14 +82,21 @@ for h in ${HOSTS[*]}; do ssh $h "hostname -f" ; done;
 DESC_SET_PROXY="Des variables PROXY sont definies dans le fichier ./00-vars.sh. Appliquer ces parametres ? \n _HTTP_PROXY=${_HTTP_PROXY} \n _HTTPS_PROXY=${_HTTPS_PROXY} \n _NO_PROXY=${_NO_PROXY}${bold}"
 COMMAND_SET_PROXY() {
 for h in ${HOSTS[*]}
-  do ssh $h "echo ; hostname -f ; echo
+  do ssh $h "cat  > /etc/profile.d/proxy.sh <<EOF
+export http_proxy=http://${_HTTP_PROXY}
+export https_proxy=http://${_HTTPS_PROXY}
+export no_proxy=${_NO_PROXY}
+EOF
+hostname -f
+echo 'Parametres Proxy ajoutes dans /etc/profile.d/proxy.sh'"
+done
+# ajout en local egalement
 cat  > /etc/profile.d/proxy.sh <<EOF
 export http_proxy=http://${_HTTP_PROXY}
 export https_proxy=http://${_HTTPS_PROXY}
 export no_proxy=${_NO_PROXY}
 EOF
-echo 'Parametres Proxy ajoutes dans /etc/profile.d/proxy.sh'"
-done
+echo "$(hostname -f) : Parametres Proxy ajoutes dans /etc/profile.d/proxy.sh"
 }
 
 ## LISTE DES REPOSITORIES
