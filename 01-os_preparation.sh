@@ -263,6 +263,21 @@ COMMAND_K8S_TOOLS_YUM() {
 yum install -y kubectl
 }
 
+## CHECK DEFAULT GW EXIST
+DESC_DEFAULT_GW="$pkg_mgr_type - Verification qu'une gateway par défaut existe?${bold}"
+DEFAULT_GW='172.16.0.254'
+COMMAND_DEFAULT_GW() {
+if grep -qi 'GATEWAY=' /etc/sysconfig/network; 
+then
+  echo "A Default Gateway is set."
+else
+  echo "A Default Gateway is not set. This is needed for K8S deployment even if this gateway does not exist"
+  read -p "${bold}Which default gateway would you like to setup on you future Rancher nodes? ${normal}" DEFAULT_GW
+  DEFAULT_GW=${DEFAULT_GW:-172.16.0.254}
+  for h in ${HOSTS[*]};do ssh $h "echo; hostname -f;sed -i '/GATEWAY=*/d' /etc/sysconfig/network; echo "GATEWAY=$DEFAULT_GW" >> /etc/sysconfig/network; sed '/^#/d' /etc/sysconfig/network; systemctl restart network" ; done  
+  hostname -f;sed -i '/GATEWAY=*/d' /etc/sysconfig/network; echo "GATEWAY=$DEFAULT_GW" >> /etc/sysconfig/network; sed '/^#/d' /etc/sysconfig/network; systemctl restart network
+fi
+}
 question_yn "$DESC_SSH_KEYS" COMMAND_SSH_KEYS
 question_yn "$DESC_SSH_DEPLOY" COMMAND_SSH_DEPLOY
 question_yn "$DESC_SSH_CONNECT_TEST" COMMAND_SSH_CONNECT_TEST
@@ -299,6 +314,7 @@ question_yn "$DESC_CHECK_TIME" COMMAND_CHECK_TIME
 question_yn "$DESC_CHECK_ACCESS" COMMAND_CHECK_ACCESS
 question_yn "$DESC_IPFORWARD_ACTIVATE" COMMAND_IPFORWARD_ACTIVATE
 question_yn "$DESC_NO_SWAP" COMMAND_NO_SWAP
+question_yn "$DESC_DEFAULT_GW" COMMAND_DEFAULT_GW
 
 echo
 echo "-- FIN --"
