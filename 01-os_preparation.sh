@@ -205,7 +205,7 @@ for h in ${HOSTS[*]}; do ssh $h "echo && hostname -f && chronyc -a tracking |gre
 }
 
 ## CHECK ACCESS - INTERNET/PROXY/REGISTRY
-DESC_CHECK_ACCESS="Verification de l'acces depuis les noeuds au reseau public et de stockage?${bold}"
+DESC_CHECK_ACCESS="Verification de l'acces des noeuds cibles aux reseaux: public et stockage?${bold}"
 COMMAND_CHECK_ACCESS() {
 echo -e "Reseau Public (registry.suse.com):"
 for h in ${HOSTS[*]}; do ssh $h "echo && hostname -f && ping -c1 registry.suse.com > /dev/null  && echo 'registry.suse.com: OK' || echo 'registry.suse.com: FAIL'"; done;
@@ -273,10 +273,15 @@ yum install -y kubectl
 ## CHECK DEFAULT GW EXIST
 DESC_DEFAULT_GW="$pkg_mgr_type - Verification qu'une gateway par défaut existe?${bold}"
 DEFAULT_GW='172.16.0.254'
-COMMAND_DEFAULT_GW() {
+COMMAND_DEFAULT_GW_YUM() {
+#CURRENT_GATEWAY='for i in $(echo "$(< /proc/net/route)" | head -2 |tail -1 | awk '{print $3}'| sed -E 's/(..)(..)(..)(..)/\4 \3 \2 \1/');do printf "%d." $((16#$i));done |sed 's/.$//';echo'
+echo
+for h in ${HOSTS[*]};do ssh $h "echo $h;grep 'GATEWAY=' /etc/sysconfig/network |awk '{print $1}';echo";done
 if grep -qi 'GATEWAY=' /etc/sysconfig/network; 
 then
-  echo "A Default Gateway is set."
+  GW=`cat /etc/sysconfig/network |grep 'GATEWAY='|awk '{print $1}'`
+  echo "A Default Gateway should be set on all nodes"
+  echo "Local default gateway: $GW"
 else
   echo "A Default Gateway is not set. This is needed for K8S deployment even if this gateway does not exist"
   read -p "${bold}Which default gateway would you like to setup on you future Rancher nodes? ${normal}" DEFAULT_GW
@@ -285,44 +290,58 @@ else
   hostname -f;sed -i '/GATEWAY=*/d' /etc/sysconfig/network; echo "GATEWAY=$DEFAULT_GW" >> /etc/sysconfig/network; sed '/^#/d' /etc/sysconfig/network; systemctl restart network
 fi
 }
-question_yn "$DESC_CHECK_PACKAGE" "COMMAND_CHECK_PACKAGE curl expect"
-question_yn "$DESC_SSH_KEYS" COMMAND_SSH_KEYS
-question_yn "$DESC_SSH_DEPLOY" COMMAND_SSH_DEPLOY
-question_yn "$DESC_SSH_CONNECT_TEST" COMMAND_SSH_CONNECT_TEST
-
-if [[ ! -z ${_HTTP_PROXY} ]] || [[ ! -z ${_HTTPS_PROXY} ]] || [[ ! -z ${_NO_PROXY} ]]
+COMMAND_DEFAULT_GW_ZYPPER() {
+if grep -qi 'GATEWAY=' /etc/sysconfig/network; 
 then
-question_yn "$DESC_SET_PROXY" COMMAND_SET_PROXY
+  GW=`cat /etc/sysconfig/network/routes |awk '{print $2}'`
+  echo "A Default Gateway is set: $GW"
+else
+  echo "A Default Gateway is not set. This is needed for K8S deployment even if this gateway does not exist"
+  read -p "${bold}Which default gateway would you like to setup on you future Rancher nodes? ${normal}" DEFAULT_GW
+  DEFAULT_GW=${DEFAULT_GW:-172.16.0.254}
+  for h in ${HOSTS[*]};do ssh $h "echo; hostname -f;sed -i '/GATEWAY=*/d' /etc/sysconfig/network; echo "GATEWAY=$DEFAULT_GW" >> /etc/sysconfig/network; sed '/^#/d' /etc/sysconfig/network; systemctl restart network" ; done  
+  hostname -f;sed -i '/GATEWAY=*/d' /etc/sysconfig/network; echo "GATEWAY=$DEFAULT_GW" >> /etc/sysconfig/network; sed '/^#/d' /etc/sysconfig/network; systemctl restart network
 fi
-
-if [[ $pkg_mgr_type == 'zypper' ]]
-then 
-question_yn "$DESC_REPOS" COMMAND_REPOS_ZYPPER
-question_yn "$DESC_ADDREPOS" COMMAND_ADDREPOS_ZYPPER
-question_yn "$DESC_NODES_UPDATE" COMMAND_NODES_UPDATE_ZYPPER
-question_yn "$DESC_DOCKER_INSTALL" COMMAND_DOCKER_INSTALL_ZYPPER
-question_yn "$DESC_K8S_TOOLS" COMMAND_K8S_TOOLS_ZYPPER
-
-elif [[ $pkg_mgr_type == 'yum' ]]
-then
-question_yn "$DESC_REPOS" COMMAND_REPOS_YUM
-question_yn "$DESC_ADDREPOS" COMMAND_ADDREPOS_YUM
-question_yn "$DESC_ADDREPOS_YUM_K8STOOLS" COMMAND_ADDREPOS_YUM_K8STOOLS
-question_yn "$DESC_NODES_UPDATE" COMMAND_NODES_UPDATE_YUM
-question_yn "$DESC_DOCKER_INSTALL_YUM" COMMAND_DOCKER_INSTALL_YUM
-question_yn "$DESC_K8S_TOOLS" COMMAND_K8S_TOOLS_YUM
-fi
-
-if [[ ! -z ${_HTTP_PROXY} ]] || [[ ! -z ${_HTTPS_PROXY} ]] || [[ ! -z ${_NO_PROXY} ]]
-then
-question_yn "$DESC_DOCKER_PROXY" COMMAND_DOCKER_PROXY
-fi
-
-question_yn "$DESC_CHECK_TIME" COMMAND_CHECK_TIME
-question_yn "$DESC_CHECK_ACCESS" COMMAND_CHECK_ACCESS
-question_yn "$DESC_IPFORWARD_ACTIVATE" COMMAND_IPFORWARD_ACTIVATE
-question_yn "$DESC_NO_SWAP" COMMAND_NO_SWAP
-question_yn "$DESC_DEFAULT_GW" COMMAND_DEFAULT_GW
+}
+#question_yn "$DESC_CHECK_PACKAGE" "COMMAND_CHECK_PACKAGE curl expect"
+#question_yn "$DESC_SSH_KEYS" COMMAND_SSH_KEYS
+#question_yn "$DESC_SSH_DEPLOY" COMMAND_SSH_DEPLOY
+#question_yn "$DESC_SSH_CONNECT_TEST" COMMAND_SSH_CONNECT_TEST
+#
+#if [[ ! -z ${_HTTP_PROXY} ]] || [[ ! -z ${_HTTPS_PROXY} ]] || [[ ! -z ${_NO_PROXY} ]]
+#then
+#question_yn "$DESC_SET_PROXY" COMMAND_SET_PROXY
+#fi
+#
+#if [[ $pkg_mgr_type == 'zypper' ]]
+#then 
+#question_yn "$DESC_DEFAULT_GW" COMMAND_DEFAULT_GW_ZYPPER
+#question_yn "$DESC_REPOS" COMMAND_REPOS_ZYPPER
+#question_yn "$DESC_ADDREPOS" COMMAND_ADDREPOS_ZYPPER
+#question_yn "$DESC_NODES_UPDATE" COMMAND_NODES_UPDATE_ZYPPER
+#question_yn "$DESC_DOCKER_INSTALL" COMMAND_DOCKER_INSTALL_ZYPPER
+#question_yn "$DESC_K8S_TOOLS" COMMAND_K8S_TOOLS_ZYPPER
+#
+#elif [[ $pkg_mgr_type == 'yum' ]]
+#then
+question_yn "$DESC_DEFAULT_GW" COMMAND_DEFAULT_GW_YUM
+#question_yn "$DESC_REPOS" COMMAND_REPOS_YUM
+#question_yn "$DESC_ADDREPOS" COMMAND_ADDREPOS_YUM
+#question_yn "$DESC_ADDREPOS_YUM_K8STOOLS" COMMAND_ADDREPOS_YUM_K8STOOLS
+#question_yn "$DESC_NODES_UPDATE" COMMAND_NODES_UPDATE_YUM
+#question_yn "$DESC_DOCKER_INSTALL_YUM" COMMAND_DOCKER_INSTALL_YUM
+#question_yn "$DESC_K8S_TOOLS" COMMAND_K8S_TOOLS_YUM
+#fi
+#
+#if [[ ! -z ${_HTTP_PROXY} ]] || [[ ! -z ${_HTTPS_PROXY} ]] || [[ ! -z ${_NO_PROXY} ]]
+#then
+#question_yn "$DESC_DOCKER_PROXY" COMMAND_DOCKER_PROXY
+#fi
+#
+#question_yn "$DESC_CHECK_TIME" COMMAND_CHECK_TIME
+#question_yn "$DESC_CHECK_ACCESS" COMMAND_CHECK_ACCESS
+#question_yn "$DESC_IPFORWARD_ACTIVATE" COMMAND_IPFORWARD_ACTIVATE
+#question_yn "$DESC_NO_SWAP" COMMAND_NO_SWAP
 
 echo
 echo "-- FIN --"
