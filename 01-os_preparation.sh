@@ -58,6 +58,13 @@ done
 }
 
 ## SSH KEYS CREATION
+DESC_CHECK_PACKAGES="Verification de la présence des paquets?${bold}"
+COMMAND_CHECK_PACKAGES() {
+yum list installed expect
+yum list installed curl
+}
+
+## SSH KEYS CREATION
 DESC_SSH_KEYS="Creation d'une paire de clefs SSH en local?${bold}"
 COMMAND_SSH_KEYS() {
 ssh-keygen
@@ -212,15 +219,32 @@ for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; useradd -G docker ${DOCKER
 COMMAND_DOCKER_INSTALL_YUM() {
 for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; yum install -y http://mirror.centos.org/centos/7/extras/x86_64/Packages/container-selinux-2.107-3.el7.noarch.rpm"; done;
 for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; yum install -y http://mirror.centos.org/centos/7/extras/x86_64/Packages/slirp4netns-0.4.3-4.el7_8.x86_64.rpm"; done;
-for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; curl -s https://releases.rancher.com/install-docker/${DOCKER_VERSION}.sh | /bin/bash"; done;
+for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; curl -s http://releases.rancher.com/install-docker/${DOCKER_VERSION}.sh | /bin/bash"; done;
 for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; systemctl enable docker ; systemctl start docker && echo 'Docker is activated' || echo 'Docker could not start'"; done;
 for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; useradd -G docker ${DOCKER_USER} && echo \"${DOCKER_USER} user is created\" || echo \"Failed to create ${DOCKER_USER} user\" && mkdir /home/${DOCKER_USER}/.ssh && chown ${DOCKER_USER}:${DOCKER_USER} /home/${DOCKER_USER}/.ssh && chmod 700 /home/${DOCKER_USER}/.ssh && cp /root/.ssh/authorized_keys /home/${DOCKER_USER}/.ssh/ && chown ${DOCKER_USER}:${DOCKER_USER} /home/${DOCKER_USER}/.ssh/authorized_keys && chmod 600 /home/${DOCKER_USER}/.ssh/authorized_keys "; done;
+}
+
+## DOCKER PROXY
+DESC_DOCKER_PROXY="Configurer Docker pour utiliser le proxy?${bold}"
+COMMAND_DOCKER_PROXY() {
+for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ;
+sudo mkdir -p /etc/systemd/system/docker.service.d
+cat <<EOF > /etc/systemd/system/docker.service.d/http-proxy.conf
+[Service]
+Environment="HTTP_PROXY=http://${_HTTP_PROXY}"
+Environment="HTTPS_PROXY=http://${_HTTPS_PROXY}"
+Environment="NO_PROXY=${_NO_PROXY}"
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl restart docker"
+done
 }
 
 ## ACTIVATION IP FORWARDING
 DESC_IPFORWARD_ACTIVATE="Activation de l'IP forwarding?${bold}"
 COMMAND_IPFORWARD_ACTIVATE() {
-  for h in ${HOSTS[*]}; do ssh $h "echo; hostname -f; sed -i 's/net.ipv4.ip_forward.*/net.ipv4.ip_forward = 1/g' /etc/sysctl.conf; sed '/^#/d' /etc/sysctl.conf" ; done
+for h in ${HOSTS[*]};do ssh $h "echo; hostname -f;sed -i '/net.ipv4.ip_forward.*/d' /etc/sysctl.conf; echo 'net.ipv4.ip_forward = 1' >> /etc/sysctl.conf; sed '/^#/d' /etc/sysctl.conf;sysctl -p" ; done
 }
 
 ## DESACTIVATION DU SWAP
@@ -264,6 +288,11 @@ question_yn "$DESC_ADDREPOS_YUM_K8STOOLS" COMMAND_ADDREPOS_YUM_K8STOOLS
 question_yn "$DESC_NODES_UPDATE" COMMAND_NODES_UPDATE_YUM
 question_yn "$DESC_DOCKER_INSTALL_YUM" COMMAND_DOCKER_INSTALL_YUM
 question_yn "$DESC_K8S_TOOLS" COMMAND_K8S_TOOLS_YUM
+fi
+
+if [[ ! -z ${_HTTP_PROXY} ]] || [[ ! -z ${_HTTPS_PROXY} ]] || [[ ! -z ${_NO_PROXY} ]]
+then
+question_yn "$DESC_DOCKER_PROXY" COMMAND_DOCKER_PROXY
 fi
 
 question_yn "$DESC_CHECK_TIME" COMMAND_CHECK_TIME

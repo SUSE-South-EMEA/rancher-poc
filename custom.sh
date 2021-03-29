@@ -86,12 +86,25 @@ else
   sed -i 's/GRUB_CMDLINE_LINUX=\"/GRUB_CMDLINE_LINUX=\"ipv6.disable=1 /' /etc/default/grub
   grub2-mkconfig -o /boot/grub2/grub.cfg
 fi
-
-echo
-echo "-- FIN --"
 }
+###
+# Disable IPv6
+###
+DESC_REBOOT_ALL="Reboot des machines?${bold}"
+COMMAND_REBOOT_ALL() {
+# Reboot Machines ${HOSTS[*]}
+for h in ${HOSTS[*]};do
+ssh $h "hostname
+reboot"
+done
+# Reboot machine locale
+reboot
+}
+
 question_yn "$DESC_REMOVE_DEF_GW" COMMAND_REMOVE_DEF_GW
 question_yn "$DESC_COPY_SQUID_CA" COMMAND_COPY_SQUID_CA
 question_yn "$DESC_DISABLE_IPV6" COMMAND_DISABLE_IPV6
+question_yn "$DESC_REBOOT_ALL" COMMAND_REBOOT_ALL
+
 echo
 echo "-- FIN --"
