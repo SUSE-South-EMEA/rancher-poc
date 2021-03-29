@@ -58,10 +58,17 @@ done
 }
 
 ## SSH KEYS CREATION
-DESC_CHECK_PACKAGES="Verification de la présence des paquets?${bold}"
-COMMAND_CHECK_PACKAGES() {
-yum list installed expect
-yum list installed curl
+DESC_CHECK_PACKAGE="Verification de la présence des paquets?${bold}"
+COMMAND_CHECK_PACKAGE() {
+for i in $@;do echo $i
+if yum -q -e 0 list installed $i
+then
+  echo "$i is present. OK!"
+else
+  echo "$i is not present. ERROR!"
+  echo "yum list installed $i: 'not installed'"
+fi
+done
 }
 
 ## SSH KEYS CREATION
@@ -278,6 +285,7 @@ else
   hostname -f;sed -i '/GATEWAY=*/d' /etc/sysconfig/network; echo "GATEWAY=$DEFAULT_GW" >> /etc/sysconfig/network; sed '/^#/d' /etc/sysconfig/network; systemctl restart network
 fi
 }
+question_yn "$DESC_CHECK_PACKAGE" "COMMAND_CHECK_PACKAGE curl expect"
 question_yn "$DESC_SSH_KEYS" COMMAND_SSH_KEYS
 question_yn "$DESC_SSH_DEPLOY" COMMAND_SSH_DEPLOY
 question_yn "$DESC_SSH_CONNECT_TEST" COMMAND_SSH_CONNECT_TEST
