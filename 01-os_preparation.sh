@@ -98,12 +98,22 @@ for h in ${HOSTS[*]}; do ssh $h "hostname -f" ; done;
 DESC_SET_PROXY="Des variables PROXY sont definies dans le fichier ./00-vars.sh. Appliquer ces parametres ? \n _HTTP_PROXY=${_HTTP_PROXY} \n _HTTPS_PROXY=${_HTTPS_PROXY} \n _NO_PROXY=${_NO_PROXY}${bold}"
 COMMAND_SET_PROXY() {
 for h in ${HOSTS[*]}
-  do ssh $h "cat  > /etc/profile.d/proxy.sh <<EOF
+  do 
+scp -o StrictHostKeyChecking=no proxyCA.pem $h:/etc/pki/ca-trust/source/anchors/
+ssh $h "cat  > /etc/profile.d/proxy.sh <<EOF
 export http_proxy=http://${_HTTP_PROXY}
 export https_proxy=http://${_HTTPS_PROXY}
 export no_proxy=${_NO_PROXY}
 EOF
 hostname -f
+if [[ $pkg_mgr_type == 'zypper' ]]
+then 
+update-ca-certificates
+fi
+if [[ $pkg_mgr_type == 'yum' ]]
+then 
+update-ca-trust
+fi
 echo 'Parametres Proxy ajoutes dans /etc/profile.d/proxy.sh'"
 done
 # ajout en local egalement
@@ -112,6 +122,15 @@ export http_proxy=http://${_HTTP_PROXY}
 export https_proxy=http://${_HTTPS_PROXY}
 export no_proxy=${_NO_PROXY}
 EOF
+scp -o StrictHostKeyChecking=no proxyCA.pem /etc/pki/ca-trust/source/anchors/
+if [[ $pkg_mgr_type == 'zypper' ]]
+then 
+update-ca-certificates
+fi
+if [[ $pkg_mgr_type == 'yum' ]]
+then 
+update-ca-trust
+fi
 echo "$(hostname -f) : Parametres Proxy ajoutes dans /etc/profile.d/proxy.sh"
 }
 
@@ -271,6 +290,23 @@ COMMAND_K8S_TOOLS_YUM() {
 yum install -y kubectl
 }
 
+## CHECK FIREWALLD
+DESC_FIREWALL="$pkg_mgr_type - Verification de l'etat du firewall (doit etre desactive)?${bold}"
+COMMAND_FIREWALL() {
+for h in ${HOSTS[*]};do
+hostname -f
+systemctl status firewalld
+if [[ $? -ne 0 ]]
+then 
+  echo "${bold}Firewall service seems down, this is OK!${normal}"
+  echo
+else 
+  echo "${bold}Firewall service seems up, this is NOT OK!${normal} Please disable and shutdown firewall on target nodes."
+  echo
+fi
+done
+}
+
 ## CHECK DEFAULT GW EXIST
 DESC_DEFAULT_GW="$pkg_mgr_type - Verification qu'une gateway par défaut existe?${bold}"
 DEFAULT_GW='172.16.0.254'
@@ -297,9 +333,10 @@ echo "A Default Gateway should be set on all nodes (even if non-existent/non-wor
 #  hostname -f;sed -i '/GATEWAY=*/d' /etc/sysconfig/network; echo "GATEWAY=$DEFAULT_GW" >> /etc/sysconfig/network; sed '/^#/d' /etc/sysconfig/network; systemctl restart network
 #fi
 }
-####################BEGIN PRE-CHECK PACKAGES##################################
+####################BEGIN PRE-CHECK PACKAGES & FIREWALL#######################
 question_yn "$DESC_CHECK_PACKAGE" "COMMAND_CHECK_PACKAGE_RPM curl expect"
-####################END PRE-CHECK PACKAGES####################################
+question_yn "$DESC_FIREWALL" COMMAND_FIREWALL
+####################END PRE-CHECK PACKAGES & FIREWALL#########################
 
 ####################BEGIN SSH KEYS EXCHANGE###################################
 question_yn "$DESC_SSH_KEYS" COMMAND_SSH_KEYS
@@ -324,7 +361,7 @@ elif [[ $pkg_mgr_type == 'yum' ]]
 then
 question_yn "$DESC_REPOS" COMMAND_REPOS_YUM
 #question_yn "$DESC_ADDREPOS" COMMAND_ADDREPOS_YUM
-#question_yn "$DESC_ADDREPOS_YUM_K8STOOLS" COMMAND_ADDREPOS_YUM_K8STOOLS
+question_yn "$DESC_ADDREPOS_YUM_K8STOOLS" COMMAND_ADDREPOS_YUM_K8STOOLS
 question_yn "$DESC_NODES_UPDATE" COMMAND_NODES_UPDATE_YUM
 question_yn "$DESC_DOCKER_INSTALL_YUM" COMMAND_DOCKER_INSTALL_YUM
 question_yn "$DESC_K8S_TOOLS" COMMAND_K8S_TOOLS_YUM

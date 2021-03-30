@@ -12,6 +12,7 @@ DOCKER_VERSION="19.03"  # options [19.03|20.10]
 _HTTP_PROXY="squid:3128"
 _HTTPS_PROXY="squid:3128"
 _NO_PROXY="127.0.0.1,172.16.2.27,172.16.2.28,172.16.2.29,172.16.2.30,cattle-system.svc"
+PROXY_CA="proxyCA.pem"
 
 # 02-rke_deploy.sh
 ## Docker user to be created on target hosts

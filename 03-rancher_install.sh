@@ -28,6 +28,8 @@ while true; do
    case $yn in
       [Yy]* )
         $2
+        echo
+        read -rsp $'Pressez une touche pour continuer...\n' -n1 key
       break;;
       [Nn]* ) echo "Etape annulee";break;;
       * ) echo "Please answer yes (y) or no (n).";;
@@ -71,7 +73,7 @@ COMMAND_TEST_FQDN() {
 ping -c 1 rancher.$dom
 }
 
-## INSTALL RANCHER MANAGEMEBT
+## INSTALL RANCHER MANAGEMENT
 DESC_RANCHER_INSTALL="Installation de Rancher Management (rancher.$dom)?${bold}"
 COMMAND_RANCHER_INSTALL() {
 kubectl create namespace cattle-system

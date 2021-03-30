@@ -28,6 +28,8 @@ while true; do
    case $yn in
       [Yy]* )
         $2
+        echo
+        read -rsp $'Pressez une touche pour continuer...\n' -n1 key
       break;;
       [Nn]* ) echo "Etape annulee";break;;
       * ) echo "Please answer yes (y) or no (n).";;
@@ -72,6 +74,7 @@ DESC_KUBECONFIG="Mise en place du fichier de controle Kubeconfig?${bold}"
 COMMAND_KUBECONFIG() {
 export KUBECONFIG=$PWD/kube_config_cluster.yml
 mkdir -p ~/.kube/
+chmod 600 $PWD/kube_config_cluster.yml
 cp $PWD/kube_config_cluster.yml ~/.kube/config
 chmod 600 ~/.kube/config
 }
