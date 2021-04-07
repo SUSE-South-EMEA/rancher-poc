@@ -3,7 +3,7 @@
 HOST_LIST_FILE=./hosts.list
 ## NON-FONCTIONNEL - Repositories (REPO_MODE: 1=SUSE Manager / 2=RMT Server / 3="Do nothing, I'm good")
 #REPO_MODE=1
-#REPO_SERVER='suma01'
+REPO_SERVER='suma01.zypp.lo'
 ## Existing storage network host for basic check
 STORAGE_TARGET="192.168.1.11"
 ## Docker version to use (to be deprecated) 
@@ -17,6 +17,8 @@ PROXY_CA="proxyCA.pem"
 # 02-rke_deploy.sh
 ## Docker user to be created on target hosts
 DOCKER_USER="rkedeploy"
+## Docker group to be joined by Docker user
+DOCKER_GROUP="docker"	# 'dockerroot' for docker provided by RHEL
 ## K8S cluster, RKE and Helm versions to deploy
 KUBERNETES_VERSION="v1.19.3-rancher1-1"
 RKE_VERSION="v1.2.6"
