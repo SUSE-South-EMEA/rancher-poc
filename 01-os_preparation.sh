@@ -63,12 +63,12 @@ done
 DESC_CHECK_PACKAGE="Verification de la présence des paquets?${bold}"
 COMMAND_CHECK_PACKAGE_RPM() {
 for i in $@;do echo "Recherche de la presence du paquet: ${bold}$i${normal}"
-if rpm -qa $i
+if rpm -q $i
 then
   echo "${bold}$i${normal} is present. OK!";echo
 else
   echo "${bold}$i${normal} is not present. ERROR!"
-  echo "rpm -qa ${bold}$i${normal}: 'not installed'"
+  echo "rpm -q ${bold}$i${normal}: 'not installed'"
 fi
 done
 }
