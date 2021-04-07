@@ -228,7 +228,7 @@ for h in ${HOSTS[*]}; do ssh $h "echo && hostname -f && chronyc -a tracking |gre
 DESC_CHECK_ACCESS="Verification de l'acces des noeuds cibles aux reseaux: public et stockage?${bold}"
 COMMAND_CHECK_ACCESS() {
 echo -e "Reseau Public (registry.suse.com):"
-for h in ${HOSTS[*]}; do ssh $h "echo && hostname -f && ping -c1 registry.suse.com > /dev/null  && echo 'registry.suse.com: OK' || echo 'registry.suse.com: FAIL'"; done;
+for h in ${HOSTS[*]}; do ssh $h "echo && hostname -f && curl -s -o /dev/null -I https://registry.suse.com  && echo 'registry.suse.com: OK' || echo 'registry.suse.com: FAIL'"; done;
 echo
 echo -e "Reseau de Stockage:"
 echo -e "Sauf pour la machine admin (isolation réseau)"
