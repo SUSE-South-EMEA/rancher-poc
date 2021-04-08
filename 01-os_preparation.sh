@@ -97,9 +97,16 @@ for h in ${HOSTS[*]}; do ssh $h "hostname -f" ; done;
 ## SET PROXY
 DESC_SET_PROXY="Des variables PROXY sont definies dans le fichier ./00-vars.sh. Appliquer ces parametres ? \n _HTTP_PROXY=${_HTTP_PROXY} \n _HTTPS_PROXY=${_HTTPS_PROXY} \n _NO_PROXY=${_NO_PROXY}${bold}"
 COMMAND_SET_PROXY() {
+if [[ $pkg_mgr_type == 'zypper' ]]
+then
+	PRIV_KEY_PATH="/etc/pki/trust/anchors/"
+elif [[ $pkg_mgr_type == 'yum' ]]
+then
+	PRIV_KEY_PATH="/etc/pki/ca-trust/source/anchors/"
+fi
 for h in ${HOSTS[*]}
-  do 
-scp -o StrictHostKeyChecking=no proxyCA.pem $h:/etc/pki/ca-trust/source/anchors/
+  do
+scp -o StrictHostKeyChecking=no proxyCA.pem $h:$PRIV_KEY_PATH
 ssh $h "cat  > /etc/profile.d/proxy.sh <<EOF
 export http_proxy=http://${_HTTP_PROXY}
 export https_proxy=http://${_HTTPS_PROXY}
@@ -122,7 +129,7 @@ export http_proxy=http://${_HTTP_PROXY}
 export https_proxy=http://${_HTTPS_PROXY}
 export no_proxy=${_NO_PROXY}
 EOF
-scp -o StrictHostKeyChecking=no proxyCA.pem /etc/pki/ca-trust/source/anchors/
+scp -o StrictHostKeyChecking=no proxyCA.pem $PRIV_KEY_PATH
 if [[ $pkg_mgr_type == 'zypper' ]]
 then 
 update-ca-certificates
@@ -370,7 +377,7 @@ question_yn "$DESC_NO_SWAP" COMMAND_NO_SWAP
 if [[ $pkg_mgr_type == 'zypper' ]]
 then 
 question_yn "$DESC_REPOS" COMMAND_REPOS_ZYPPER
-#question_yn "$DESC_ADDREPOS" COMMAND_ADDREPOS_ZYPPER
+question_yn "$DESC_ADDREPOS" COMMAND_ADDREPOS_ZYPPER
 question_yn "$DESC_NODES_UPDATE" COMMAND_NODES_UPDATE_ZYPPER
 question_yn "$DESC_DOCKER_INSTALL" COMMAND_DOCKER_INSTALL_ZYPPER
 question_yn "$DESC_CREATE_DOCKER_USER" COMMAND_CREATE_DOCKER_USER
