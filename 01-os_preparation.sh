@@ -337,22 +337,36 @@ echo "A Default Gateway should be set on all nodes (even if non-existent/non-wor
 #  hostname -f;sed -i '/GATEWAY=*/d' /etc/sysconfig/network; echo "GATEWAY=$DEFAULT_GW" >> /etc/sysconfig/network; sed '/^#/d' /etc/sysconfig/network; systemctl restart network
 #fi
 }
-####################BEGIN PRE-CHECK PACKAGES & FIREWALL#######################
-question_yn "$DESC_CHECK_PACKAGE" "COMMAND_CHECK_PACKAGE_RPM curl expect"
-question_yn "$DESC_FIREWALL" COMMAND_FIREWALL
-####################END PRE-CHECK PACKAGES & FIREWALL#########################
 
-####################BEGIN SSH KEYS EXCHANGE###################################
+
+#################### BEGIN PRE-CHECK PACKAGES ##################################
+question_yn "$DESC_CHECK_PACKAGE" "COMMAND_CHECK_PACKAGE_RPM curl expect"
+#################### END PRE-CHECK PACKAGES ####################################
+
+
+#################### BEGIN SSH KEYS EXCHANGE ###################################
 question_yn "$DESC_SSH_KEYS" COMMAND_SSH_KEYS
 question_yn "$DESC_SSH_DEPLOY" COMMAND_SSH_DEPLOY
 question_yn "$DESC_SSH_CONNECT_TEST" COMMAND_SSH_CONNECT_TEST
-####################END SSH KEYS EXCHANGE#####################################
+#################### END SSH KEYS EXCHANGE #####################################
 
+
+#################### BEGIN PROXY ###############################################
 if [[ ! -z ${_HTTP_PROXY} ]] || [[ ! -z ${_HTTPS_PROXY} ]] || [[ ! -z ${_NO_PROXY} ]]
 then
 question_yn "$DESC_SET_PROXY" COMMAND_SET_PROXY
 fi
+#################### END PROXY #################################################
 
+#################### BEGIN FIREWALL#############################################
+question_yn "$DESC_FIREWALL" COMMAND_FIREWALL
+question_yn "$DESC_DEFAULT_GW" COMMAND_DEFAULT_GW
+question_yn "$DESC_CHECK_TIME" COMMAND_CHECK_TIME
+question_yn "$DESC_IPFORWARD_ACTIVATE" COMMAND_IPFORWARD_ACTIVATE
+question_yn "$DESC_NO_SWAP" COMMAND_NO_SWAP
+
+
+#################### BEGIN REPOS & BINARIES ####################################
 if [[ $pkg_mgr_type == 'zypper' ]]
 then 
 question_yn "$DESC_REPOS" COMMAND_REPOS_ZYPPER
@@ -372,17 +386,20 @@ question_yn "$DESC_DOCKER_INSTALL_YUM" COMMAND_DOCKER_INSTALL_YUM
 question_yn "$DESC_CREATE_DOCKER_USER" COMMAND_CREATE_DOCKER_USER
 question_yn "$DESC_K8S_TOOLS" COMMAND_K8S_TOOLS_YUM
 fi
+#################### END REPOS & BINARIES ######################################
 
+
+#################### BEGIN DOCKER PROXY SETTINGS ###############################
 if [[ ! -z ${_HTTP_PROXY} ]] || [[ ! -z ${_HTTPS_PROXY} ]] || [[ ! -z ${_NO_PROXY} ]]
 then
 question_yn "$DESC_DOCKER_PROXY" COMMAND_DOCKER_PROXY
 fi
+#################### END DOCKER PROXY SETTINGS #################################
 
-question_yn "$DESC_DEFAULT_GW" COMMAND_DEFAULT_GW
-question_yn "$DESC_CHECK_TIME" COMMAND_CHECK_TIME
+
+#################### BEGIN CHECK ACCESS ########################################
 question_yn "$DESC_CHECK_ACCESS" COMMAND_CHECK_ACCESS
-question_yn "$DESC_IPFORWARD_ACTIVATE" COMMAND_IPFORWARD_ACTIVATE
-question_yn "$DESC_NO_SWAP" COMMAND_NO_SWAP
+#################### END CHECK ACCESS ##########################################
 
 echo
 echo "-- FIN --"
