@@ -67,6 +67,9 @@ echo "  provider: nginx" >> ./cluster.yml
 DESC_RKE_DEPLOY="Installation de RKE en local?${bold}"
 COMMAND_RKE_DEPLOY() {
 rke up
+echo; echo "Veuillez patienter lors de la création des ressources du clusters."
+read -rsp $'Pressez une touche pour suivre la construction...\n' -n1 key
+watch -n1 -d kubectl get nodes,pods -A
 }
 
 ## KUBECONFIG SETUP
