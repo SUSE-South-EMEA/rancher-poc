@@ -366,7 +366,7 @@ question_yn "$DESC_SSH_CONNECT_TEST" COMMAND_SSH_CONNECT_TEST
 #
 #
 ##################### BEGIN PROXY ###############################################
-if [[ ! -z ${_HTTP_PROXY} ]] || [[ ! -z ${_HTTPS_PROXY} ]] || [[ ! -z ${_NO_PROXY} ]]
+if [[ $PROXY_DEPLOY == 1 ]]
 then
 question_yn "$DESC_SET_PROXY" COMMAND_SET_PROXY
 fi
@@ -404,7 +404,7 @@ fi
 #
 #
 ##################### BEGIN DOCKER PROXY SETTINGS ###############################
-if [[ ! -z ${_HTTP_PROXY} ]] || [[ ! -z ${_HTTPS_PROXY} ]] || [[ ! -z ${_NO_PROXY} ]]
+if [[ $PROXY_DEPLOY == 1 ]]
 then
 question_yn "$DESC_DOCKER_PROXY" COMMAND_DOCKER_PROXY
 fi

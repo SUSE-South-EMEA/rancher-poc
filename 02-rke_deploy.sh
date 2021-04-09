@@ -61,6 +61,15 @@ echo "kubernetes_version: \"$KUBERNETES_VERSION\"" >> ./cluster.yml
 echo "ingress:" >> ./cluster.yml
 echo "  provider: nginx" >> ./cluster.yml
 #rke config
+if [[ $AIRGAP_DEPLOY == 1 ]]; then
+echo """private_registries:
+  - url: $AIRGAP_REGISTRY_URL
+    is_default: true """ >> ./cluster.yml
+  if [[ ! -z ${AIRGAP_REGISTRY_USER} ]] ; then
+    echo """    user: $AIRGAP_REGISTRY_USER
+    password: $AIRGAP_REGISTRY_PASSWD """ >> ./cluster.yml
+  fi
+fi
 }
 
 ## RKE DEPLOY
