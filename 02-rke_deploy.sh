@@ -42,7 +42,7 @@ DESC_RKE_INSTALL="Installation de RKE en local? \n RKE version: ${RKE_VERSION}${
 COMMAND_RKE_INSTALL() {
 curl -LO https://github.com/rancher/rke/releases/download/${RKE_VERSION}/rke_linux-amd64
 chmod +x rke_linux-amd64
-mv rke_linux-amd64 /usr/local/bin/rke
+sudo mv rke_linux-amd64 /usr/local/bin/rke
 }
 
 ## RKE CONFIG
@@ -70,6 +70,8 @@ echo """private_registries:
     password: $AIRGAP_REGISTRY_PASSWD """ >> ./cluster.yml
   fi
 fi
+echo "Fichier cluster.yml généré:"
+cat ./cluster.yml
 }
 
 ## RKE DEPLOY
