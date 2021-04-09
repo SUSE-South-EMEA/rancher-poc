@@ -106,8 +106,9 @@ then
 fi
 for h in ${HOSTS[*]}
   do
-scp -o StrictHostKeyChecking=no proxyCA.pem $h:$PRIV_KEY_PATH
-ssh $h "sudo tee /etc/profile.d/proxy.sh <<EOF
+scp -o StrictHostKeyChecking=no proxyCA.pem $h:/tmp/
+ssh $h "sudo mv /tmp/proxyCA.pem $PRIV_KEY_PATH
+sudo tee /etc/profile.d/proxy.sh <<EOF
 export http_proxy=http://${_HTTP_PROXY}
 export https_proxy=http://${_HTTPS_PROXY}
 export no_proxy=${_NO_PROXY}
