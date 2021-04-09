@@ -1,9 +1,11 @@
 # 01-os_preparation.sh
 ## Hosts to remote control in $HOST_LIST_FILE (one target per line)
 HOST_LIST_FILE=./hosts.list
+## Deploiement airgap: tapez 1 sinon 0
+AIRGAP_DEPLOY="1"
 ## NON-FONCTIONNEL - Repositories (REPO_MODE: 1=SUSE Manager / 2=RMT Server / 3="Do nothing, I'm good")
 #REPO_MODE=1
-REPO_SERVER='suma01.zypp.lo'
+REPO_SERVER="suma01.zypp.lo"
 ## Existing storage network host for basic check
 STORAGE_TARGET="192.168.1.11"
 ## Docker version to use (to be deprecated) 
