@@ -68,18 +68,18 @@ watch -d -c "kubectl get pods,services -n cert-manager"
 }
 
 ## TEST FQDN FOR RANCHER MGMT
-DESC_TEST_FQDN="Test du nom dns rancher.$dom?${bold}"
+DESC_TEST_FQDN="Test du nom dns ${LB_RANCHER_FQDN}?${bold}"
 COMMAND_TEST_FQDN() {
-ping -c 1 rancher.$dom
+ping -c 1 ${LB_RANCHER_FQDN}
 }
 
 ## INSTALL RANCHER MANAGEMENT
-DESC_RANCHER_INSTALL="Installation de Rancher Management (rancher.$dom)?${bold}"
+DESC_RANCHER_INSTALL="Installation de Rancher Management (${LB_RANCHER_FQDN})?${bold}"
 COMMAND_RANCHER_INSTALL() {
 kubectl create namespace cattle-system
 helm install rancher rancher-stable/rancher \
   --namespace cattle-system \
-  --set hostname=rancher.$dom
+  --set hostname=${LB_RANCHER_FQDN}
 echo "Verification de l'installation de rancher.app"
 read -p "#> kubectl -n cattle-system get pods,deploy"
 watch -d -c "kubectl -n cattle-system get pods,deploy"
@@ -98,6 +98,6 @@ question_yn "$DESC_INIT_ADMIN" COMMAND_INIT_ADMIN
 
 echo
 echo "Rancher Management server is available:"
-echo "${bold}Url :${normal} https://rancher.${ext_dom}"
+echo "${bold}Url :${normal} https://${LB_RANCHER_FQDN}"
 echo
 echo "-- FIN --"

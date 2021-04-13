@@ -42,9 +42,7 @@ RKE_VERSION="v1.2.6"
 HELM_VERSION="3.5.3"
 
 ######################## FQDNs & DOMAINs #########################
-## K8S Masters load balanced DNS name
-LB_MASTERS="api.apps.zypp.lo"
-## Apps private DNS domain
-dom="apps.zypp.lo"
-## Apps public DNS domain (optional)
-ext_dom="apps.office.zypp.fr"
+## Rancher Management address FQDN
+LB_RANCHER_FQDN="rancher.zypp.lo"
+## Apps DNS domain (wildcard)
+LB_APPS_DOMAIN="apps.zypp.lo"
