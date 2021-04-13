@@ -80,6 +80,7 @@ COMMAND_RKE_DEPLOY() {
 rke up
 echo; echo "Veuillez patienter lors de la création des ressources du clusters."
 read -rsp $'Pressez une touche pour suivre la construction...\n' -n1 key
+export KUBECONFIG=$PWD/kube_config_cluster.yml
 watch -n1 -d kubectl get nodes,pods -A
 }
 
