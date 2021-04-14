@@ -42,7 +42,7 @@ RKE_VERSION="v1.2.6"
 HELM_VERSION="3.5.3"
 
 ######################## FQDNs & DOMAINs #########################
-## Rancher Management address FQDN
-LB_RANCHER_FQDN="rancher.zypp.lo"
-## Apps DNS domain (wildcard)
-LB_APPS_DOMAIN="apps.zypp.lo"
+## Rancher Management Load balancer FQDN (redirect to RKE nodes hosting Rancher)
+LB_RANCHER_FQDN="rancher.office.zypp.fr"
+## Apps DNS domain (wildcard redirecting to RKE workers nodes hosting applications)
+LB_APPS_DOMAIN="apps.office.zypp.fr"
