@@ -94,6 +94,25 @@ COMMAND_SSH_CONNECT_TEST() {
 for h in ${HOSTS[*]}; do ssh $h "hostname -f" ; done;
 }
 
+## Copy Proxy CA locally
+DESC_COPY_PROXY_CA="Copie de la clef privée du proxy vers les clients. Appliquer ces parametres ?"
+COMMAND_COPY_PROXY_CA() {
+if [[ $pkg_mgr_type == 'zypper' ]]
+then
+	PRIV_KEY_PATH="/etc/pki/trust/anchors/"
+elif [[ $pkg_mgr_type == 'yum' ]]
+then
+	PRIV_KEY_PATH="/etc/pki/ca-trust/source/anchors/"
+fi
+echo "Recuperation du certificat privé provenant du proxy."
+sudo scp -o StrictHostKeyChecking=no $PROXY_ADDR:$PROXY_CA_LOCATION /tmp/proxyCA.pem
+for h in ${HOSTS[*]}
+  do
+ssh $h "hostname"
+scp /tmp/proxyCA.pem $h:$PRIV_KEY_PATH
+done
+}
+
 ## SET PROXY
 DESC_SET_PROXY="Des variables PROXY sont definies dans le fichier ./00-vars.sh. Appliquer ces parametres ? \n _HTTP_PROXY=${_HTTP_PROXY} \n _HTTPS_PROXY=${_HTTPS_PROXY} \n _NO_PROXY=${_NO_PROXY}${bold}"
 COMMAND_SET_PROXY() {
@@ -104,11 +123,11 @@ elif [[ $pkg_mgr_type == 'yum' ]]
 then
 	PRIV_KEY_PATH="/etc/pki/ca-trust/source/anchors/"
 fi
+echo "$PROXY_ADDR:$PROXY_CA_LOCATION"
+echo
 for h in ${HOSTS[*]}
   do
-scp -o StrictHostKeyChecking=no proxyCA.pem $h:/tmp/
-ssh $h "sudo mv /tmp/proxyCA.pem $PRIV_KEY_PATH
-sudo tee /etc/profile.d/proxy.sh <<EOF
+ssh $h "sudo tee /etc/profile.d/proxy.sh <<EOF
 export http_proxy=http://${_HTTP_PROXY}
 export https_proxy=http://${_HTTPS_PROXY}
 export no_proxy=${_NO_PROXY}
@@ -122,7 +141,8 @@ if [[ $pkg_mgr_type == 'yum' ]]
 then 
 sudo update-ca-trust
 fi
-echo 'Parametres Proxy ajoutes dans /etc/profile.d/proxy.sh'"
+echo 'Parametres Proxy ajoutes dans /etc/profile.d/proxy.sh'
+echo"
 done
 # ajout en local egalement
 sudo tee /etc/profile.d/proxy.sh <<EOF
@@ -130,7 +150,7 @@ export http_proxy=http://${_HTTP_PROXY}
 export https_proxy=http://${_HTTPS_PROXY}
 export no_proxy=${_NO_PROXY}
 EOF
-sudo cp proxyCA.pem $PRIV_KEY_PATH
+sudo cp /tmp/proxyCA.pem $PRIV_KEY_PATH
 if [[ $pkg_mgr_type == 'zypper' ]]
 then 
 sudo update-ca-certificates
@@ -369,6 +389,7 @@ question_yn "$DESC_SSH_CONNECT_TEST" COMMAND_SSH_CONNECT_TEST
 ##################### BEGIN PROXY ###############################################
 if [[ $PROXY_DEPLOY == 1 ]]
 then
+question_yn "$DESC_COPY_PROXY_CA" COMMAND_COPY_PROXY_CA
 question_yn "$DESC_SET_PROXY" COMMAND_SET_PROXY
 fi
 ##################### END PROXY #################################################

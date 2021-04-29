@@ -4,7 +4,7 @@ HOST_LIST_FILE=./hosts.list
 
 ######################## IF AIRGAP SETUP #########################
 ## Deploiement airgap: tapez 1 sinon 0
-AIRGAP_DEPLOY="1"
+AIRGAP_DEPLOY="0" # 1=deploiement airgap / 0=deploiement non-airgap
 AIRGAP_REGISTRY_URL="http://mon_registry:5000"
 # Optional user/password
 AIRGAP_REGISTRY_USER="toto"
@@ -12,11 +12,13 @@ AIRGAP_REGISTRY_PASSWD=""
 
 ######################## IF PROXY SETUP ##########################
 ## Proxy settings (leave empty aka "" if you don't want proxy setting to trigger)
-PROXY_DEPLOY="1"
+PROXY_ADDR="squid.zypp.lo"
+PROXY_DEPLOY="1" # 1=deploiement avec proxy / 0=deploiement sans proxy
 _HTTP_PROXY="squid:3128"
 _HTTPS_PROXY="squid:3128"
-_NO_PROXY="127.0.0.1,172.16.2.27,172.16.2.28,172.16.2.29,172.16.2.30,cattle-system.svc"
-PROXY_CA="proxyCA.pem"
+#_NO_PROXY="127.0.0.1,172.16.2.27,172.16.2.28,172.16.2.29,172.16.2.30,cattle-system.svc"
+_NO_PROXY="127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,cattle-system.svc,.svc,.cluster.local"
+PROXY_CA_LOCATION="/etc/squid/ssl_cert/proxyCA.pem"
 
 ######################## DOCKER SETUP ############################
 ## Docker version to use (to be deprecated) 
