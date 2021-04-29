@@ -115,21 +115,6 @@ fi
 }
 
 ###
-# Copy Squid proxyCA cert
-###
-DESC_COPY_SQUID_CA="Copie du CA SQUID vers les noeuds?${bold}"
-COMMAND_COPY_SQUID_CA() {
-# on local host from squid Proxy
-scp squid:/etc/squid/ssl_cert/proxyCA.pem /etc/pki/ca-trust/source/anchors/
-update-ca-trust
-# on remote hosts from local host
-for h in ${HOSTS[*]};do
-scp /etc/pki/ca-trust/source/anchors/proxyCA.pem $h:/etc/pki/ca-trust/source/anchors/
-ssh $h "hostname ; update-ca-trust"
-done
-}
-
-###
 # Disable IPv6
 ###
 DESC_DISABLE_IPV6="Desactiver IPV6? (redemarrage necessaire!)${bold}"
@@ -152,7 +137,7 @@ else
 fi
 }
 ###
-# Disable IPv6
+# Mass Reboot
 ###
 DESC_REBOOT_ALL="Reboot des machines?${bold}"
 COMMAND_REBOOT_ALL() {
