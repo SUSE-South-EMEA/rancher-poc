@@ -150,6 +150,7 @@ export http_proxy=http://${_HTTP_PROXY}
 export https_proxy=http://${_HTTPS_PROXY}
 export no_proxy=${_NO_PROXY}
 EOF
+source /etc/profile.d/proxy.sh
 sudo cp /tmp/proxyCA.pem $PRIV_KEY_PATH
 if [[ $pkg_mgr_type == 'zypper' ]]
 then 
