@@ -16,6 +16,12 @@ echo
 printf '%s\n' "${HOSTS[@]}"
 echo
 
+# Detection de la configuration Proxy - Source des configurations
+if [[ $PROXY_DEPLOY == 1 ]]
+  then
+  source /etc/profile.d/proxy.sh
+fi
+
 # Fonction generique de question (yes / no)
 
 question_yn() {
