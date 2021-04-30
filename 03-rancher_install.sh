@@ -49,12 +49,28 @@ helm repo add jetstack https://charts.jetstack.io
 # Update your local Helm chart repository cache
 helm repo update
 # Install Cert-Manager
-helm install \
-  cert-manager jetstack/cert-manager \
-  --namespace cert-manager \
-  --version v1.2.0 \
-  --set global.podSecurityPolicy.enabled=True \
-  --set global.podSecurityPolicy.useAppArmor=False
+if [[ $PROXY_DEPLOY == 1 ]] 
+then
+  echo "Cert Manager deployment with Proxy settings:"
+  echo "- http_proxy=${_HTTP_PROXY}"
+  echo "- https_proxy=${_HTTPS_PROXY}"
+  echo "- no_proxy=${_NO_PROXY}"
+  helm install cert-manager jetstack/cert-manager \
+    --namespace cert-manager \
+    --version v1.2.0 \
+    --set global.podSecurityPolicy.enabled=True \
+    --set global.podSecurityPolicy.useAppArmor=False \
+    --set http_proxy=http://${_HTTP_PROXY} \
+    --set https_proxy=http://${_HTTPS_PROXY} \
+    --set no_proxy=${_NO_PROXY}
+else
+  echo "Cert Manager deployment"
+  helm install cert-manager jetstack/cert-manager \
+    --namespace cert-manager \
+    --version v1.2.0 \
+    --set global.podSecurityPolicy.enabled=True \
+    --set global.podSecurityPolicy.useAppArmor=False \
+fi
   # Correction pour K8S 1.19 - sélection du profil PSP (apparmor forcé bien que désactivé)
 kubectl annotate --overwrite psp cert-manager \
   seccomp.security.alpha.kubernetes.io/allowedProfileNames=docker/default,runtime/default
@@ -77,9 +93,23 @@ ping -c 1 ${LB_RANCHER_FQDN}
 DESC_RANCHER_INSTALL="Installation de Rancher Management (${LB_RANCHER_FQDN})?${bold}"
 COMMAND_RANCHER_INSTALL() {
 kubectl create namespace cattle-system
-helm install rancher rancher-stable/rancher \
-  --namespace cattle-system \
-  --set hostname=${LB_RANCHER_FQDN}
+if [[ $PROXY_DEPLOY == 1 ]] 
+then
+  RANCHER_NO_PROXY=$(echo ${_NO_PROXY} |sed 's/,/\\,/g')
+  echo "Rancher Management Server deployment with Proxy settings:"
+  echo "- proxy=${_HTTP_PROXY}"
+  echo "- no_proxy=${RANCHER_NO_PROXY}"
+  helm install rancher rancher-stable/rancher \
+    --namespace cattle-system \
+    --set hostname=${LB_RANCHER_FQDN} \
+    --set proxy=http://${_HTTP_PROXY} \
+    --set no_proxy=${RANCHER_NO_PROXY}
+else
+  echo "Rancher Management Server deployment"
+  helm install rancher rancher-stable/rancher \
+    --namespace cattle-system \
+    --set hostname=${LB_RANCHER_FQDN} \
+fi
 echo "Verification de l'installation de rancher.app"
 read -p "#> kubectl -n cattle-system get pods,deploy"
 watch -d -c "kubectl -n cattle-system get pods,deploy"
