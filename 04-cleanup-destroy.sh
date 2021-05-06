@@ -1,12 +1,9 @@
 #!/bin/bash
 
-### Source des variables
-. ./00-vars.sh
-
-bold=$(tput bold)
-normal=$(tput sgr0)
-clear
-mapfile -t HOSTS < $HOST_LIST_FILE
+### Source variables
+source ./00-vars.sh
+source ./lang/$LANGUAGE.sh
+source ./00-common.sh
 
 while true; do
    echo -e "${bold}---\nReset de la configuration des noeuds?  ${normal}"
@@ -93,4 +90,4 @@ rm -rf /etc/ceph \
     esac
 done
 
-echo "-- FIN --"
+echo "-- $TXT_END --"

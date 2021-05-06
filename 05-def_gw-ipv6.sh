@@ -1,40 +1,11 @@
 #!/bin/bash
 
-### Source des variables
-. ./00-vars.sh
+### Source variables
+source ./00-vars.sh
+source ./lang/$LANGUAGE.sh
+source ./00-common.sh
 
-bold=$(tput bold)
-normal=$(tput sgr0)
-clear
-
-#Creation de la table HOSTS a partir du fichier HOST_LIST_FILE
-
-echo "Lecture de la liste des hotes dans $HOST_LIST_FILE"
-mapfile -t HOSTS < $HOST_LIST_FILE
-echo "Liste des hotes:"
-echo
-printf '%s\n' "${HOSTS[@]}"
-echo
-
-question_yn() {
-while true; do
-   echo -e "${bold}---\n $1 ${normal}"
-   echo -e "${bold}---\n Commande:\n ${normal}"
-   declare -f $2
-   echo
-   read -p " ${bold}Executer ? (y/n) ${normal}" yn
-   echo
-   case $yn in
-      [Yy]* )
-        $2
-      break;;
-      [Nn]* ) echo "Etape annulee";break;;
-      * ) echo "Please answer yes (y) or no (n).";;
-    esac
-done
-}
 #Selection du package manager à utiliser pour les futures commandes
-
 while true; do
    read -p "${bold}Package manager type? (zypper/yum/apt) ${normal}" pkg_mgr_type
    case $pkg_mgr_type in
@@ -156,4 +127,4 @@ question_yn "$DESC_DISABLE_IPV6" COMMAND_DISABLE_IPV6
 question_yn "$DESC_REBOOT_ALL" COMMAND_REBOOT_ALL
 
 echo
-echo "-- FIN --"
+echo "-- $TXT_END --"

@@ -1,50 +1,17 @@
 #!/bin/bash
 
-### Source des variables
-. ./00-vars.sh
+### Source variables
+source ./00-vars.sh
+source ./lang/$LANGUAGE.sh
+source ./00-common.sh
 
-bold=$(tput bold)
-normal=$(tput sgr0)
-clear
-
-#Creation de la table HOSTS a partir du fichier HOST_LIST_FILE
-
-echo "Lecture de la liste des hotes dans $HOST_LIST_FILE"
-mapfile -t HOSTS < $HOST_LIST_FILE
-echo "Liste des hotes:"
-echo
-printf '%s\n' "${HOSTS[@]}"
-echo
-
-# Detection de la configuration Proxy - Source des configurations
+# Detect and source Proxy configuration
 if [[ $PROXY_DEPLOY == 1 ]]
   then
   source /etc/profile.d/proxy.sh
 fi
 
-# Fonction generique de question (yes / no)
-
-question_yn() {
-while true; do
-   echo -e "${bold}---\n $1 ${normal}"
-   echo -e "${bold}---\n Commande:\n ${normal}"
-   declare -f $2
-   read -p " ${bold}Executer ? (y/n) ${normal}" yn
-   echo
-   case $yn in
-      [Yy]* )
-        $2
-        echo
-        read -rsp $'Pressez une touche pour continuer...\n' -n1 key
-      break;;
-      [Nn]* ) echo "Etape annulee";break;;
-      * ) echo "Please answer yes (y) or no (n).";;
-    esac
-done
-}
-
 ## CERT MANAGER INSTALL
-DESC_CERTMGR_INSTALL="Installation de Cert Manager?${bold}"
 COMMAND_CERTMGR_INSTALL() {
 # Install the CustomResourceDefinition resources separately
 kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.2.0/cert-manager.crds.yaml
@@ -93,13 +60,11 @@ watch -d -c "kubectl get all -n cert-manager"
 }
 
 ## TEST FQDN FOR RANCHER MGMT
-DESC_TEST_FQDN="Test du nom dns ${LB_RANCHER_FQDN}?${bold}"
 COMMAND_TEST_FQDN() {
 ping -c 1 ${LB_RANCHER_FQDN}
 }
 
 ## INSTALL RANCHER MANAGEMENT
-DESC_RANCHER_INSTALL="Installation de Rancher Management (${LB_RANCHER_FQDN})?${bold}"
 COMMAND_RANCHER_INSTALL() {
 kubectl create namespace cattle-system
 if [[ $PROXY_DEPLOY == 1 ]] 
@@ -127,7 +92,6 @@ watch -d -c "kubectl -n cattle-system get all"
 }
 
 ## INIT ADMIN USER
-DESC_INIT_ADMIN="Initialisation d'un utilisateur admin?${bold}"
 COMMAND_INIT_ADMIN() {
 kubectl -n cattle-system exec $(kubectl -n cattle-system get pods -l app=rancher | grep '1/1' | head -1 | awk '{ print $1 }') -- reset-password
 }
@@ -138,7 +102,7 @@ question_yn "$DESC_RANCHER_INSTALL" COMMAND_RANCHER_INSTALL
 question_yn "$DESC_INIT_ADMIN" COMMAND_INIT_ADMIN
 
 echo
-echo "Rancher Management server is available:"
+echo "Rancher Management server is available."
 echo "${bold}Url :${normal} https://${LB_RANCHER_FQDN}"
 echo
-echo "-- FIN --"
+echo "-- $TXT_END --"

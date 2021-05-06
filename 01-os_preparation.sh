@@ -3,22 +3,9 @@
 ### Source variables
 source ./00-vars.sh
 source ./lang/$LANGUAGE.sh
+source ./00-common.sh
 
-bold=$(tput bold)
-normal=$(tput sgr0)
-clear
-
-#Creation de la table HOSTS a partir du fichier HOST_LIST_FILE
-
-echo "Lecture de la liste des hotes dans $HOST_LIST_FILE"
-mapfile -t HOSTS < $HOST_LIST_FILE
-echo "Liste des hotes cibles:"
-echo
-printf '%s\n' "${HOSTS[@]}"
-echo
-
-# Selection du package manager à utiliser pour les futures commandes
-
+# Select package manager to use for next steps
 while true; do
    read -p "${bold}Package manager type? (zypper/yum/apt) ${normal}" pkg_mgr_type
    case $pkg_mgr_type in
@@ -38,37 +25,15 @@ while true; do
     esac
 done
 
-# Fonction generique de question (yes / no)
-
-question_yn() {
-while true; do
-   echo -e "${bold}---\n $1 ${normal}"
-   echo -e "${bold}---\n Commande:\n ${normal}"
-   declare -f $2
-   echo
-   read -p " ${bold}Executer ? (y/n) ${normal}" yn
-   echo
-   case $yn in
-      [Yy]* )
-        $2
-        echo
-        read -rsp $'Pressez une touche pour continuer...\n' -n1 key
-      break;;
-      [Nn]* ) echo "Etape annulee";break;;
-      * ) echo "Please answer yes (y) or no (n).";;
-    esac
-done
-}
-
 ## PRE-CHECK PACKAGE
 
 COMMAND_CHECK_PACKAGE_RPM() {
-for i in $@;do echo "Recherche de la presence du paquet: ${bold}$i${normal}"
+for i in $@;do echo "$TXT_CHECK_PACKAGE_PRESENT: ${bold}$i${normal}"
 if sudo rpm -q $i
 then
-  echo "${bold}$i${normal} is present. OK!";echo
+  echo "${bold}$i${normal} $TXT_IS_PRESENT. OK!";echo
 else
-  echo "${bold}$i${normal} is not present. ERROR!"
+  echo "${bold}$i${normal} $TXT_NOT_PRESENT. ERROR!"
   echo "sudo rpm -q ${bold}$i${normal}: 'not installed'"
 fi
 done
@@ -81,7 +46,7 @@ ssh-keygen
 
 ## SSH KEYS DEPLOY
 COMMAND_SSH_DEPLOY() {
-read -s -p "Veuillez entrer le mot de passe des clients : " PASSWD
+read -s -p "$TXT_ENTER_CLIENT_PWD : " PASSWD
 for h in ${HOSTS[*]};
   do expect -c "set timeout 2; spawn ssh-copy-id -o StrictHostKeyChecking=no $h; expect 'assword:'; send "$PASSWD\\r"; interact"
 done;
@@ -92,7 +57,7 @@ COMMAND_SSH_CONNECT_TEST() {
 for h in ${HOSTS[*]}; do ssh $h "hostname -f" ; done;
 }
 
-## Copy Proxy CA locally
+## Copy Proxy CA locally (specific to SUSE Lab FR)
 COMMAND_COPY_PROXY_CA() {
 if [[ $pkg_mgr_type == 'zypper' ]]
 then
@@ -101,7 +66,7 @@ elif [[ $pkg_mgr_type == 'yum' ]]
 then
 	PRIV_KEY_PATH="/etc/pki/ca-trust/source/anchors/"
 fi
-echo "Recuperation du certificat privé provenant du proxy."
+echo "Get private certificate from proxy."
 sudo scp -o StrictHostKeyChecking=no $PROXY_ADDR:$PROXY_CA_LOCATION /tmp/proxyCA.pem
 for h in ${HOSTS[*]}
   do
@@ -137,10 +102,10 @@ if [[ $pkg_mgr_type == 'yum' ]]
 then 
 sudo update-ca-trust
 fi
-echo 'Parametres Proxy ajoutes dans /etc/profile.d/proxy.sh'
+echo 'Proxy parameters added to /etc/profile.d/proxy.sh'
 echo"
 done
-# ajout en local egalement
+# Add locally
 sudo tee /etc/profile.d/proxy.sh <<EOF
 export http_proxy=http://${_HTTP_PROXY}
 export https_proxy=http://${_HTTPS_PROXY}
@@ -156,10 +121,10 @@ if [[ $pkg_mgr_type == 'yum' ]]
 then 
 sudo update-ca-trust
 fi
-echo "$(hostname -f) : Parametres Proxy ajoutes dans /etc/profile.d/proxy.sh"
+echo "$(hostname -f) : Proxy parameters added to /etc/profile.d/proxy.sh"
 }
 
-## LISTE DES REPOSITORIES
+## LIST REPOSITORIES
 COMMAND_REPOS_ZYPPER() {
 for h in ${HOSTS[*]}
   do ssh $h "echo && hostname -f && echo && sudo zypper lr"; 
@@ -240,6 +205,7 @@ done;
 }
 
 ## CHECK TIME
+## TODO - support chronyc and ntpq
 COMMAND_CHECK_TIME() {
 for h in ${HOSTS[*]}; do ssh $h "echo && hostname -f && sudo chronyc -a tracking |grep 'Leap status'"; done;
 }
@@ -420,5 +386,5 @@ fi
 ##################### END CHECK ACCESS ##########################################
 
 echo
-echo "-- FIN --"
-echo "Prochaine étape 02-rke_deploy.sh"
+echo "-- $TXT_END --"
+echo "$TXT_NEXT_STEP 02-rke_deploy.sh"
