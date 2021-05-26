@@ -47,14 +47,14 @@ else
     --set global.podSecurityPolicy.enabled=True \
     --set global.podSecurityPolicy.useAppArmor=False
 fi
-  # Correction pour K8S 1.19 - sélection du profil PSP (apparmor forcé bien que désactivé)
+  # Fix for K8S 1.19 - Select PSP profile (apparmor forced whereas desactivated)
 kubectl annotate --overwrite psp cert-manager \
   seccomp.security.alpha.kubernetes.io/allowedProfileNames=docker/default,runtime/default
 kubectl annotate --overwrite psp cert-manager-cainjector \
   seccomp.security.alpha.kubernetes.io/allowedProfileNames=docker/default,runtime/default
 kubectl annotate --overwrite psp cert-manager-webhook \
   seccomp.security.alpha.kubernetes.io/allowedProfileNames=docker/default,runtime/default
-echo "Verification de l'installation de Cert Manager"
+echo "$TXT_VERIFY_CERTMGR_INSTALL"
 read -p "#> kubectl get all --namespace cert-manager"
 watch -d -c "kubectl get all -n cert-manager"
 }
