@@ -343,7 +343,7 @@ fi
 ##################### END PROXY #################################################
 #
 ##################### BEGIN FIREWALL#############################################
-question_yn "$DESC_FIREWALL" COMMAND_FIREWALL
+question_yn "$pkg_mgr_type - $DESC_FIREWALL" COMMAND_FIREWALL
 question_yn "$DESC_DEFAULT_GW" COMMAND_DEFAULT_GW
 question_yn "$DESC_CHECK_TIME" COMMAND_CHECK_TIME
 question_yn "$DESC_IPFORWARD_ACTIVATE" COMMAND_IPFORWARD_ACTIVATE
@@ -353,10 +353,10 @@ question_yn "$DESC_NO_SWAP" COMMAND_NO_SWAP
 ##################### BEGIN REPOS & BINARIES ####################################
 if [[ $pkg_mgr_type == 'zypper' ]]
 then 
-question_yn "$DESC_REPOS" COMMAND_REPOS_ZYPPER
-question_yn "$DESC_ADDREPOS" COMMAND_ADDREPOS_ZYPPER
+question_yn "$pkg_mgr_type - $DESC_REPOS" COMMAND_REPOS_ZYPPER
+question_yn "$pkg_mgr_type - $DESC_ADDREPOS" COMMAND_ADDREPOS_ZYPPER
 question_yn "$DESC_NODES_UPDATE" COMMAND_NODES_UPDATE_ZYPPER
-question_yn "$DESC_DOCKER_INSTALL" COMMAND_DOCKER_INSTALL_ZYPPER
+question_yn "$pkg_mgr_type - $DESC_DOCKER_INSTALL" COMMAND_DOCKER_INSTALL_ZYPPER
 question_yn "$DESC_CREATE_DOCKER_USER" COMMAND_CREATE_DOCKER_USER
 question_yn "$DESC_K8S_TOOLS" COMMAND_K8S_TOOLS_ZYPPER
 
@@ -364,11 +364,11 @@ elif [[ $pkg_mgr_type == 'yum' ]]
 then
 question_yn "$DESC_REPOS" COMMAND_REPOS_YUM
 #question_yn "$DESC_ADDREPOS" COMMAND_ADDREPOS_YUM
-question_yn "$DESC_ADDREPOS_YUM_K8STOOLS" COMMAND_ADDREPOS_YUM_K8STOOLS
-question_yn "$DESC_NODES_UPDATE" COMMAND_NODES_UPDATE_YUM
-question_yn "$DESC_DOCKER_INSTALL_YUM" COMMAND_DOCKER_INSTALL_YUM
+question_yn "$pkg_mgr_type - $DESC_ADDREPOS_YUM_K8STOOLS" COMMAND_ADDREPOS_YUM_K8STOOLS
+question_yn "$pkg_mgr_type - $DESC_NODES_UPDATE" COMMAND_NODES_UPDATE_YUM
+question_yn "$pkg_mgr_type - $DESC_DOCKER_INSTALL_YUM" COMMAND_DOCKER_INSTALL_YUM
 question_yn "$DESC_CREATE_DOCKER_USER" COMMAND_CREATE_DOCKER_USER
-question_yn "$DESC_K8S_TOOLS" COMMAND_K8S_TOOLS_YUM
+question_yn "$pkg_mgr_type - $DESC_K8S_TOOLS" COMMAND_K8S_TOOLS_YUM
 fi
 ##################### END REPOS & BINARIES ######################################
 #
