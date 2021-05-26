@@ -1,7 +1,7 @@
 ### Common
 TXT_END="FIN"
 TXT_NEXT_STEP="Prochaine étape"
-TXT_READ_HOST_FILE="Lecture de la liste des hôtes dans"
+TXT_READ_HOST_FILE="Lecture de la liste des hôtes dans le fichier"
 TXT_LIST_HOSTS="Liste des hôtes cibles"
 TXT_IS_PRESENT="est present"
 TXT_NOT_PRESENT="est absent"
