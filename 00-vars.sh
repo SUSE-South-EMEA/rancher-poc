@@ -1,4 +1,7 @@
-######################## HOSTS LIST ###########################
+######################## LANGUAGE ################################
+LANGUAGE="fr"
+
+######################## HOSTS LIST ##############################
 ## Hosts to remote control in $HOST_LIST_FILE (one target per line)
 HOST_LIST_FILE=./hosts.list
 
