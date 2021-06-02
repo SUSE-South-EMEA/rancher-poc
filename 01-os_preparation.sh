@@ -28,12 +28,12 @@ done
 ## PRE-CHECK PACKAGE
 
 COMMAND_CHECK_PACKAGE_RPM() {
-for i in $@;do echo "$TXT_CHECK_PACKAGE_PRESENT: ${bold}$i${normal}"
+for i in $@;do echo "${TXT_CHECK_PACKAGE_PRESENT:=Checking if package is installed}: ${bold}$i${normal}"
 if sudo rpm -q $i
 then
-  echo "${bold}$i${normal} $TXT_IS_PRESENT. OK!";echo
+  echo "${bold}$i${normal} ${TXT_IS_PRESENT:=is present}. OK!";echo
 else
-  echo "${bold}$i${normal} $TXT_NOT_PRESENT. ERROR!"
+  echo "${bold}$i${normal} ${TXT_NOT_PRESENT:=is absent}. ERROR!"
   echo "sudo rpm -q ${bold}$i${normal}: 'not installed'"
 fi
 done
@@ -46,7 +46,7 @@ ssh-keygen
 
 ## SSH KEYS DEPLOY
 COMMAND_SSH_DEPLOY() {
-read -s -p "$TXT_ENTER_CLIENT_PWD : " PASSWD
+read -s -p "${TXT_ENTER_CLIENT_PWD:=Please enter target hosts SSH password}: " PASSWD
 for h in ${HOSTS[*]};
   do expect -c "set timeout 2; spawn ssh-copy-id -o StrictHostKeyChecking=no $h; expect 'assword:'; send "$PASSWD\\r"; interact"
 done;
@@ -211,7 +211,7 @@ for h in ${HOSTS[*]}; do
   ssh $h "echo && hostname -f &&
 	  if which chronyc ; then sudo chronyc -a tracking |grep 'Leap status'
  	  elif which ntpq ; then sudo ntpq -p
-	  else echo ${TXT_CHECK_TIME:=Chronyc or ntpq binaries not present. Cannot check time is synchronized}
+	  else echo ${TXT_CHECK_TIME:=Chronyc or ntpq binaries are not present. Cannot check if time is synchronized.}
 	  fi"
 done
 }
@@ -299,7 +299,7 @@ for h in ${HOSTS[*]};do
 ssh $h "
 hostname -f
 if sudo rpm -q $FIREWALL_SVC ; then
-  echo "Arret et desactivation de firewalld..."
+  echo "${TXT_FIREWALLD_STOP_DISABLE:=Stop and disable firewalld}"
   sudo systemctl stop $FIREWALL_SVC
   sudo systemctl disable $FIREWALL_SVC
 fi
@@ -307,7 +307,7 @@ fi
 done
 hostname -f
 if sudo rpm -q $FIREWALL_SVC ; then
-  echo "Arret et desactivation de firewalld..."
+  echo "${TXT_FIREWALLD_STOP_DISABLE:=Stop and disable firewalld}"
   sudo systemctl stop $FIREWALL_SVC
   sudo systemctl disable $FIREWALL_SVC
 fi
@@ -329,51 +329,51 @@ echo "A Default Gateway should be set on all nodes (even if non-existent/non-wor
 
 
 ##################### BEGIN PRE-CHECK PACKAGES ##################################
-question_yn "$DESC_CHECK_PACKAGE" "COMMAND_CHECK_PACKAGE_RPM curl expect"
+question_yn "${DESC_CHECK_PACKAGE:=Check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_RPM curl expect"
 ##################### END PRE-CHECK PACKAGES ####################################
 #
 #
 ##################### BEGIN SSH KEYS EXCHANGE ###################################
-question_yn "$DESC_SSH_KEYS" COMMAND_SSH_KEYS
-question_yn "$DESC_SSH_DEPLOY" COMMAND_SSH_DEPLOY
-question_yn "$DESC_SSH_CONNECT_TEST" COMMAND_SSH_CONNECT_TEST
+question_yn "${DESC_SSH_KEYS:=Create a local SSH key pair?}" COMMAND_SSH_KEYS
+question_yn "${DESC_SSH_DEPLOY:=Push public key to nodes?}" COMMAND_SSH_DEPLOY
+question_yn "${DESC_SSH_CONNECT_TEST:=Test SSH connection to nodes?}" COMMAND_SSH_CONNECT_TEST
 ##################### END SSH KEYS EXCHANGE #####################################
 #
 #
 ##################### BEGIN PROXY ###############################################
 if [[ $PROXY_DEPLOY == 1 ]]
 then
-question_yn "$DESC_COPY_PROXY_CA" COMMAND_COPY_PROXY_CA
-question_yn "$DESC_SET_PROXY" COMMAND_SET_PROXY
+question_yn "${DESC_COPY_PROXY_CA:=Copy proxy private key to clients. Apply parameters? (specific to SUSE FR Lab)}" COMMAND_COPY_PROXY_CA
+question_yn "${DESC_SET_PROXY:=PROXY variables are set in ./00-vars.sh. Apply parameters ? \n _HTTP_PROXY=${_HTTP_PROXY} \n _HTTPS_PROXY=${_HTTPS_PROXY} \n _NO_PROXY=${_NO_PROXY}}" COMMAND_SET_PROXY
 fi
 ##################### END PROXY #################################################
 #
 ##################### BEGIN FIREWALL#############################################
-question_yn "$pkg_mgr_type - $DESC_FIREWALL" COMMAND_FIREWALL
-question_yn "$DESC_DEFAULT_GW" COMMAND_DEFAULT_GW
-question_yn "$DESC_CHECK_TIME" COMMAND_CHECK_TIME
-question_yn "$DESC_IPFORWARD_ACTIVATE" COMMAND_IPFORWARD_ACTIVATE
-question_yn "$DESC_NO_SWAP" COMMAND_NO_SWAP
+question_yn "$pkg_mgr_type - ${DESC_FIREWALL:=Check firewalld status (must be disabled)?}" COMMAND_FIREWALL
+question_yn "${DESC_DEFAULT_GW:=Check for a defined default gateway?}" COMMAND_DEFAULT_GW
+question_yn "${DESC_CHECK_TIME:=Verify date and time on all nodes?}" COMMAND_CHECK_TIME
+question_yn "${DESC_IPFORWARD_ACTIVATE:=Enable IP forwarding?}" COMMAND_IPFORWARD_ACTIVATE
+question_yn "${DESC_NO_SWAP:=Disable swap on target nodes?}" COMMAND_NO_SWAP
 #
 #
 ##################### BEGIN REPOS & BINARIES ####################################
 if [[ $pkg_mgr_type == 'zypper' ]]
 then 
-question_yn "$pkg_mgr_type - $DESC_REPOS" COMMAND_REPOS_ZYPPER
-question_yn "$pkg_mgr_type - $DESC_ADDREPOS" COMMAND_ADDREPOS_ZYPPER
-question_yn "$DESC_NODES_UPDATE" COMMAND_NODES_UPDATE_ZYPPER
-question_yn "$pkg_mgr_type - $DESC_DOCKER_INSTALL" COMMAND_DOCKER_INSTALL_ZYPPER
-question_yn "$DESC_CREATE_DOCKER_USER" COMMAND_CREATE_DOCKER_USER
-question_yn "$DESC_K8S_TOOLS" COMMAND_K8S_TOOLS_ZYPPER
+question_yn "$pkg_mgr_type - ${DESC_REPOS:=List repositories on nodes}" COMMAND_REPOS_ZYPPER
+question_yn "$pkg_mgr_type - ${DESC_ADDREPOS:=Add sle-module-containers repositories on target and local nodes?}" COMMAND_ADDREPOS_ZYPPER
+question_yn "${DESC_NODES_UPDATE:=Update all nodes?}" COMMAND_NODES_UPDATE_ZYPPER
+question_yn "$pkg_mgr_type - ${DESC_DOCKER_INSTALL:=Install, enable and start Docker on target nodes?}" COMMAND_DOCKER_INSTALL_ZYPPER
+question_yn "${DESC_CREATE_DOCKER_USER:=Create docker user for RKE\n - Docker user: ${DOCKER_USER}\n - Docker group: ${DOCKER_GROUP}}" COMMAND_CREATE_DOCKER_USER
+question_yn "${DESC_K8S_TOOLS:=Install kubernetes-client on local node?}" COMMAND_K8S_TOOLS_ZYPPER
 
 elif [[ $pkg_mgr_type == 'yum' ]]
 then
 question_yn "$DESC_REPOS" COMMAND_REPOS_YUM
 #question_yn "$DESC_ADDREPOS" COMMAND_ADDREPOS_YUM
-question_yn "$pkg_mgr_type - $DESC_ADDREPOS_YUM_K8STOOLS" COMMAND_ADDREPOS_YUM_K8STOOLS
-question_yn "$pkg_mgr_type - $DESC_NODES_UPDATE" COMMAND_NODES_UPDATE_YUM
-question_yn "$pkg_mgr_type - $DESC_DOCKER_INSTALL_YUM" COMMAND_DOCKER_INSTALL_YUM
-question_yn "$DESC_CREATE_DOCKER_USER" COMMAND_CREATE_DOCKER_USER
+question_yn "$pkg_mgr_type - ${DESC_ADDREPOS_YUM_K8STOOLS:=Add K8S tools public repository (kubectl...)?}" COMMAND_ADDREPOS_YUM_K8STOOLS
+question_yn "$pkg_mgr_type - ${DESC_NODES_UPDATE:=Update all nodes?}" COMMAND_NODES_UPDATE_YUM
+question_yn "$pkg_mgr_type - ${DESC_DOCKER_INSTALL_YUM:=Install, enable and start Docker on target nodes?\n Docker version: ${DOCKER_VERSION}}" COMMAND_DOCKER_INSTALL_YUM
+question_yn "${DESC_CREATE_DOCKER_USER:=Create docker user for RKE\n - Docker user: ${DOCKER_USER}\n - Docker group: ${DOCKER_GROUP}}" COMMAND_CREATE_DOCKER_USER
 question_yn "$pkg_mgr_type - $DESC_K8S_TOOLS" COMMAND_K8S_TOOLS_YUM
 fi
 ##################### END REPOS & BINARIES ######################################
@@ -382,15 +382,15 @@ fi
 ##################### BEGIN DOCKER PROXY SETTINGS ###############################
 if [[ $PROXY_DEPLOY == 1 ]]
 then
-question_yn "$DESC_DOCKER_PROXY" COMMAND_DOCKER_PROXY
+question_yn "${DESC_DOCKER_PROXY:=Configure Proxy settings for Docker?}" COMMAND_DOCKER_PROXY
 fi
 ##################### END DOCKER PROXY SETTINGS #################################
 #
 #
 ##################### BEGIN CHECK ACCESS ########################################
-#question_yn "$DESC_CHECK_ACCESS" COMMAND_CHECK_ACCESS
+#question_yn "${DESC_CHECK_ACCESS:=Test access to public and storage networks from all nodes?}" COMMAND_CHECK_ACCESS
 ##################### END CHECK ACCESS ##########################################
 
 echo
-echo "-- $TXT_END --"
-echo "$TXT_NEXT_STEP 02-rke_deploy.sh"
+echo "-- ${TXT_END:=END} --"
+echo "${TXT_NEXT_STEP:=Next step} 02-rke_deploy.sh"

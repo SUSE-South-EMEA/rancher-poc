@@ -90,4 +90,4 @@ rm -rf /etc/ceph \
     esac
 done
 
-echo "-- $TXT_END --"
+echo "-- ${TXT_END:=END} --"

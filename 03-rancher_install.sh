@@ -54,7 +54,7 @@ kubectl annotate --overwrite psp cert-manager-cainjector \
   seccomp.security.alpha.kubernetes.io/allowedProfileNames=docker/default,runtime/default
 kubectl annotate --overwrite psp cert-manager-webhook \
   seccomp.security.alpha.kubernetes.io/allowedProfileNames=docker/default,runtime/default
-echo "$TXT_VERIFY_CERTMGR_INSTALL"
+echo "${TXT_MONITOR_CERTMGR_INSTALL:=Monitor Cert Manager installation}"
 read -p "#> kubectl get all --namespace cert-manager"
 watch -d -c "kubectl get all -n cert-manager"
 }
@@ -86,7 +86,7 @@ else
     --namespace cattle-system \
     --set hostname=${LB_RANCHER_FQDN}
 fi
-echo "Verification de l'installation de rancher.app"
+echo "${TXT_MONITOR_RANCHER_INSTALL:=Monitor Rancher resources deployment}"
 read -p "#> kubectl -n cattle-system get all"
 watch -d -c "kubectl -n cattle-system get all"
 }
@@ -96,13 +96,13 @@ COMMAND_INIT_ADMIN() {
 kubectl -n cattle-system exec $(kubectl -n cattle-system get pods -l app=rancher | grep '1/1' | head -1 | awk '{ print $1 }') -- reset-password
 }
 
-question_yn "$DESC_CERTMGR_INSTALL" COMMAND_CERTMGR_INSTALL
-question_yn "$DESC_TEST_FQDN" COMMAND_TEST_FQDN
-question_yn "$DESC_RANCHER_INSTALL" COMMAND_RANCHER_INSTALL
-question_yn "$DESC_INIT_ADMIN" COMMAND_INIT_ADMIN
+question_yn "${DESC_CERTMGR_INSTALL:=Install Cert Manager?}" COMMAND_CERTMGR_INSTALL
+question_yn "${DESC_TEST_FQDN:=Test DNS name ${LB_RANCHER_FQDN}?}" COMMAND_TEST_FQDN
+question_yn "${DESC_RANCHER_INSTALL:=Install Rancher Management Server (${LB_RANCHER_FQDN})?}" COMMAND_RANCHER_INSTALL
+question_yn "${DESC_INIT_ADMIN:=Init admin user password?}" COMMAND_INIT_ADMIN
 
 echo
 echo "Rancher Management server is available."
 echo "${bold}Url :${normal} https://${LB_RANCHER_FQDN}"
 echo
-echo "-- $TXT_END --"
+echo "-- ${TXT_END:=END} --"

@@ -127,4 +127,4 @@ question_yn "$DESC_DISABLE_IPV6" COMMAND_DISABLE_IPV6
 question_yn "$DESC_REBOOT_ALL" COMMAND_REBOOT_ALL
 
 echo
-echo "-- $TXT_END --"
+echo "-- ${TXT_END:=END} --"

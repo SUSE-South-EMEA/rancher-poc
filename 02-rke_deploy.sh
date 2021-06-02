@@ -42,15 +42,15 @@ echo """private_registries:
     password: $AIRGAP_REGISTRY_PASSWD """ >> ./cluster.yml
   fi
 fi
-echo "Fichier cluster.yml généré:"
+echo -e "${TXT_RKE_CONFIG_GENERATED:=Configuration file cluster.yml is created with content:\n}"
 cat ./cluster.yml
 }
 
 ## RKE DEPLOY
 COMMAND_RKE_DEPLOY() {
 rke up
-echo; echo "Veuillez patienter lors de la création des ressources du clusters."
-read -rsp $'Pressez une touche pour suivre la construction...\n' -n1 key
+echo; echo "${TXT_RKE_DEPLOY_WAIT:=Please wait while resources are being created.}"
+read -rsp "${TXT_RKE_DEPLOY_PRESS_KEY:=Press a key to monitor deployment...}" -n1 key
 export KUBECONFIG=$PWD/kube_config_cluster.yml
 watch -n1 -d kubectl get nodes,pods -A
 }
@@ -81,13 +81,13 @@ helm repo list
 }
 
 
-question_yn "$DESC_RKE_INSTALL" COMMAND_RKE_INSTALL
-question_yn "$DESC_RKE_CONFIG" COMMAND_RKE_CONFIG
-question_yn "$DESC_RKE_DEPLOY" COMMAND_RKE_DEPLOY
-question_yn "$DESC_KUBECONFIG" COMMAND_KUBECONFIG
-question_yn "$DESC_HELM_INSTALL" COMMAND_HELM_INSTALL
-question_yn "$DESC_HELM_REPOS" COMMAND_HELM_REPOS
+question_yn "${DESC_RKE_INSTALL:=Install RKE binary on local node? \n RKE version: ${RKE_VERSION}}" COMMAND_RKE_INSTALL
+question_yn "${DESC_RKE_CONFIG:=Create cluster.yml configuration file? \n Kubernetes version: $KUBERNETES_VERSION}" COMMAND_RKE_CONFIG
+question_yn "${DESC_RKE_DEPLOY:=Deploy RKE cluster?}" COMMAND_RKE_DEPLOY
+question_yn "${DESC_KUBECONFIG:=Copy Kubeconfig file to ~/.kube/config?}" COMMAND_KUBECONFIG
+question_yn "${DESC_HELM_INSTALL:=Install Helm binary? \n Helm Version: ${HELM_VERSION}}" COMMAND_HELM_INSTALL
+question_yn "${DESC_HELM_REPOS:=Add SUSE + Rancher Helm repositories (Internet!)?}" COMMAND_HELM_REPOS
 
 echo
-echo "-- $TXT_END --"
-echo "$TXT_NEXT_STEP 03-rancher_install.sh"
+echo "-- ${TXT_END:=END} --"
+echo "${TXT_NEXT_STEP:=Next step} 03-rancher_install.sh"
