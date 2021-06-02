@@ -207,7 +207,13 @@ done;
 ## CHECK TIME
 ## TODO - support chronyc and ntpq
 COMMAND_CHECK_TIME() {
-for h in ${HOSTS[*]}; do ssh $h "echo && hostname -f && sudo chronyc -a tracking |grep 'Leap status'"; done;
+for h in ${HOSTS[*]}; do
+  ssh $h "echo && hostname -f &&
+	  if which chronyc ; then sudo chronyc -a tracking |grep 'Leap status'
+ 	  elif which ntpq ; then sudo ntpq -p
+	  else echo ${TXT_CHECK_TIME:=Chronyc or ntpq binaries not present. Cannot check time is synchronized}
+	  fi"
+done
 }
 
 ## CHECK ACCESS - INTERNET/PROXY/REGISTRY
