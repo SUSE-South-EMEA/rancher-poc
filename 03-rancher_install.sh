@@ -33,7 +33,7 @@ then
   echo
   helm install cert-manager jetstack/cert-manager \
     --namespace cert-manager \
-    --version v1.2.0 \
+    --version ${CERTMGR_VERSION} \
     --set global.podSecurityPolicy.enabled=True \
     --set global.podSecurityPolicy.useAppArmor=False \
     --set http_proxy=http://${_HTTP_PROXY} \
@@ -43,7 +43,7 @@ else
   echo "Cert Manager deployment"
   helm install cert-manager jetstack/cert-manager \
     --namespace cert-manager \
-    --version v1.2.0 \
+    --version ${CERTMGR_VERSION} \
     --set global.podSecurityPolicy.enabled=True \
     --set global.podSecurityPolicy.useAppArmor=False
 fi
@@ -78,13 +78,15 @@ then
   helm install rancher rancher-stable/rancher \
     --namespace cattle-system \
     --set hostname=${LB_RANCHER_FQDN} \
+    --version ${RANCHER_VERSION} \
     --set proxy=http://${_HTTP_PROXY} \
     --set no_proxy=${RANCHER_NO_PROXY}
 else
   echo "Rancher Management Server deployment"
   helm install rancher rancher-stable/rancher \
     --namespace cattle-system \
-    --set hostname=${LB_RANCHER_FQDN}
+    --set hostname=${LB_RANCHER_FQDN} \
+    --version ${RANCHER_VERSION}
 fi
 echo "${TXT_MONITOR_RANCHER_INSTALL:=Monitor Rancher resources deployment}"
 read -p "#> kubectl -n cattle-system get all"

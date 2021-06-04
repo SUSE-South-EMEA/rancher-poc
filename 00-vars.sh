@@ -44,6 +44,8 @@ STORAGE_TARGET="192.168.1.11"
 KUBERNETES_VERSION="v1.19.10-rancher1-1"
 RKE_VERSION="v1.2.8"
 HELM_VERSION="3.5.3"
+CERTMGR_VERSION="v1.2.0"
+RANCHER_VERSION="2.5.8"
 
 ######################## FQDNs & DOMAINs #########################
 ## Rancher Management Load balancer FQDN (redirect to RKE nodes hosting Rancher)
