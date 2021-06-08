@@ -11,6 +11,7 @@ while true; do
    case $yn in
       [Yy]* )
             zypper -n in docker
+	    systemctl enable --now docker
             break;;
       [Nn]* ) 
 	        echo;

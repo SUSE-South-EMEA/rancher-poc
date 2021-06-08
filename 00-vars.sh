@@ -8,7 +8,7 @@ HOST_LIST_FILE=./hosts.list
 ######################## IF AIRGAP SETUP #########################
 ## Airgap deployment
 AIRGAP_DEPLOY="0"	# 1=airgap enabled / 0=airgap disabled
-AIRGAP_REGISTRY_URL="http://mon_registry:5000"
+AIRGAP_REGISTRY_URL="admin:5000"
 # Optional user/password
 AIRGAP_REGISTRY_USER="toto"
 AIRGAP_REGISTRY_PASSWD=""

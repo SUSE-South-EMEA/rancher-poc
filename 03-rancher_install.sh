@@ -22,7 +22,16 @@ helm repo add jetstack https://charts.jetstack.io
 # Update your local Helm chart repository cache
 helm repo update
 # Install Cert-Manager
-if [[ $PROXY_DEPLOY == 1 ]] 
+if [[ $AIRGAP_DEPLOY == 1 ]]
+then
+  echo
+  echo "${bold}Cert Manager airgap deployment${normal}"
+  echo
+  # Create the cert-manager CustomResourceDefinitions (CRDs)
+  kubectl apply -f cert-manager/cert-manager-crd.yaml
+  # Launch cert-manager
+  kubectl apply -R -f ./cert-manager
+elif [[ $PROXY_DEPLOY == 1 ]] 
 then
   RANCHER_NO_PROXY=$(echo ${_NO_PROXY} |sed 's/,/\\,/g')
   echo
@@ -40,7 +49,9 @@ then
     --set https_proxy=http://${_HTTPS_PROXY} \
     --set no_proxy=${RANCHER_NO_PROXY}
 else
+  echo
   echo "Cert Manager deployment"
+  echo
   helm install cert-manager jetstack/cert-manager \
     --namespace cert-manager \
     --version ${CERTMGR_VERSION} \
@@ -67,7 +78,13 @@ ping -c 1 ${LB_RANCHER_FQDN}
 ## INSTALL RANCHER MANAGEMENT
 COMMAND_RANCHER_INSTALL() {
 kubectl create namespace cattle-system
-if [[ $PROXY_DEPLOY == 1 ]] 
+if [[ $AIRGAP_DEPLOY == 1 ]]
+then
+  echo
+  echo "${bold}Rancher Management Server airgap deployment${normal}"
+  echo
+  kubectl -n cattle-system apply -R -f ./rancher
+elif [[ $PROXY_DEPLOY == 1 ]] 
 then
   RANCHER_NO_PROXY=$(echo ${_NO_PROXY} |sed 's/,/\\,/g')
   echo
@@ -82,7 +99,7 @@ then
     --set proxy=http://${_HTTP_PROXY} \
     --set no_proxy=${RANCHER_NO_PROXY}
 else
-  echo "Rancher Management Server deployment"
+  echo "${bold}Rancher Management Server deployment${normal}"
   helm install rancher rancher-stable/rancher \
     --namespace cattle-system \
     --set hostname=${LB_RANCHER_FQDN} \
