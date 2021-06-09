@@ -13,7 +13,9 @@ fi
 
 ## RKE INSTALL
 COMMAND_RKE_INSTALL() {
-curl -LO https://github.com/rancher/rke/releases/download/${RKE_VERSION}/rke_linux-amd64
+if [[ $AIRGAP_DEPLOY != 1 ]]; then
+  curl -LO https://github.com/rancher/rke/releases/download/${RKE_VERSION}/rke_linux-amd64
+fi
 chmod +x rke_linux-amd64
 sudo mv rke_linux-amd64 /usr/local/bin/rke
 }
@@ -66,11 +68,15 @@ chmod 600 ~/.kube/config
 
 ## INSTALL HELM
 COMMAND_HELM_INSTALL() {
-curl -O https://get.helm.sh/helm-v${HELM_VERSION}-linux-amd64.tar.gz
+if [[ $AIRGAP_DEPLOY != 1 ]]; then
+  curl -O https://get.helm.sh/helm-v${HELM_VERSION}-linux-amd64.tar.gz
+fi
 tar zxvf helm-v${HELM_VERSION}-linux-amd64.tar.gz
 sudo mv linux-amd64/helm /usr/local/bin/helm
 rm -rf linux-amd64/
-rm helm-v${HELM_VERSION}-linux-amd64.tar.gz
+if [[ $AIRGAP_DEPLOY != 1 ]]; then
+  rm helm-v${HELM_VERSION}-linux-amd64.tar.gz
+fi
 }
 
 ## REPOS HELM
