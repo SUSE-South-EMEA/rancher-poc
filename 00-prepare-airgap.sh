@@ -66,7 +66,9 @@ helm template cert-manager ./cert-manager-${CERTMGR_VERSION}.tgz --output-dir . 
     --namespace cert-manager \
     --set image.repository=${AIRGAP_REGISTRY_URL}/quay.io/jetstack/cert-manager-controller \
     --set webhook.image.repository=${AIRGAP_REGISTRY_URL}/quay.io/jetstack/cert-manager-webhook \
-    --set cainjector.image.repository=${AIRGAP_REGISTRY_URL}/quay.io/jetstack/cert-manager-cainjector
+    --set cainjector.image.repository=${AIRGAP_REGISTRY_URL}/quay.io/jetstack/cert-manager-cainjector \
+    --set global.podSecurityPolicy.enabled=True \
+    --set global.podSecurityPolicy.useAppArmor=False
 curl -L -o cert-manager/cert-manager-crd.yaml https://github.com/jetstack/cert-manager/releases/download/${CERTMGR_VERSION}/cert-manager.crds.yaml
 # Render rancher
 helm template rancher ./rancher-${RANCHER_VERSION}.tgz --output-dir . \
