@@ -78,6 +78,7 @@ helm template rancher ./rancher-${RANCHER_VERSION}.tgz --output-dir . \
     --set hostname=${LB_RANCHER_FQDN} \
     --set certmanager.version=${CERTMGR_VERSION} \
     --set rancherImage=${AIRGAP_REGISTRY_URL}/rancher/rancher \
+    --set rancherImageTag=v${RANCHER_VERSION} \
     --set systemDefaultRegistry=${AIRGAP_REGISTRY_URL} \
     --set useBundledSystemChart=true
 # Cleanup
