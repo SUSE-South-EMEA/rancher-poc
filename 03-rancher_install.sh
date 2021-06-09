@@ -6,32 +6,24 @@ source ./lang/$LANGUAGE.sh
 source ./00-common.sh
 
 # Detect and source Proxy configuration
-if [[ $PROXY_DEPLOY == 1 ]]
-  then
+if [[ $PROXY_DEPLOY == 1 ]] ; then
   source /etc/profile.d/proxy.sh
 fi
 
 ## CERT MANAGER INSTALL
 COMMAND_CERTMGR_INSTALL() {
-# Install the CustomResourceDefinition resources separately
-kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.2.0/cert-manager.crds.yaml
-# Create the namespace for cert-manager
-kubectl create namespace cert-manager
-# Add the Jetstack Helm repository
-helm repo add jetstack https://charts.jetstack.io
-# Update your local Helm chart repository cache
-helm repo update
-# Install Cert-Manager
 if [[ $AIRGAP_DEPLOY == 1 ]]
 then
   echo
   echo "${bold}Cert Manager airgap deployment${normal}"
   echo
+  # Create the namespace for cert-manager
+  kubectl create namespace cert-manager
   # Create the cert-manager CustomResourceDefinitions (CRDs)
   kubectl apply -f cert-manager/cert-manager-crd.yaml
   # Launch cert-manager
   kubectl apply -R -f ./cert-manager
-elif [[ $PROXY_DEPLOY == 1 ]] 
+elif [[ $PROXY_DEPLOY == 1 ]]
 then
   RANCHER_NO_PROXY=$(echo ${_NO_PROXY} |sed 's/,/\\,/g')
   echo
@@ -40,6 +32,15 @@ then
   echo "- https_proxy=${_HTTPS_PROXY}"
   echo "- no_proxy=${RANCHER_NO_PROXY}${normal}"
   echo
+  # Install the CustomResourceDefinition resources separately
+  kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/${CERTMGR_VERSION}/cert-manager.crds.yaml
+  # Create the namespace for cert-manager
+  kubectl create namespace cert-manager
+  # Add the Jetstack Helm repository
+  helm repo add jetstack https://charts.jetstack.io
+  # Update your local Helm chart repository cache
+  helm repo update
+  # Install Cert-Manager
   helm install cert-manager jetstack/cert-manager \
     --namespace cert-manager \
     --version ${CERTMGR_VERSION} \
@@ -52,19 +53,30 @@ else
   echo
   echo "Cert Manager deployment"
   echo
+  # Install the CustomResourceDefinition resources separately
+  kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/${CERTMGR_VERSION}/cert-manager.crds.yaml
+  # Create the namespace for cert-manager
+  kubectl create namespace cert-manager
+  # Add the Jetstack Helm repository
+  helm repo add jetstack https://charts.jetstack.io
+  # Update your local Helm chart repository cache
+  helm repo update
+  # Install Cert-Manager
   helm install cert-manager jetstack/cert-manager \
     --namespace cert-manager \
     --version ${CERTMGR_VERSION} \
     --set global.podSecurityPolicy.enabled=True \
     --set global.podSecurityPolicy.useAppArmor=False
 fi
-  # Fix for K8S 1.19 - Select PSP profile (apparmor forced whereas desactivated)
+
+# Fix for K8S 1.19 - Select PSP profile (apparmor forced whereas desactivated)
 kubectl annotate --overwrite psp cert-manager \
   seccomp.security.alpha.kubernetes.io/allowedProfileNames=docker/default,runtime/default
 kubectl annotate --overwrite psp cert-manager-cainjector \
   seccomp.security.alpha.kubernetes.io/allowedProfileNames=docker/default,runtime/default
 kubectl annotate --overwrite psp cert-manager-webhook \
   seccomp.security.alpha.kubernetes.io/allowedProfileNames=docker/default,runtime/default
+
 echo "${TXT_MONITOR_CERTMGR_INSTALL:=Monitor Cert Manager installation}"
 read -p "#> kubectl get all --namespace cert-manager"
 watch -d -c "kubectl get all -n cert-manager"

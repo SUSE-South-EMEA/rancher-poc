@@ -13,11 +13,14 @@ fi
 
 ## RKE INSTALL
 COMMAND_RKE_INSTALL() {
-if [[ $AIRGAP_DEPLOY != 1 ]]; then
+if [[ $AIRGAP_DEPLOY == 1 ]]; then
+  chmod +x rke_linux-amd64
+  sudo cp rke_linux-amd64 /usr/local/bin/rke
+else
   curl -LO https://github.com/rancher/rke/releases/download/${RKE_VERSION}/rke_linux-amd64
+  chmod +x rke_linux-amd64
+  sudo mv rke_linux-amd64 /usr/local/bin/rke
 fi
-chmod +x rke_linux-amd64
-sudo mv rke_linux-amd64 /usr/local/bin/rke
 }
 
 ## RKE CONFIG
@@ -68,22 +71,28 @@ chmod 600 ~/.kube/config
 
 ## INSTALL HELM
 COMMAND_HELM_INSTALL() {
-if [[ $AIRGAP_DEPLOY != 1 ]]; then
+if [[ $AIRGAP_DEPLOY == 1 ]]; then
+  tar zxvf helm-v${HELM_VERSION}-linux-amd64.tar.gz
+  sudo mv linux-amd64/helm /usr/local/bin/helm
+  rm -rf linux-amd64/
+else
   curl -O https://get.helm.sh/helm-v${HELM_VERSION}-linux-amd64.tar.gz
-fi
-tar zxvf helm-v${HELM_VERSION}-linux-amd64.tar.gz
-sudo mv linux-amd64/helm /usr/local/bin/helm
-rm -rf linux-amd64/
-if [[ $AIRGAP_DEPLOY != 1 ]]; then
+  tar zxvf helm-v${HELM_VERSION}-linux-amd64.tar.gz
+  sudo mv linux-amd64/helm /usr/local/bin/helm
+  rm -rf linux-amd64/
   rm helm-v${HELM_VERSION}-linux-amd64.tar.gz
 fi
 }
 
 ## REPOS HELM
 COMMAND_HELM_REPOS() {
-helm repo add suse https://kubernetes-charts.suse.com/
-helm repo add rancher-stable https://releases.rancher.com/server-charts/stable
-helm repo list
+if [[ $AIRGAP_DEPLOY == 1 ]]; then
+  echo "${TXT_HELM_REPOS:=Helm charts must be previously synced with 00-prepare-airgap.sh and placed in current directory.}"
+else
+  helm repo add suse https://kubernetes-charts.suse.com/
+  helm repo add rancher-stable https://releases.rancher.com/server-charts/stable
+  helm repo list
+fi
 }
 
 
