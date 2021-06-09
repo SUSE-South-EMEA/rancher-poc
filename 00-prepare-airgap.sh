@@ -15,6 +15,7 @@ fi
 COMMAND_DL_PREREQ_SCRIPTS() {
 # Download images list and import/export scripts
 for file in rancher-images.txt rancher-save-images.sh rancher-load-images.sh ; do
+  if [ -f $file ]; then rm $file ; fi
   wget https://github.com/rancher/rancher/releases/download/v${RANCHER_VERSION}/$file
 done
 }
