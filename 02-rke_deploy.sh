@@ -21,6 +21,7 @@ else
   chmod +x rke_linux-amd64
   sudo mv rke_linux-amd64 /usr/local/bin/rke
 fi
+rke --version
 }
 
 ## RKE CONFIG
@@ -82,6 +83,7 @@ else
   rm -rf linux-amd64/
   rm helm-v${HELM_VERSION}-linux-amd64.tar.gz
 fi
+echo -e "\nHelm installed.\n $(helm version)"
 }
 
 ## REPOS HELM
