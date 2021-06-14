@@ -8,9 +8,9 @@ HOST_LIST_FILE=./hosts.list
 ######################## IF AIRGAP SETUP #########################
 ## Airgap deployment
 AIRGAP_DEPLOY="0"	# 1=airgap enabled / 0=airgap disabled
-AIRGAP_REGISTRY_URL="admin:5000"
+AIRGAP_REGISTRY_URL="registry.local:5000"
 # Optional user/password
-AIRGAP_REGISTRY_USER="toto"
+AIRGAP_REGISTRY_USER=""
 AIRGAP_REGISTRY_PASSWD=""
 
 ######################## IF PROXY SETUP ##########################
@@ -44,7 +44,7 @@ STORAGE_TARGET="192.168.1.11"
 KUBERNETES_VERSION="v1.19.10-rancher1-1"
 RKE_VERSION="v1.2.8"
 HELM_VERSION="3.5.3"
-CERTMGR_VERSION="v1.2.0"
+CERTMGR_VERSION="v1.0.4"
 RANCHER_VERSION="2.5.8"
 
 ######################## FQDNs & DOMAINs #########################
