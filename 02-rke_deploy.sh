@@ -58,7 +58,7 @@ rke up
 echo; echo "${TXT_RKE_DEPLOY_WAIT:=Please wait while resources are being created.}"
 read -rsp "${TXT_RKE_DEPLOY_PRESS_KEY:=Press a key to monitor deployment...}" -n1 key
 export KUBECONFIG=$PWD/kube_config_cluster.yml
-watch -n1 -d kubectl get nodes,pods -A
+watch -n1 -d "kubectl get nodes,pods -A"
 }
 
 ## KUBECONFIG SETUP

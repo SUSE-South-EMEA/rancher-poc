@@ -9,6 +9,7 @@ HOST_LIST_FILE=./hosts.list
 ## Airgap deployment
 AIRGAP_DEPLOY="0"	# 1=airgap enabled / 0=airgap disabled
 AIRGAP_REGISTRY_URL="registry.local:5000"
+AIRGAP_REGISTRY_CACERT="/etc/docker-distribution/registry/host.cert"
 # Optional user/password
 AIRGAP_REGISTRY_USER=""
 AIRGAP_REGISTRY_PASSWD=""
@@ -23,8 +24,8 @@ _NO_PROXY=127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,cattle-system.svc,
 PROXY_CA_LOCATION="/etc/squid/ssl_cert/proxyCA.pem"
 
 ######################## DOCKER SETUP ############################
-### DEPRECATED - Now use docker package from distribution
-#DOCKER_VERSION="19.03"  # options [19.03|20.10]
+## DEPRECATED - Now use docker package from distribution
+DOCKER_VERSION="19.03"  # options [19.03|20.10]
 ## Docker user to be created on target hosts
 DOCKER_USER="rkedeploy"
 ## Docker group to be joined by Docker user

@@ -147,47 +147,6 @@ sudo zypper ar -G http://${REPO_SERVER}/ks/dist/child/sle-module-containers15-sp
 sudo zypper ar -G http://${REPO_SERVER}/ks/dist/child/sle-module-containers15-sp2-updates-x86_64/sles15sp2 containers_updates
 }
 
-COMMAND_ADDREPOS_YUM() {
-for h in ${HOSTS[*]}
-  do ssh $h "echo ; hostname -f ; echo
-sudo tee /etc/yum.repos.d/res7.repo <<EOF
-[res7]
-name=res7
-baseurl=http://${REPO_SERVER}/ks/dist/child/res7-x86_64/rhel76
-enabled=1
-gpgcheck=0
-EOF
-sudo tee /etc/yum.repos.d/res7-iso.repo <<EOF
-[res7-iso]
-name=res7.6-ISO
-baseurl=http://${REPO_SERVER}/ks/dist/child/rhel76-iso/rhel76
-enabled=1
-gpgcheck=0
-EOF
-sudo tee  /etc/yum.repos.d/res7-suma.repo <<EOF
-[res7-SUMA]
-name=res7-SUMA_BOOTSTRAP
-baseurl=http://${REPO_SERVER}/ks/dist/child/res7-suse-manager-tools-x86_64/rhel76
-enabled=1
-gpgcheck=0
-EOF"
-done
-}
-
-## YUM SPECIFIC REPO FOR K8S TOOLS 
-COMMAND_ADDREPOS_YUM_K8STOOLS() {
-sudo tee /etc/yum.repos.d/kubernetes.repo <<EOF
-[kubernetes]
-name=Kubernetes
-baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
-enabled=1
-gpgcheck=1
-repo_gpgcheck=1
-gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
-EOF
-echo -e "Repo for K8S Tools has been added."
-}
-
 ## ALL NODES UPDATE 
 COMMAND_NODES_UPDATE_ZYPPER() {
 for h in ${HOSTS[*]}
@@ -232,8 +191,27 @@ for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; sudo zypper ref ; sudo zyp
 for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; sudo systemctl enable docker ; sudo systemctl start docker && echo 'Docker is activated' || echo 'Docker could not start'"; done;
 }
 COMMAND_DOCKER_INSTALL_YUM() {
-for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; sudo yum install -y docker"; done;
+if [[ $AIRGAP_DEPLOY == 1 ]]; then
+  for h in ${HOSTS[*]}; do scp docker-ce*.rpm docker-scan-plugin*.rpm containerd.io*.rpm $h:/tmp ; done;
+  for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; cd /tmp ; sudo yum install -y docker-ce*.rpm docker-scan-plugin*.rpm containerd.io*.rpm"; done;
+else
+  for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; curl -s http://releases.rancher.com/install-docker/${DOCKER_VERSION}.sh | sudo /bin/bash"; done
+fi
 for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; sudo systemctl enable docker ; sudo systemctl start docker && echo 'Docker is activated' || echo 'Docker could not start'"; done;
+}
+
+COMMAND_CONFIGURE_DOCKER_DAEMON() {
+# Create docker configuration daemon.json
+for h in ${HOSTS[*]} ; do
+ssh $h "hostname -f ; sudo tee /etc/docker/daemon.json <<EOF
+{\"registry-mirrors\": [\"https://${AIRGAP_REGISTRY_URL}\"]}
+EOF
+echo"
+# Copy registry CA certificate
+ssh $h "mkdir -p /etc/docker/certs.d/${AIRGAP_REGISTRY_URL}/"
+scp ${AIRGAP_REGISTRY_CACERT} $h:/etc/docker/certs.d/${AIRGAP_REGISTRY_URL}/ca.crt
+ssh $h "systemctl restart docker"
+done
 }
 
 ## DOCKER USER/GROUP FOR RKE
@@ -277,11 +255,18 @@ for h in ${HOSTS[*]};do ssh $h "echo; hostname -f; grep swap /etc/fstab; sudo sw
 }
 
 ## OUTILS K8S
+COMMAND_INSTALL_KUBECTL() {
+if [[ $AIRGAP_DEPLOY != 1 ]] ; then
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+fi
+sudo install -v -o root -g root -m 0755 kubectl /usr/bin/kubectl
+}
 COMMAND_K8S_TOOLS_ZYPPER() {
 sudo zypper -n in kubernetes1.18-client
 }
 COMMAND_K8S_TOOLS_YUM() {
-sudo yum install -y kubectl
+sudo yum install -y kubernetes-client
+# For Google repositories : sudo yum install -y kubectl
 }
 
 ## CHECK FIREWALLD
@@ -362,18 +347,21 @@ question_yn "$pkg_mgr_type - ${DESC_ADDREPOS:=Add sle-module-containers reposito
 question_yn "${DESC_NODES_UPDATE:=Update all nodes?}" COMMAND_NODES_UPDATE_ZYPPER
 question_yn "$pkg_mgr_type - ${DESC_DOCKER_INSTALL:=Install, enable and start Docker on target nodes?}" COMMAND_DOCKER_INSTALL_ZYPPER
 question_yn "${DESC_CREATE_DOCKER_USER:=Create docker user for RKE\n - Docker user: ${DOCKER_USER}\n - Docker group: ${DOCKER_GROUP}}" COMMAND_CREATE_DOCKER_USER
-question_yn "${DESC_K8S_TOOLS:=Install kubernetes-client on local node?}" COMMAND_K8S_TOOLS_ZYPPER
 
 elif [[ $pkg_mgr_type == 'yum' ]]
 then
 question_yn "$DESC_REPOS" COMMAND_REPOS_YUM
-#question_yn "$DESC_ADDREPOS" COMMAND_ADDREPOS_YUM
-question_yn "$pkg_mgr_type - ${DESC_ADDREPOS_YUM_K8STOOLS:=Add K8S tools public repository (kubectl...)?}" COMMAND_ADDREPOS_YUM_K8STOOLS
+# question_yn "$pkg_mgr_type - ${DESC_ADDREPOS_YUM_K8STOOLS:=Add Google public repository for Kubernetes tools (kubectl...)?}" COMMAND_ADDREPOS_YUM_K8STOOLS
 question_yn "$pkg_mgr_type - ${DESC_NODES_UPDATE:=Update all nodes?}" COMMAND_NODES_UPDATE_YUM
 question_yn "$pkg_mgr_type - ${DESC_DOCKER_INSTALL_YUM:=Install, enable and start Docker on target nodes?}" COMMAND_DOCKER_INSTALL_YUM
 question_yn "${DESC_CREATE_DOCKER_USER:=Create docker user for RKE\n - Docker user: ${DOCKER_USER}\n - Docker group: ${DOCKER_GROUP}}" COMMAND_CREATE_DOCKER_USER
-question_yn "$pkg_mgr_type - $DESC_K8S_TOOLS" COMMAND_K8S_TOOLS_YUM
 fi
+
+if [[ $AIRGAP_DEPLOY == 1 ]] ; then
+  question_yn "${DESC_CONFIGURE_DOCKER_DAEMON:=Configure docker daemon to use private registry?}" COMMAND_CONFIGURE_DOCKER_DAEMON
+fi
+
+question_yn "${DESC_INSTALL_KUBECTL:=Install kubectl on local node?}" COMMAND_INSTALL_KUBECTL
 ##################### END REPOS & BINARIES ######################################
 #
 #

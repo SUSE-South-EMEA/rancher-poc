@@ -38,7 +38,7 @@ sudo systemctl enable docker ; sudo systemctl start docker && echo 'Docker is ac
 }
 
 COMMAND_DOCKER_INSTALL_YUM_LOCAL() {
-sudo yum install -y docker
+curl -s http://releases.rancher.com/install-docker/${DOCKER_VERSION}.sh | sudo /bin/bash
 sudo systemctl enable docker ; sudo systemctl start docker && echo 'Docker is activated' || echo 'Docker could not start'
 }
 
@@ -51,13 +51,24 @@ done
 }
 
 COMMAND_DL_PREREQ_BINARIES() {
-# Download RKE binary
+echo
+echo "${TXT_DL_RKE_BIN:=Download RKE binary}"
 curl -LO https://github.com/rancher/rke/releases/download/${RKE_VERSION}/rke_linux-amd64
-# Download and install Helm
+
+echo
+echo "${TXT_DL_INSTALL_HELM:=Download and install Helm}"
 curl -O https://get.helm.sh/helm-v${HELM_VERSION}-linux-amd64.tar.gz
 tar zxvf helm-v${HELM_VERSION}-linux-amd64.tar.gz
 sudo mv linux-amd64/helm /usr/local/bin/helm
 rm -rf linux-amd64/
+
+echo
+echo "${TXT_DL_KUBECTL:=Download kubectl binary}"
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+
+echo
+echo "${TXT_DL_DOCKER_RPM:=Download Docker RPMs}"
+yumdownloader docker-ce docker-ce-cli docker-ce-rootless-extras docker-scan-plugin containerd.io
 }
 
 COMMAND_FETCH_CERTMGR_IMAGES() {
@@ -73,7 +84,7 @@ COMMAND_SAVE_IMAGES() {
 sort -u rancher-images.txt -o rancher-images.txt
 # Save images
 chmod +x rancher-save-images.sh
-./rancher-save-images.sh --image-list ./rancher-images.txt
+sudo ./rancher-save-images.sh --image-list ./rancher-images.txt
 echo "${TXT_SAVE_IMAGES:=Images saved in rancher-images.tar.gz.}"
 }
 
@@ -81,7 +92,7 @@ COMMAND_PUSH_IMAGES() {
 # Push images
 chmod +x rancher-load-images.sh
 #docker login ${AIRGAP_REGISTRY_URL}
-./rancher-load-images.sh --image-list ./rancher-images.txt --registry ${AIRGAP_REGISTRY_URL}
+sudo ./rancher-load-images.sh --image-list ./rancher-images.txt --registry ${AIRGAP_REGISTRY_URL}
 }
 
 COMMAND_HELM_MIRROR() {
@@ -124,7 +135,7 @@ then
 question_yn "$pkg_mgr_type - ${DESC_DOCKER_INSTALL_LOCAL_YUM:=Install, enable and start Docker on local host?}" COMMAND_DOCKER_INSTALL_YUM_LOCAL
 fi
 question_yn "${DESC_DL_PREREQ_SCRIPTS:=Download images list and import/export scripts?}" COMMAND_DL_PREREQ_SCRIPTS
-question_yn "${DESC_DL_PREREQ_BINARIES:=Download RKE/Helm binaries and install Helm?}" COMMAND_DL_PREREQ_BINARIES
+question_yn "${DESC_DL_PREREQ_BINARIES:=Download RKE/Helm/Docker and install Helm?}" COMMAND_DL_PREREQ_BINARIES
 question_yn "${DESC_FETCH_CERTMGR_IMAGES:=Fetch cert-manager images?}" COMMAND_FETCH_CERTMGR_IMAGES
 question_yn "${DESC_SAVE_IMAGES:=Save images locally?}" COMMAND_SAVE_IMAGES
 question_yn "${DESC_PUSH_IMAGES:=Push images to registry?\n - Registry URL: ${AIRGAP_REGISTRY_URL}}" COMMAND_PUSH_IMAGES
