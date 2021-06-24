@@ -1,5 +1,5 @@
 ######################## LANGUAGE ################################
-LANGUAGE="en"
+LANGUAGE="fr"
 
 ######################## HOSTS LIST ##############################
 ## Hosts to remote control in $HOST_LIST_FILE (one target per line)
@@ -23,8 +23,8 @@ _NO_PROXY=127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,cattle-system.svc,
 PROXY_CA_LOCATION="/etc/squid/ssl_cert/proxyCA.pem"
 
 ######################## DOCKER SETUP ############################
-## Docker version to use
-DOCKER_VERSION="19.03"  # options [19.03|20.10]
+### DEPRECATED - Now use docker package from distribution
+#DOCKER_VERSION="19.03"  # options [19.03|20.10]
 ## Docker user to be created on target hosts
 DOCKER_USER="rkedeploy"
 ## Docker group to be joined by Docker user

@@ -232,9 +232,7 @@ for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; sudo zypper ref ; sudo zyp
 for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; sudo systemctl enable docker ; sudo systemctl start docker && echo 'Docker is activated' || echo 'Docker could not start'"; done;
 }
 COMMAND_DOCKER_INSTALL_YUM() {
-for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; sudo yum install -y http://mirror.centos.org/centos/7/extras/x86_64/Packages/container-selinux-2.107-3.el7.noarch.rpm"; done;
-for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; sudo yum install -y http://mirror.centos.org/centos/7/extras/x86_64/Packages/slirp4netns-0.4.3-4.el7_8.x86_64.rpm"; done;
-for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; curl -s http://releases.rancher.com/install-docker/${DOCKER_VERSION}.sh | /bin/bash"; done;
+for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; sudo yum install -y docker"; done;
 for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; sudo systemctl enable docker ; sudo systemctl start docker && echo 'Docker is activated' || echo 'Docker could not start'"; done;
 }
 
@@ -372,7 +370,7 @@ question_yn "$DESC_REPOS" COMMAND_REPOS_YUM
 #question_yn "$DESC_ADDREPOS" COMMAND_ADDREPOS_YUM
 question_yn "$pkg_mgr_type - ${DESC_ADDREPOS_YUM_K8STOOLS:=Add K8S tools public repository (kubectl...)?}" COMMAND_ADDREPOS_YUM_K8STOOLS
 question_yn "$pkg_mgr_type - ${DESC_NODES_UPDATE:=Update all nodes?}" COMMAND_NODES_UPDATE_YUM
-question_yn "$pkg_mgr_type - ${DESC_DOCKER_INSTALL_YUM:=Install, enable and start Docker on target nodes?\n Docker version: ${DOCKER_VERSION}}" COMMAND_DOCKER_INSTALL_YUM
+question_yn "$pkg_mgr_type - ${DESC_DOCKER_INSTALL_YUM:=Install, enable and start Docker on target nodes?}" COMMAND_DOCKER_INSTALL_YUM
 question_yn "${DESC_CREATE_DOCKER_USER:=Create docker user for RKE\n - Docker user: ${DOCKER_USER}\n - Docker group: ${DOCKER_GROUP}}" COMMAND_CREATE_DOCKER_USER
 question_yn "$pkg_mgr_type - $DESC_K8S_TOOLS" COMMAND_K8S_TOOLS_YUM
 fi

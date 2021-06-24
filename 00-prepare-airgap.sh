@@ -12,6 +12,36 @@ if [[ $AIRGAP_DEPLOY != 1 ]]; then
  exit 1
 fi
 
+# Select package manager to use for next steps
+while true; do
+   read -p "${bold}Package manager type? (zypper/yum/apt) ${normal}" pkg_mgr_type
+   case $pkg_mgr_type in
+      [zypper]* )
+            echo "$pkg_mgr_type selected."
+            echo
+            break;;
+      [yum]* )
+            echo "$pkg_mgr_type selected."
+            echo
+            break;;
+      [apt]* )
+            echo "$pkg_mgr_type selected."
+            echo
+            break;;
+      * ) echo "Please answer: zypper or yum or apt.";;
+    esac
+done
+
+COMMAND_DOCKER_INSTALL_ZYPPER_LOCAL() {
+sudo zypper ref ; sudo zypper --non-interactive in docker
+sudo systemctl enable docker ; sudo systemctl start docker && echo 'Docker is activated' || echo 'Docker could not start'
+}
+
+COMMAND_DOCKER_INSTALL_YUM_LOCAL() {
+sudo yum install -y docker
+sudo systemctl enable docker ; sudo systemctl start docker && echo 'Docker is activated' || echo 'Docker could not start'
+}
+
 COMMAND_DL_PREREQ_SCRIPTS() {
 # Download images list and import/export scripts
 for file in rancher-images.txt rancher-save-images.sh rancher-load-images.sh ; do
@@ -86,6 +116,13 @@ rm -f cert-manager-${CERTMGR_VERSION}.tgz rancher-${RANCHER_VERSION}.tgz
 }
 
 ##################### BEGIN COMMANDS ###################################
+if [[ $pkg_mgr_type == 'zypper' ]]
+then
+question_yn "$pkg_mgr_type - ${DESC_DOCKER_INSTALL_ZYPPER_LOCAL:=Install, enable and start Docker on local host?}" COMMAND_DOCKER_INSTALL_ZYPPER_LOCAL
+elif [[ $pkg_mgr_type == 'yum' ]]
+then
+question_yn "$pkg_mgr_type - ${DESC_DOCKER_INSTALL_LOCAL_YUM:=Install, enable and start Docker on local host?}" COMMAND_DOCKER_INSTALL_YUM_LOCAL
+fi
 question_yn "${DESC_DL_PREREQ_SCRIPTS:=Download images list and import/export scripts?}" COMMAND_DL_PREREQ_SCRIPTS
 question_yn "${DESC_DL_PREREQ_BINARIES:=Download RKE/Helm binaries and install Helm?}" COMMAND_DL_PREREQ_BINARIES
 question_yn "${DESC_FETCH_CERTMGR_IMAGES:=Fetch cert-manager images?}" COMMAND_FETCH_CERTMGR_IMAGES
