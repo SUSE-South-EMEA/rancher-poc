@@ -192,7 +192,7 @@ for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; sudo systemctl enable dock
 }
 COMMAND_DOCKER_INSTALL_YUM() {
 if [[ $AIRGAP_DEPLOY == 1 ]]; then
-  for h in ${HOSTS[*]}; do scp docker-ce*.rpm docker-scan-plugin*.rpm containerd.io*.rpm $h:/tmp ; done;
+  for h in ${HOSTS[*]}; do echo "$h" ; scp docker-ce*.rpm docker-scan-plugin*.rpm containerd.io*.rpm $h:/tmp ; done;
   for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; cd /tmp ; sudo yum install -y docker-ce*.rpm docker-scan-plugin*.rpm containerd.io*.rpm"; done;
 else
   for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; curl -s http://releases.rancher.com/install-docker/${DOCKER_VERSION}.sh | sudo /bin/bash"; done
@@ -207,9 +207,11 @@ ssh $h "hostname -f ; sudo tee /etc/docker/daemon.json <<EOF
 {\"registry-mirrors\": [\"https://${AIRGAP_REGISTRY_URL}\"]}
 EOF
 echo"
-# Copy registry CA certificate
-ssh $h "mkdir -p /etc/docker/certs.d/${AIRGAP_REGISTRY_URL}/"
-scp ${AIRGAP_REGISTRY_CACERT} $h:/etc/docker/certs.d/${AIRGAP_REGISTRY_URL}/ca.crt
+if [[ ! -z ${AIRGAP_REGISTRY_CACERT} ]] ; then
+  echo "${TXT_REGISTRY_COPY_CACERT:=Copy registry CA certificate}"
+  ssh $h "mkdir -p /etc/docker/certs.d/${AIRGAP_REGISTRY_URL}/"
+  scp ${AIRGAP_REGISTRY_CACERT} $h:/etc/docker/certs.d/${AIRGAP_REGISTRY_URL}/ca.crt
+fi
 ssh $h "systemctl restart docker"
 done
 }
