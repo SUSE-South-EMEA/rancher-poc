@@ -68,7 +68,7 @@ curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stabl
 
 echo
 echo "${TXT_DL_DOCKER_RPM:=Download Docker RPMs}"
-yumdownloader docker-ce docker-ce-cli docker-ce-rootless-extras docker-scan-plugin containerd.io
+yumdownloader docker-ce-${DOCKER_VERSION}* docker-ce-cli-${DOCKER_VERSION}* docker-ce-rootless-extras-${DOCKER_VERSION}* docker-scan-plugin containerd.io
 }
 
 COMMAND_FETCH_CERTMGR_IMAGES() {
