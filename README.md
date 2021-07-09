@@ -51,7 +51,7 @@ The Rancher UI will need a FQDN which load balances the connections toward the R
 
 ```bash
 git config --global http.sslVerify false
-https://github.com/SUSE-South-EMEA/rancher-poc.git
+git clone http://git.zypp.fr/se/rancher-poc.git
 cd rancher-poc
 ```
 
