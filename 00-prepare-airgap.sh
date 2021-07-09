@@ -68,7 +68,8 @@ curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stabl
 
 echo
 echo "${TXT_DL_DOCKER_RPM:=Download Docker RPMs}"
-yumdownloader docker-ce-${DOCKER_VERSION}* docker-ce-cli-${DOCKER_VERSION}* docker-ce-rootless-extras-${DOCKER_VERSION}* docker-scan-plugin containerd.io
+yumdownloader docker-ce-${DOCKER_VERSION}* docker-ce-cli-${DOCKER_VERSION}* docker-scan-plugin containerd.io
+if [ "${DOCKER_VERSION}" == "20.10" ] ; then yumdownloader docker-ce-rootless-extras-${DOCKER_VERSION}* ; fi
 }
 
 COMMAND_FETCH_CERTMGR_IMAGES() {
