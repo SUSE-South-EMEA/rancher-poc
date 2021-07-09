@@ -176,13 +176,13 @@ done
 }
 
 ## CHECK ACCESS - INTERNET/PROXY/REGISTRY
-COMMAND_CHECK_ACCESS() {
-echo -e "Reseau Public (registry.suse.com):"
-for h in ${HOSTS[*]}; do ssh $h "echo && hostname -f && curl -s -o /dev/null -I https://registry.suse.com  && echo 'registry.suse.com: OK' || echo 'registry.suse.com: FAIL'"; done;
+COMMAND_CHECK_ACCESS_REGISTRY() {
+for h in ${HOSTS[*]}; do ssh $h "echo && hostname -f && curl -s -o /dev/null -I ${AIRGAP_REGISTRY_URL}  && echo '${AIRGAP_REGISTRY_URL}: OK' || echo '${AIRGAP_REGISTRY_URL}: FAIL'"; done;
 echo
-echo -e "Reseau de Stockage:"
-echo -e "Sauf pour la machine admin (isolation réseau)"
-for h in ${HOSTS[*]}; do ssh $h "echo && hostname -f && ping -c1 $STORAGE_TARGET > /dev/null  && echo 'Acces Stockage: OK' || echo 'Acces Stockage: FAIL'"; done;
+}
+
+COMMAND_CHECK_ACCESS_STORAGE_NET() {
+for h in ${HOSTS[*]}; do ssh $h "echo && hostname -f && ping -c1 $STORAGE_TARGET > /dev/null  && echo 'ping $STORAGE_TARGET: OK' || echo 'ping $STORAGE_TARGET: FAIL'"; done;
 }
 
 ## DOCKER INSTALL
@@ -376,7 +376,8 @@ fi
 #
 #
 ##################### BEGIN CHECK ACCESS ########################################
-#question_yn "${DESC_CHECK_ACCESS:=Test access to public and storage networks from all nodes?}" COMMAND_CHECK_ACCESS
+question_yn "${DESC_CHECK_ACCESS_REGISTRY:=Check ${AIRGAP_REGISTRY_URL} is accessible from all nodes?}" COMMAND_CHECK_ACCESS_REGISTRY
+question_yn "${DESC_CHECK_ACCESS_STORAGE_NET:=Check $STORAGE_TARGET is accessible from all nodes?}" COMMAND_CHECK_ACCESS_STORAGE_NET
 ##################### END CHECK ACCESS ##########################################
 
 echo
