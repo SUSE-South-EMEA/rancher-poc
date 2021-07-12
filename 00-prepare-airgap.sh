@@ -32,6 +32,13 @@ while true; do
     esac
 done
 
+## PRE-CHECK PACKAGE
+
+COMMAND_INSTALL_YUM_UTILS() {
+# Install yum-utils package (needed for 'yumdownloader')
+yum install -y yum-utils
+}
+
 COMMAND_DOCKER_INSTALL_ZYPPER_LOCAL() {
 sudo zypper ref ; sudo zypper --non-interactive in docker
 sudo systemctl enable docker ; sudo systemctl start docker && echo 'Docker is activated' || echo 'Docker could not start'
@@ -132,6 +139,7 @@ then
 question_yn "$pkg_mgr_type - ${DESC_DOCKER_INSTALL_ZYPPER_LOCAL:=Install, enable and start Docker on local host?}" COMMAND_DOCKER_INSTALL_ZYPPER_LOCAL
 elif [[ $pkg_mgr_type == 'yum' ]]
 then
+question_yn "$pkg_mgr_type - ${DESC_INSTALL_YUM_UTILS:=Install yum-utils package (containing yumdownloader needed for next steps) ?}" COMMAND_INSTALL_YUM_UTILS
 question_yn "$pkg_mgr_type - ${DESC_DOCKER_INSTALL_LOCAL_YUM:=Install, enable and start Docker on local host?}" COMMAND_DOCKER_INSTALL_YUM_LOCAL
 fi
 question_yn "${DESC_DL_PREREQ_SCRIPTS:=Download images list and import/export scripts?}" COMMAND_DL_PREREQ_SCRIPTS
