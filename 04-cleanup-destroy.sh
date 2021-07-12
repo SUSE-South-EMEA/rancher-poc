@@ -5,27 +5,27 @@ source ./00-vars.sh
 source ./lang/$LANGUAGE.sh
 source ./00-common.sh
 
-while true; do
-   echo -e "${bold}---\nReset de la configuration des noeuds?  ${normal}"
-   echo " ${bold}Commande :${normal}"
-   echo " - Suppression des images docker"
-   echo " - suppression des dossiers k8s, ceph, rke et cni"
-   read -p " ${bold}Executer ? (y/n) ${normal}" yn
-   echo
-   case $yn in
-      [Yy]* )
-         echo "Execution en cours..."
-         for h in ${HOSTS[*]}; do 
-            echo  
-            echo "Host = $h" 
-            ssh $h "docker ps -qa | xargs docker rm -f ; \
-		docker images -q | xargs docker rmi -f  ; \
-		docker volume ls -q | xargs docker volume rm ; "
+COMMAND_RKE_REMOVE() {
+# Remote rke cluster
+rke remove
+}
 
-	    ssh $h "mount | grep tmpfs | grep '/var/lib/kubelet' | awk '{ print $3 }' | xargs umount ; \
-                    umount /var/lib/kubelet; umount /var/lib/rancher"
+COMMAND_NODES_CLEANUP() {
+for h in ${HOSTS[*]}; do 
+echo  
+echo "${bold}${TXT_CLEANUP_NODE:=Cleanup node $h}${normal}" 
+echo
+echo "- ${TXT_DOCKER_IMAGES_VOLUMES_CLEAN:=Removing docker images and volumes}"
+ssh $h "sudo docker ps -qa | xargs sudo docker rm -f ; \
+	sudo docker images -q | xargs sudo docker rmi -f  ; \
+	sudo docker volume ls -q | xargs sudo docker volume rm ;"
 
-	ssh $h "rm -rf /etc/ceph \
+echo "- ${TXT_DOCKER_MOUNT_CLEAN:=Unmounting docker and kubernetes specific directories}"
+ssh $h "sudo mount | grep tmpfs | grep '/var/lib/kubelet' | awk '{ print $3 }' | xargs sudo umount ; \
+        sudo umount /var/lib/kubelet; sudo umount /var/lib/rancher"
+
+echo "- ${TXT_DOCKER_CLEAN_DIR:=Removing docker and kubernetes specific directories}"
+ssh $h "sudo rm -rf /etc/ceph \
        /etc/cni \
        /etc/kubernetes \
        /opt/cni \
@@ -42,32 +42,23 @@ while true; do
        /var/log/kube-audit \
        /var/log/pods \
        /var/run/calico" 
-         done
-         echo "Done."
-         break;;
-      [Nn]* ) echo "Etape annulee";break;;
-        * ) echo "Please answer yes (y) or no (n).";;
-    esac
 done
+}
+
+COMMAND_LOCAL_DOCKER_CLEANUP() {
+echo "${bold}${TXT_CLEANUP_LOCAL_NODE:=Cleanup local node} $HOSTNAME ${normal}"
 echo
-
-while true; do
-   echo -e "${bold}---\nReset de la configuration locale?  ${normal}"
-   echo " ${bold}Commande en local:${normal}"
-   echo " - Suppression des images docker"
-   echo " - suppression des dossiers k8s, ceph, rke et cni"
-   read -p " ${bold}Executer ? (y/n) ${normal}" yn
-   echo
-   case $yn in
-      [Yy]* )
-         echo "Execution en cours..."
-docker ps -qa | xargs docker rm -f 
-docker images -q | xargs docker rmi -f 
-docker volume ls -q | xargs docker volume rm
-
-mount | grep tmpfs | grep '/var/lib/kubelet' | awk '{ print $3 }' | xargs umount ; umount /var/lib/kubelet; umount /var/lib/rancher
-
-rm -rf /etc/ceph \
+echo "- ${TXT_LOCAL_DOCKER_IMAGES_VOLUMES_CLEAN:=Removing local docker images and volumes}"
+sudo docker ps -qa | xargs sudo docker rm -f
+sudo docker images -q | xargs sudo docker rmi -f
+sudo docker volume ls -q | xargs sudo docker volume rm
+echo
+echo "- ${TXT_LOCAL_DOCKER_MOUNT_CLEAN:=Unmounting local docker and kubernetes specific directories}"
+sudo mount | grep tmpfs | grep '/var/lib/kubelet' | awk '{ print $3 }' | xargs sudo umount
+sudo umount /var/lib/kubelet; sudo umount /var/lib/rancher
+echo
+echo "- ${TXT_LOCAL_DOCKER_CLEAN_DIR:=Removing local docker and kubernetes specific directories}"
+sudo rm -rf /etc/ceph \
        /etc/cni \
        /etc/kubernetes \
        /opt/cni \
@@ -84,10 +75,25 @@ rm -rf /etc/ceph \
        /var/log/kube-audit \
        /var/log/pods \
        /var/run/calico
-       break;;
-      [Nn]* ) echo "Etape annulee";break;;
-        * ) echo "Please answer yes (y) or no (n).";;
-    esac
-done
+}
+
+COMMAND_LOCAL_AIRGAP_RESOURCES_CLEANUP() {
+# Rancher images and scripts
+sudo rm -f rancher-images.tar.gz rancher-images.txt rancher-load-images.sh rancher-save-images.sh
+# Prereqs binaries
+sudo rm -f helm-v*-linux-amd64.tar.gz kubectl rke_linux-amd64
+# Docker RPMs
+sudo rm -f *.rpm
+# Fetched Helm charts
+sudo rm -rf cert-manager rancher
+}
+
+
+##################### BEGIN CLEANUP ##################################
+question_yn "${DESC_RKE_REMOVE:=Remove RKE cluster?}" COMMAND_RKE_REMOVE
+question_yn "${DESC_NODES_CLEANUP:=Cleanup nodes - remove docker images, volumes, mountpoints and directories?}" COMMAND_NODES_CLEANUP
+question_yn "${DESC_LOCAL_DOCKER_CLEANUP:=Cleanup local node - remove docker images, volumes, mountpoints and directories?}" COMMAND_LOCAL_DOCKER_CLEANUP
+question_yn "${DESC_LOCAL_AIRGAP_RESOURCES_CLEANUP:=Cleanup local Airgap resources created by 00-prepare-airgap script?}" COMMAND_LOCAL_AIRGAP_RESOURCES_CLEANUP
+##################### END CLEANUP ####################################
 
 echo "-- ${TXT_END:=END} --"
