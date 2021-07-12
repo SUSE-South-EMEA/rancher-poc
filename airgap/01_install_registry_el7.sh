@@ -65,9 +65,9 @@ while true; do
       [Yy]* )
 	    cat /etc/docker-distribution/registry/config.yml|grep "/etc/docker-distribution/registry/host.key" > /dev/null
 	    if [[ $? != 0 ]]; then
-echo "  tls:
-    certificate: /etc/docker-distribution/registry/host.cert
-    key: /etc/docker-distribution/registry/host.key"  >> /etc/docker-distribution/registry/config.yml
+echo "    tls:
+      certificate: /etc/docker-distribution/registry/host.cert
+      key: /etc/docker-distribution/registry/host.key"  >> /etc/docker-distribution/registry/config.yml
             else 
             echo -e "> Fichier deja configure."
 	    echo
