@@ -177,8 +177,13 @@ done
 
 ## CHECK ACCESS - INTERNET/PROXY/REGISTRY
 COMMAND_CHECK_ACCESS_REGISTRY() {
-for h in ${HOSTS[*]}; do ssh $h "echo && hostname -f && curl -s -o /dev/null -I ${AIRGAP_REGISTRY_URL}  && echo '${AIRGAP_REGISTRY_URL}: OK' || echo '${AIRGAP_REGISTRY_URL}: FAIL'"; done;
-echo
+if [[ ! -z ${AIRGAP_REGISTRY_CACERT} ]] ; then
+  for h in ${HOSTS[*]}; do ssh $h "echo && hostname -f && curl -s -o /dev/null -I --cacert /etc/docker/certs.d/${AIRGAP_REGISTRY_URL}/ca.crt  https://${AIRGAP_REGISTRY_URL}  && echo '${AIRGAP_REGISTRY_URL}: OK' || echo '${AIRGAP_REGISTRY_URL}: FAIL'"; done;
+  echo
+elif
+  for h in ${HOSTS[*]}; do ssh $h "echo && hostname -f && curl -s -o /dev/null -I https://${AIRGAP_REGISTRY_URL}  && echo '${AIRGAP_REGISTRY_URL}: OK' || echo '${AIRGAP_REGISTRY_URL}: FAIL'"; done;
+  echo
+fi
 }
 
 COMMAND_CHECK_ACCESS_STORAGE_NET() {
