@@ -308,7 +308,6 @@ fi
 }
 
 ## CHECK DEFAULT GW EXISTS
-DEFAULT_GW='172.16.0.254'
 COMMAND_DEFAULT_GW() {
 echo
 for h in ${HOSTS[*]};do 
@@ -321,6 +320,20 @@ echo
 echo "A Default Gateway should be set on all nodes (even if non-existent/non-working)"
 }
 
+## LONGHORN
+COMMAND_INSTALL_LONGHORN_PREREQ() {
+if [[ $pkg_mgr_type == 'zypper' ]]
+then
+  for h in ${HOSTS[*]}; do
+    ssh $h "hostname -f ; zypper in -y open-iscsi"
+  done
+elif [[ $pkg_mgr_type == 'yum' ]]
+then
+  for h in ${HOSTS[*]}; do
+    ssh $h "hostname -f ; yum install -y iscsi-initiator-utils"
+  done
+fi
+}
 
 ##################### BEGIN PRE-CHECK PACKAGES ##################################
 question_yn "${DESC_CHECK_PACKAGE:=Check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_RPM curl expect"
@@ -342,12 +355,13 @@ question_yn "${DESC_SET_PROXY:=PROXY variables are set in ./00-vars.sh. Apply pa
 fi
 ##################### END PROXY #################################################
 #
-##################### BEGIN FIREWALL#############################################
+##################### BEGIN OS REQUIREMENTS #####################################
 question_yn "$pkg_mgr_type - ${DESC_FIREWALL:=Check firewalld status (must be disabled)?}" COMMAND_FIREWALL
 question_yn "${DESC_DEFAULT_GW:=Check for a defined default gateway?}" COMMAND_DEFAULT_GW
 question_yn "${DESC_CHECK_TIME:=Verify date and time on all nodes?}" COMMAND_CHECK_TIME
 question_yn "${DESC_IPFORWARD_ACTIVATE:=Enable IP forwarding?}" COMMAND_IPFORWARD_ACTIVATE
 question_yn "${DESC_NO_SWAP:=Disable swap on target nodes?}" COMMAND_NO_SWAP
+##################### END OS REQUIREMENTS #######################################
 #
 #
 ##################### BEGIN REPOS & BINARIES ####################################
@@ -362,18 +376,21 @@ question_yn "${DESC_CREATE_DOCKER_USER:=Create docker user for RKE\n - Docker us
 elif [[ $pkg_mgr_type == 'yum' ]]
 then
 question_yn "$DESC_REPOS" COMMAND_REPOS_YUM
-# question_yn "$pkg_mgr_type - ${DESC_ADDREPOS_YUM_K8STOOLS:=Add Google public repository for Kubernetes tools (kubectl...)?}" COMMAND_ADDREPOS_YUM_K8STOOLS
 question_yn "$pkg_mgr_type - ${DESC_NODES_UPDATE:=Update all nodes?}" COMMAND_NODES_UPDATE_YUM
 question_yn "$pkg_mgr_type - ${DESC_DOCKER_INSTALL_YUM:=Install, enable and start Docker on target nodes?}" COMMAND_DOCKER_INSTALL_YUM
 question_yn "${DESC_CREATE_DOCKER_USER:=Create docker user for RKE\n - Docker user: ${DOCKER_USER}\n - Docker group: ${DOCKER_GROUP}}" COMMAND_CREATE_DOCKER_USER
 fi
 
-if [[ $AIRGAP_DEPLOY == 1 ]] ; then
-  question_yn "${DESC_CONFIGURE_DOCKER_DAEMON:=Configure docker daemon to use private registry?}" COMMAND_CONFIGURE_DOCKER_DAEMON
-fi
-
 question_yn "${DESC_INSTALL_KUBECTL:=Install kubectl on local node?}" COMMAND_INSTALL_KUBECTL
 ##################### END REPOS & BINARIES ######################################
+#
+#
+##################### BEGIN AIRGAP ##############################################
+if [[ $AIRGAP_DEPLOY == 1 ]] ; then
+  question_yn "Airgap - ${DESC_CHECK_ACCESS_REGISTRY:=Check ${AIRGAP_REGISTRY_URL} is accessible from all nodes?}" COMMAND_CHECK_ACCESS_REGISTRY
+  question_yn "Airgap - ${DESC_CONFIGURE_DOCKER_DAEMON:=Configure docker daemon to use private registry?}" COMMAND_CONFIGURE_DOCKER_DAEMON
+fi
+##################### END AIRGAP ################################################
 #
 #
 ##################### BEGIN DOCKER PROXY SETTINGS ###############################
@@ -384,10 +401,16 @@ fi
 ##################### END DOCKER PROXY SETTINGS #################################
 #
 #
-##################### BEGIN CHECK ACCESS ########################################
-question_yn "${DESC_CHECK_ACCESS_REGISTRY:=Check ${AIRGAP_REGISTRY_URL} is accessible from all nodes?}" COMMAND_CHECK_ACCESS_REGISTRY
-question_yn "${DESC_CHECK_ACCESS_STORAGE_NET:=Check $STORAGE_TARGET is accessible from all nodes?}" COMMAND_CHECK_ACCESS_STORAGE_NET
-##################### END CHECK ACCESS ##########################################
+##################### BEGIN CHECK STORAGE ACCESS #################################
+if [[ ! -z ${STORAGE_TARGET} ]] ; then
+  question_yn "${DESC_CHECK_ACCESS_STORAGE_NET:=Check $STORAGE_TARGET is accessible from all nodes?}" COMMAND_CHECK_ACCESS_STORAGE_NET
+fi
+##################### END CHECK STORAGE ACCESS ###################################
+#
+#
+##################### BEGIN LONGHORN REQUIREMENTS ################################
+question_yn "${DESC_INSTALL_LONGHORN_PREREQ:=Install Longhorn pre-requisites (open-iscsi) on all nodes?}" COMMAND_INSTALL_LONGHORN_PREREQ
+##################### END LONGHORN REQUIREMENTS ##################################
 
 echo
 echo "-- ${TXT_END:=END} --"
