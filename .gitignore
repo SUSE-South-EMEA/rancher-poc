@@ -3,4 +3,3 @@ cluster.yml
 kube_config_cluster.yml
 kuberang-linux-amd64
 proxyCA.pem
-README.md
