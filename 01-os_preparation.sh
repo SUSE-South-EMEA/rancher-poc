@@ -140,11 +140,11 @@ done
 COMMAND_ADDREPOS_ZYPPER() {
 for h in ${HOSTS[*]}
   do ssh $h "echo ; hostname -f ; echo ; sudo zypper ref ; 
-sudo zypper ar -G http://${REPO_SERVER}/ks/dist/child/sle-module-containers15-sp2-pool-x86_64/sles15sp2 containers_product ; 
-sudo zypper ar -G http://${REPO_SERVER}/ks/dist/child/sle-module-containers15-sp2-updates-x86_64/sles15sp2 containers_updates" 
+sudo zypper ar -G http://${REPO_SERVER}/ks/dist/child/sle-module-containers15-sp3-pool-x86_64/sles15sp3 containers_product ; 
+sudo zypper ar -G http://${REPO_SERVER}/ks/dist/child/sle-module-containers15-sp3-updates-x86_64/sles15sp3 containers_updates" 
 done
-sudo zypper ar -G http://${REPO_SERVER}/ks/dist/child/sle-module-containers15-sp2-pool-x86_64/sles15sp2 containers_product
-sudo zypper ar -G http://${REPO_SERVER}/ks/dist/child/sle-module-containers15-sp2-updates-x86_64/sles15sp2 containers_updates
+sudo zypper ar -G http://${REPO_SERVER}/ks/dist/child/sle-module-containers15-sp3-pool-x86_64/sles15sp3 containers_product
+sudo zypper ar -G http://${REPO_SERVER}/ks/dist/child/sle-module-containers15-sp3-updates-x86_64/sles15sp3 containers_updates
 }
 
 ## ALL NODES UPDATE 
@@ -352,7 +352,7 @@ fi
 }
 
 ##################### BEGIN PRE-CHECK PACKAGES ##################################
-question_yn "${DESC_CHECK_PACKAGE:=Check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_RPM curl expect"
+question_yn "${DESC_CHECK_PACKAGE:=Check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_RPM curl expect lsof"
 ##################### END PRE-CHECK PACKAGES ####################################
 #
 #
