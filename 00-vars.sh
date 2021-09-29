@@ -7,7 +7,7 @@ HOST_LIST_FILE=./hosts.list
 
 ######################## IF AIRGAP SETUP #########################
 ## Airgap deployment
-AIRGAP_DEPLOY="1"	# 1=airgap enabled / 0=airgap disabled
+AIRGAP_DEPLOY="0"	# 1=airgap enabled / 0=airgap disabled
 AIRGAP_REGISTRY_URL="registry.domain:5000"
 AIRGAP_REGISTRY_CACERT=""
 # Use insecure registry
@@ -52,4 +52,4 @@ RANCHER_VERSION="2.6.0"
 
 ######################## FQDNs & DOMAINs #########################
 ## Rancher Management Load balancer FQDN (redirect to RKE nodes hosting Rancher)
-LB_RANCHER_FQDN="rancher.g2.office.zypp.fr"
+LB_RANCHER_FQDN="rancher.domain.tld"
