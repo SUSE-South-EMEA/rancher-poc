@@ -7,9 +7,11 @@ HOST_LIST_FILE=./hosts.list
 
 ######################## IF AIRGAP SETUP #########################
 ## Airgap deployment
-AIRGAP_DEPLOY="0"	# 1=airgap enabled / 0=airgap disabled
-AIRGAP_REGISTRY_URL="registry.local:5000"
-AIRGAP_REGISTRY_CACERT="/etc/docker-distribution/registry/host.cert"
+AIRGAP_DEPLOY="1"	# 1=airgap enabled / 0=airgap disabled
+AIRGAP_REGISTRY_URL="registry.domain:5000"
+AIRGAP_REGISTRY_CACERT=""
+# Use insecure registry
+AIRGAP_REGISTRY_INSECURE="1" # 1=insecure / 0=secured
 # Optional user/password
 AIRGAP_REGISTRY_USER=""
 AIRGAP_REGISTRY_PASSWD=""
@@ -25,7 +27,7 @@ PROXY_CA_LOCATION="/etc/squid/ssl_cert/proxyCA.pem"
 
 ######################## DOCKER SETUP ############################
 ## Docker version to use (RHEL/CentOS)
-DOCKER_VERSION="19.03"  # options [19.03|20.10]
+DOCKER_VERSION="20.10"  # options [19.03|20.10]
 ## Docker user to be created on target hosts
 DOCKER_USER="rkedeploy"
 ## Docker group to be joined by Docker user
@@ -46,10 +48,8 @@ KUBERNETES_VERSION="v1.19.10-rancher1-1"
 RKE_VERSION="v1.2.8"
 HELM_VERSION="3.5.3"
 CERTMGR_VERSION="v1.0.4"
-RANCHER_VERSION="2.5.8"
+RANCHER_VERSION="2.5.9"
 
 ######################## FQDNs & DOMAINs #########################
 ## Rancher Management Load balancer FQDN (redirect to RKE nodes hosting Rancher)
 LB_RANCHER_FQDN="rancher.g2.office.zypp.fr"
-## Apps DNS domain (wildcard redirecting to RKE workers nodes hosting applications)
-LB_APPS_DOMAIN="g2.office.zypp.fr"

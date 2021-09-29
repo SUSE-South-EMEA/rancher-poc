@@ -177,7 +177,12 @@ done
 
 ## CHECK ACCESS - INTERNET/PROXY/REGISTRY
 COMMAND_CHECK_ACCESS_REGISTRY() {
-if [[ ! -z ${AIRGAP_REGISTRY_CACERT} ]] ; then
+if [ "${AIRGAP_REGISTRY_INSECURE}" == "1" ] ; then
+  for h in ${HOSTS[*]}; do
+    ssh $h "echo && hostname -f && curl -k -s -o /dev/null -I https://${AIRGAP_REGISTRY_URL}  && echo '${AIRGAP_REGISTRY_URL}: OK' || echo '${AIRGAP_REGISTRY_URL}: FAIL'"
+  done
+  echo
+elif [[ ! -z ${AIRGAP_REGISTRY_CACERT} ]] ; then
   for h in ${HOSTS[*]}; do
     ssh $h "echo && hostname -f && curl -s -o /dev/null -I --cacert /etc/docker/certs.d/${AIRGAP_REGISTRY_URL}/ca.crt  https://${AIRGAP_REGISTRY_URL}  && echo '${AIRGAP_REGISTRY_URL}: OK' || echo '${AIRGAP_REGISTRY_URL}: FAIL'"
   done
@@ -210,19 +215,30 @@ for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; sudo systemctl enable dock
 }
 
 COMMAND_CONFIGURE_DOCKER_DAEMON() {
-# Create docker configuration daemon.json
-for h in ${HOSTS[*]} ; do
-ssh $h "hostname -f ; sudo tee /etc/docker/daemon.json <<EOF
+if [ "${AIRGAP_REGISTRY_INSECURE}" == "1" ] ; then
+  # Configure docker to use insecure private registry
+  for h in ${HOSTS[*]} ; do
+    ssh $h "hostname -f ; sudo tee /etc/docker/daemon.json <<EOF
+{\"insecure-registries\" : [\"${AIRGAP_REGISTRY_URL}\"]}
+EOF
+    echo
+    sudo systemctl restart docker"
+  done
+else
+# Configure docker to use private registry
+  for h in ${HOSTS[*]} ; do
+    ssh $h "hostname -f ; sudo tee /etc/docker/daemon.json <<EOF
 {\"registry-mirrors\": [\"https://${AIRGAP_REGISTRY_URL}\"]}
 EOF
-echo"
-if [[ ! -z ${AIRGAP_REGISTRY_CACERT} ]] ; then
-  echo "${TXT_REGISTRY_COPY_CACERT:=Copy registry CA certificate}"
-  ssh $h "mkdir -p /etc/docker/certs.d/${AIRGAP_REGISTRY_URL}/"
-  scp ${AIRGAP_REGISTRY_CACERT} $h:/etc/docker/certs.d/${AIRGAP_REGISTRY_URL}/ca.crt
+    echo"
+    if [[ ! -z ${AIRGAP_REGISTRY_CACERT} ]] ; then
+      echo "${TXT_REGISTRY_COPY_CACERT:=Copy registry CA certificate}"
+      ssh $h "sudo mkdir -p /etc/docker/certs.d/${AIRGAP_REGISTRY_URL}/"
+      scp ${AIRGAP_REGISTRY_CACERT} $h:/etc/docker/certs.d/${AIRGAP_REGISTRY_URL}/ca.crt
+    fi
+    ssh $h "sudo systemctl restart docker"
+  done
 fi
-ssh $h "systemctl restart docker"
-done
 }
 
 ## DOCKER USER/GROUP FOR RKE
@@ -325,12 +341,12 @@ COMMAND_INSTALL_LONGHORN_PREREQ() {
 if [[ $pkg_mgr_type == 'zypper' ]]
 then
   for h in ${HOSTS[*]}; do
-    ssh $h "hostname -f ; zypper in -y open-iscsi"
+    ssh $h "hostname -f ; sudo zypper in -y open-iscsi ; sudo systemctl enable --now iscsid.service"
   done
 elif [[ $pkg_mgr_type == 'yum' ]]
 then
   for h in ${HOSTS[*]}; do
-    ssh $h "hostname -f ; yum install -y iscsi-initiator-utils"
+    ssh $h "hostname -f ; sudo yum install -y iscsi-initiator-utils"
   done
 fi
 }
@@ -387,8 +403,8 @@ question_yn "${DESC_INSTALL_KUBECTL:=Install kubectl on local node?}" COMMAND_IN
 #
 ##################### BEGIN AIRGAP ##############################################
 if [[ $AIRGAP_DEPLOY == 1 ]] ; then
-  question_yn "Airgap - ${DESC_CHECK_ACCESS_REGISTRY:=Check ${AIRGAP_REGISTRY_URL} is accessible from all nodes?}" COMMAND_CHECK_ACCESS_REGISTRY
   question_yn "Airgap - ${DESC_CONFIGURE_DOCKER_DAEMON:=Configure docker daemon to use private registry?}" COMMAND_CONFIGURE_DOCKER_DAEMON
+  question_yn "Airgap - ${DESC_CHECK_ACCESS_REGISTRY:=Check ${AIRGAP_REGISTRY_URL} is accessible from all nodes?}" COMMAND_CHECK_ACCESS_REGISTRY
 fi
 ##################### END AIRGAP ################################################
 #

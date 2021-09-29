@@ -10,6 +10,15 @@ if [[ $AIRGAP_DEPLOY != 1 ]]; then
  echo -e "${bold}${TXT_AIRGAP_NOT_ENABLED:=Airgap mode not enabled.\nPlease set AIRGAP_DEPLOY=1 in 00-vars.sh and check that everything is properly configured in the AIRGAP SETUP section.}${normal}"
  echo
  exit 1
+else
+  echo "${TXT_AIRGAP_INTRO:=Airgap configuration defined in 00-vars.sh}:"
+  echo
+  echo "  AIRGAP_REGISTRY_URL: ${AIRGAP_REGISTRY_URL}"
+  echo "  AIRGAP_REGISTRY_CACERT: ${AIRGAP_REGISTRY_CACERT}"
+  echo "  AIRGAP_REGISTRY_INSECURE: ${AIRGAP_REGISTRY_INSECURE}"
+  echo "  AIRGAP_REGISTRY_USER: ${AIRGAP_REGISTRY_USER}"   
+  echo "  AIRGAP_REGISTRY_PASSWD: <THIS_IS_A_SECRET>"
+  echo
 fi
 
 # Select package manager to use for next steps
@@ -36,7 +45,7 @@ done
 
 COMMAND_INSTALL_YUM_UTILS() {
 # Install yum-utils package (needed for 'yumdownloader')
-yum install -y yum-utils
+sudo yum install -y yum-utils
 }
 
 COMMAND_DOCKER_INSTALL_ZYPPER_LOCAL() {
@@ -47,6 +56,28 @@ sudo systemctl enable docker ; sudo systemctl start docker && echo 'Docker is ac
 COMMAND_DOCKER_INSTALL_YUM_LOCAL() {
 curl -s http://releases.rancher.com/install-docker/${DOCKER_VERSION}.sh | sudo /bin/bash
 sudo systemctl enable docker ; sudo systemctl start docker && echo 'Docker is activated' || echo 'Docker could not start'
+}
+
+COMMAND_CONFIGURE_LOCAL_DOCKER_DAEMON() {
+if [ "${AIRGAP_REGISTRY_INSECURE}" == "1" ] ; then
+  # Configure docker to use insecure private registry
+  sudo tee /etc/docker/daemon.json <<EOF
+{"insecure-registries" : ["${AIRGAP_REGISTRY_URL}"]}
+EOF
+else
+  # Configure docker to use private registry
+  sudo tee /etc/docker/daemon.json <<EOF
+{"registry-mirrors": ["https://${AIRGAP_REGISTRY_URL}"]}
+EOF
+  echo
+  if [[ ! -z ${AIRGAP_REGISTRY_CACERT} ]] ; then
+    echo "${TXT_REGISTRY_COPY_CACERT:=Copy registry CA certificate}"
+    mkdir -p /etc/docker/certs.d/${AIRGAP_REGISTRY_URL}/
+    cp ${AIRGAP_REGISTRY_CACERT} /etc/docker/certs.d/${AIRGAP_REGISTRY_URL}/ca.crt
+  fi
+fi
+# Restart docker
+systemctl restart docker
 }
 
 COMMAND_DL_PREREQ_SCRIPTS() {
@@ -99,7 +130,9 @@ echo "${TXT_SAVE_IMAGES:=Images saved in rancher-images.tar.gz.}"
 COMMAND_PUSH_IMAGES() {
 # Push images
 chmod +x rancher-load-images.sh
-#docker login ${AIRGAP_REGISTRY_URL}
+if [[ ! -z ${AIRGAP_REGISTRY_USER} ]] ; then
+  echo "${AIRGAP_REGISTRY_PASSWD}" | docker login -u ${AIRGAP_REGISTRY_USER} --password-stdin ${AIRGAP_REGISTRY_URL}
+fi
 sudo ./rancher-load-images.sh --image-list ./rancher-images.txt --registry ${AIRGAP_REGISTRY_URL}
 }
 
@@ -142,6 +175,7 @@ then
 question_yn "$pkg_mgr_type - ${DESC_INSTALL_YUM_UTILS:=Install yum-utils package (containing yumdownloader needed for next steps) ?}" COMMAND_INSTALL_YUM_UTILS
 question_yn "$pkg_mgr_type - ${DESC_DOCKER_INSTALL_LOCAL_YUM:=Install, enable and start Docker on local host?}" COMMAND_DOCKER_INSTALL_YUM_LOCAL
 fi
+question_yn "${DESC_CONFIGURE_DOCKER_DAEMON:=Configure docker daemon to use private registry?}" COMMAND_CONFIGURE_LOCAL_DOCKER_DAEMON
 question_yn "${DESC_DL_PREREQ_SCRIPTS:=Download images list and import/export scripts?}" COMMAND_DL_PREREQ_SCRIPTS
 question_yn "${DESC_DL_PREREQ_BINARIES:=Download RKE/Helm/Docker and install Helm?}" COMMAND_DL_PREREQ_BINARIES
 question_yn "${DESC_FETCH_CERTMGR_IMAGES:=Fetch cert-manager images?}" COMMAND_FETCH_CERTMGR_IMAGES
