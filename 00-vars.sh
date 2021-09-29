@@ -44,11 +44,11 @@ STORAGE_TARGET="192.168.1.11"
 
 ######################## SELECT VERSIONS #########################
 ## K8S cluster, RKE and Helm versions to deploy
-KUBERNETES_VERSION="v1.19.10-rancher1-1"
-RKE_VERSION="v1.2.8"
+KUBERNETES_VERSION="v1.19.15-rancher1-2"
+RKE_VERSION="v1.3.1"
 HELM_VERSION="3.5.3"
 CERTMGR_VERSION="v1.0.4"
-RANCHER_VERSION="2.5.9"
+RANCHER_VERSION="2.6.0"
 
 ######################## FQDNs & DOMAINs #########################
 ## Rancher Management Load balancer FQDN (redirect to RKE nodes hosting Rancher)

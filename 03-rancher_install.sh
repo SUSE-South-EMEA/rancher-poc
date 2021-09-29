@@ -104,7 +104,7 @@ then
   echo "- proxy=${_HTTP_PROXY}"
   echo "- no_proxy=${RANCHER_NO_PROXY}${normal}"
   echo
-  helm install rancher rancher-stable/rancher \
+  helm install rancher rancher-latest/rancher \
     --namespace cattle-system \
     --set hostname=${LB_RANCHER_FQDN} \
     --version ${RANCHER_VERSION} \
@@ -112,7 +112,7 @@ then
     --set no_proxy=${RANCHER_NO_PROXY}
 else
   echo "${bold}Rancher Management Server deployment${normal}"
-  helm install rancher rancher-stable/rancher \
+  helm install rancher rancher-latest/rancher \
     --namespace cattle-system \
     --set hostname=${LB_RANCHER_FQDN} \
     --version ${RANCHER_VERSION}
