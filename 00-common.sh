@@ -31,3 +31,31 @@ while true; do
     esac
 done
 }
+
+## PRE-CHECK PACKAGE
+COMMAND_CHECK_PACKAGE_RPM_LOCAL() {
+for i in $@;do echo "${TXT_CHECK_PACKAGE_PRESENT:=Checking if package is installed}: ${bold}$i${normal}"
+if sudo rpm -q $i
+then
+  echo "${bold}$i${normal} ${TXT_IS_PRESENT:=is present}. OK!";echo
+else
+  echo "${bold}$i${normal} ${TXT_NOT_PRESENT:=is absent}. ERROR!"
+  echo "sudo rpm -q ${bold}$i${normal}: 'not installed'"
+fi
+done
+}
+
+COMMAND_CHECK_PACKAGE_RPM() {
+for h in ${HOSTS[*]}; do
+  echo -e "\n${bold}$h${normal}"
+  for i in $@;do echo "${TXT_CHECK_PACKAGE_PRESENT:=Checking if package is installed}: ${bold}$i${normal}"
+  if ssh $h "sudo rpm -q $i"
+  then
+    echo "${bold}$i${normal} ${TXT_IS_PRESENT:=is present}. OK!";echo
+  else
+    echo "${bold}$i${normal} ${TXT_NOT_PRESENT:=is absent}. ERROR!"
+    echo "sudo rpm -q ${bold}$i${normal}: 'not installed'"
+  fi
+  done
+done
+}

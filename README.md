@@ -1,8 +1,11 @@
 # Rancher PoC - High Availability
 
+Rancher deployment based on RKE2 cluster.
+In progress...
+
 ## Objectives
 
-This set of scripts aims to simplify the deployment of a highly available Rancher Management Server on RKE.
+This set of scripts aims to simplify the deployment of a highly available Rancher Management Server on RKE2 cluster.
 
 It currently supports the following deployment options:
 - with direct access to Internet
@@ -11,11 +14,11 @@ It currently supports the following deployment options:
 - Zypper based or Yum based operating systems
 
 The following files are crucial for your experience:
-- `hosts.list` : List of target servers where Rancher will be deployed
+- `hosts.list` : List of target servers where RKE2 and Rancher will be deployed
 - `00-vars.sh` : Configuration variables
 - `00-prepare-airgap.sh` : Preparation for airgap deployment
 - `01-os_preparation.sh` : OS validations and preparation
-- `02-rke_deploy.sh` : RKE deployment
+- `02-rke2_deploy.sh` : RKE2 deployment
 - `03-rancher_install.sh` : Rancher Management Server deployment
 - `04-cleanup-destroy.sh` : Cleanup target servers to start over
 - `05-def_gw-ipv6.sh` : Special configurations (remove and set default gw, disable ipv6...)
@@ -28,8 +31,8 @@ The following files are crucial for your experience:
  > The server you will use to execute the scripts
 
 - 3 rancher management servers
- > These 3 machines will for a 3 nodes RKE cluster which will hold the Rancher Management UI
- > The 3 nodes will have: ETCD role, Controlplane role and Worker role
+ > These 3 machines will be used for a 3 nodes RKE2 cluster which will hold the Rancher Management UI
+ > The 3 nodes will have: ETCD, Controlplane and Worker roles
 
 The servers are deployed using classic standards
  > Fixed network settings
@@ -52,11 +55,12 @@ The Rancher UI will need a FQDN which load balances the connections toward the R
 ```bash
 git clone https://github.com/SUSE-South-EMEA/rancher-poc.git
 cd rancher-poc
+git checkout rke2
 ```
 
 ### hosts.list - List target nodes
 
-This file contains the list of target nodes that will be members of the RKE cluster and host the Rancher Management Server.
+This file contains the list of target nodes that will be members of the RKE2 cluster and host the Rancher Management Server.
 
 1 FQDN or IP address by line.
 
@@ -82,17 +86,17 @@ Script to validate environment and setup pre-requisites.
 ./01-os_preparation.sh
 ```
 
-### 02-rke_deploy.sh - RKE Cluster installation
+### 02-rke2_deploy.sh - RKE Cluster installation
 
-Deploy a RKE cluster on target nodes.
+Deploy a RKE2 cluster on target nodes.
 
 ```bash
-./02-rke_deploy.sh
+./02-rke2_deploy.sh
 ```
 
 ### 03-rancher_install.sh - Rancher Management Server installation
 
-Deploy the Rancher Management Server on the previously deployed RKE cluster.
+Deploy the Rancher Management Server on the previously deployed RKE2 cluster.
 
 ```bash
 ./03-rancher_install.sh

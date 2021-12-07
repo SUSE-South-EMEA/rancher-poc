@@ -23,7 +23,7 @@ openssl req -new -x509 -nodes -sha1 -subj "/CN=$HOSTNAME/C=FR/emailAddress=root@
 docker run -d \
   --restart=always \
   --name registry \
-  -v "$(pwd)"/certs:/certs \
+  -v ~/certs:/certs \
   -e REGISTRY_HTTP_ADDR=0.0.0.0:443 \
   -e REGISTRY_HTTP_TLS_CERTIFICATE=/certs/ca.crt \
   -e REGISTRY_HTTP_TLS_KEY=/certs/ca.key \

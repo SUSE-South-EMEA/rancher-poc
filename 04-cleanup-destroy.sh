@@ -5,43 +5,22 @@ source ./00-vars.sh
 source ./lang/$LANGUAGE.sh
 source ./00-common.sh
 
-COMMAND_RKE_REMOVE() {
-# Remote rke cluster
-rke remove
+COMMAND_RKE2_UNINSTALL() {
+for h in ${HOSTS[*]}; do
+echo  
+echo "${bold}${TXT_NODE_UNINSTALL:=Uninstall rke2 on node} $h${normal}" 
+echo
+ssh $h "sudo /usr/local/bin/rke2-killall.sh"
+ssh $h "sudo /usr/local/bin/rke2-uninstall.sh ; sudo rm -rf /etc/rancher"
+done
 }
 
-COMMAND_NODES_CLEANUP() {
-for h in ${HOSTS[*]}; do 
+COMMAND_RKE2_NODES_REBOOT() {
+for h in ${HOSTS[*]}; do
 echo  
-echo "${bold}${TXT_CLEANUP_NODE:=Cleanup node $h}${normal}" 
+echo "${bold}${TXT_REBOOT_NODE:=Reboot node} $h${normal}" 
 echo
-echo "- ${TXT_DOCKER_IMAGES_VOLUMES_CLEAN:=Removing docker images and volumes}"
-ssh $h "sudo docker ps -qa | xargs sudo docker rm -f ; \
-	sudo docker images -q | xargs sudo docker rmi -f  ; \
-	sudo docker volume ls -q | xargs sudo docker volume rm ;"
-
-echo "- ${TXT_DOCKER_MOUNT_CLEAN:=Unmounting docker and kubernetes specific directories}"
-ssh $h "sudo mount | grep tmpfs | grep '/var/lib/kubelet' | awk '{ print $3 }' | xargs sudo umount ; \
-        sudo umount /var/lib/kubelet; sudo umount /var/lib/rancher"
-
-echo "- ${TXT_DOCKER_CLEAN_DIR:=Removing docker and kubernetes specific directories}"
-ssh $h "sudo rm -rf /etc/ceph \
-       /etc/cni \
-       /etc/kubernetes \
-       /opt/cni \
-       /opt/rke \
-       /run/secrets/kubernetes.io \
-       /run/calico \
-       /run/flannel \
-       /var/lib/calico \
-       /var/lib/etcd \
-       /var/lib/cni \
-       /var/lib/kubelet \
-       /var/lib/rancher/rke/log \
-       /var/log/containers \
-       /var/log/kube-audit \
-       /var/log/pods \
-       /var/run/calico" 
+ssh $h "sudo reboot"
 done
 }
 
@@ -80,18 +59,20 @@ sudo rm -rf /etc/ceph \
 COMMAND_LOCAL_AIRGAP_RESOURCES_CLEANUP() {
 # Rancher images and scripts
 sudo rm -f rancher-images.tar.gz rancher-images.txt rancher-load-images.sh rancher-save-images.sh
+# RKE2 images, scripts and configuration files
+sudo rm -f rke2-*.tar.gz rke2-*.txt registries.yaml
 # Prereqs binaries
-sudo rm -f helm-v*-linux-amd64.tar.gz kubectl rke_linux-amd64
+sudo rm -f helm-v*-linux-amd64.tar.gz kubectl rke2.linux-amd64.tar.gz
 # Docker RPMs
 sudo rm -f *.rpm
 # Fetched Helm charts
-sudo rm -rf cert-manager rancher
+sudo rm -rf cert-manager rancher cert-manager-*.tgz
 }
 
 
 ##################### BEGIN CLEANUP ##################################
-question_yn "${DESC_RKE_REMOVE:=Remove RKE cluster?}" COMMAND_RKE_REMOVE
-question_yn "${DESC_NODES_CLEANUP:=Cleanup nodes - remove docker images, volumes, mountpoints and directories?}" COMMAND_NODES_CLEANUP
+question_yn "${DESC_RKE2_UNINSTALL:=Uninstall RKE2 from all nodes?}" COMMAND_RKE2_UNINSTALL
+question_yn "${DESC_RKE2_NODES_REBOOT:=Reboot RKE2 nodes?}" COMMAND_RKE2_NODES_REBOOT
 question_yn "${DESC_LOCAL_DOCKER_CLEANUP:=Cleanup local node - remove docker images, volumes, mountpoints and directories?}" COMMAND_LOCAL_DOCKER_CLEANUP
 question_yn "${DESC_LOCAL_AIRGAP_RESOURCES_CLEANUP:=Cleanup local Airgap resources created by 00-prepare-airgap script?}" COMMAND_LOCAL_AIRGAP_RESOURCES_CLEANUP
 ##################### END CLEANUP ####################################

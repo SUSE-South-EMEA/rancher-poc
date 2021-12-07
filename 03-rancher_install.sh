@@ -32,10 +32,6 @@ then
   echo "- https_proxy=${_HTTPS_PROXY}"
   echo "- no_proxy=${RANCHER_NO_PROXY}${normal}"
   echo
-  # Install the CustomResourceDefinition resources separately
-  kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/${CERTMGR_VERSION}/cert-manager.crds.yaml
-  # Create the namespace for cert-manager
-  kubectl create namespace cert-manager
   # Add the Jetstack Helm repository
   helm repo add jetstack https://charts.jetstack.io
   # Update your local Helm chart repository cache
@@ -43,9 +39,9 @@ then
   # Install Cert-Manager
   helm install cert-manager jetstack/cert-manager \
     --namespace cert-manager \
+    --create-namespace \
     --version ${CERTMGR_VERSION} \
-    --set global.podSecurityPolicy.enabled=True \
-    --set global.podSecurityPolicy.useAppArmor=False \
+    --set installCRDs=true \
     --set http_proxy=http://${_HTTP_PROXY} \
     --set https_proxy=http://${_HTTPS_PROXY} \
     --set no_proxy=${RANCHER_NO_PROXY}
@@ -53,10 +49,6 @@ else
   echo
   echo "Cert Manager deployment"
   echo
-  # Install the CustomResourceDefinition resources separately
-  kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/${CERTMGR_VERSION}/cert-manager.crds.yaml
-  # Create the namespace for cert-manager
-  kubectl create namespace cert-manager
   # Add the Jetstack Helm repository
   helm repo add jetstack https://charts.jetstack.io
   # Update your local Helm chart repository cache
@@ -64,18 +56,10 @@ else
   # Install Cert-Manager
   helm install cert-manager jetstack/cert-manager \
     --namespace cert-manager \
+    --create-namespace \
     --version ${CERTMGR_VERSION} \
-    --set global.podSecurityPolicy.enabled=True \
-    --set global.podSecurityPolicy.useAppArmor=False
+    --set installCRDs=true
 fi
-
-# Fix for K8S 1.19 - Select PSP profile (apparmor forced whereas desactivated)
-kubectl annotate --overwrite psp cert-manager \
-  seccomp.security.alpha.kubernetes.io/allowedProfileNames=docker/default,runtime/default
-kubectl annotate --overwrite psp cert-manager-cainjector \
-  seccomp.security.alpha.kubernetes.io/allowedProfileNames=docker/default,runtime/default
-kubectl annotate --overwrite psp cert-manager-webhook \
-  seccomp.security.alpha.kubernetes.io/allowedProfileNames=docker/default,runtime/default
 
 echo "${TXT_MONITOR_CERTMGR_INSTALL:=Monitor Cert Manager installation}"
 read -p "#> kubectl get all --namespace cert-manager"
@@ -104,7 +88,7 @@ then
   echo "- proxy=${_HTTP_PROXY}"
   echo "- no_proxy=${RANCHER_NO_PROXY}${normal}"
   echo
-  helm install rancher rancher-latest/rancher \
+  helm install rancher rancher-stable/rancher \
     --namespace cattle-system \
     --set hostname=${LB_RANCHER_FQDN} \
     --version ${RANCHER_VERSION} \
@@ -112,7 +96,7 @@ then
     --set no_proxy=${RANCHER_NO_PROXY}
 else
   echo "${bold}Rancher Management Server deployment${normal}"
-  helm install rancher rancher-latest/rancher \
+  helm install rancher rancher-stable/rancher \
     --namespace cattle-system \
     --set hostname=${LB_RANCHER_FQDN} \
     --version ${RANCHER_VERSION}

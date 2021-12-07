@@ -25,20 +25,6 @@ while true; do
     esac
 done
 
-## PRE-CHECK PACKAGE
-
-COMMAND_CHECK_PACKAGE_RPM() {
-for i in $@;do echo "${TXT_CHECK_PACKAGE_PRESENT:=Checking if package is installed}: ${bold}$i${normal}"
-if sudo rpm -q $i
-then
-  echo "${bold}$i${normal} ${TXT_IS_PRESENT:=is present}. OK!";echo
-else
-  echo "${bold}$i${normal} ${TXT_NOT_PRESENT:=is absent}. ERROR!"
-  echo "sudo rpm -q ${bold}$i${normal}: 'not installed'"
-fi
-done
-}
-
 ## SSH KEYS CREATION
 COMMAND_SSH_KEYS() {
 ssh-keygen
@@ -54,7 +40,7 @@ done;
 
 ## SSH CONNECT TESTING
 COMMAND_SSH_CONNECT_TEST() {
-for h in ${HOSTS[*]}; do ssh $h "hostname -f" ; done;
+for h in ${HOSTS[*]}; do ssh $h "hostname -s" ; done;
 }
 
 ## Copy Proxy CA locally (specific to SUSE Lab FR)
@@ -93,7 +79,7 @@ export http_proxy=http://${_HTTP_PROXY}
 export https_proxy=http://${_HTTPS_PROXY}
 export no_proxy=${_NO_PROXY}
 EOF
-hostname -f
+hostname -s
 if [[ $pkg_mgr_type == 'zypper' ]]
 then 
 sudo update-ca-certificates
@@ -121,25 +107,25 @@ if [[ $pkg_mgr_type == 'yum' ]]
 then 
 sudo update-ca-trust
 fi
-echo "$(hostname -f) : Proxy parameters added to /etc/profile.d/proxy.sh"
+echo "$(hostname -s) : Proxy parameters added to /etc/profile.d/proxy.sh"
 }
 
 ## LIST REPOSITORIES
 COMMAND_REPOS_ZYPPER() {
 for h in ${HOSTS[*]}
-  do ssh $h "echo && hostname -f && echo && sudo zypper lr"; 
+  do ssh $h "echo && hostname -s && echo && sudo zypper lr"; 
 done
 }
 COMMAND_REPOS_YUM() {
 for h in ${HOSTS[*]}
-  do ssh $h "echo && hostname -f && echo && sudo yum repolist all"; 
+  do ssh $h "echo && hostname -s && echo && sudo yum repolist all"; 
 done
 }
 
 ## ADDING REPOSITORIES
 COMMAND_ADDREPOS_ZYPPER() {
 for h in ${HOSTS[*]}
-  do ssh $h "echo ; hostname -f ; echo ; sudo zypper ref ; 
+  do ssh $h "echo ; hostname -s ; echo ; sudo zypper ref ; 
 sudo zypper ar -G http://${REPO_SERVER}/ks/dist/child/sle-module-containers15-sp3-pool-x86_64/sles15sp3 containers_product ; 
 sudo zypper ar -G http://${REPO_SERVER}/ks/dist/child/sle-module-containers15-sp3-updates-x86_64/sles15sp3 containers_updates" 
 done
@@ -150,7 +136,7 @@ sudo zypper ar -G http://${REPO_SERVER}/ks/dist/child/sle-module-containers15-sp
 ## ALL NODES UPDATE 
 COMMAND_NODES_UPDATE_ZYPPER() {
 for h in ${HOSTS[*]}
-  do ssh $h "echo ; hostname -f ; echo ; sudo zypper ref ; sudo zypper --non-interactive up"
+  do ssh $h "echo ; hostname -s ; echo ; sudo zypper ref ; sudo zypper --non-interactive up"
 done;
 for h in ${HOSTS[*]}
   do ssh $h "echo ; sudo zypper ps" 
@@ -159,7 +145,7 @@ done
 
 COMMAND_NODES_UPDATE_YUM() {
 for h in ${HOSTS[*]}
-  do ssh $h "echo ; hostname -f ; echo ; sudo yum -y update"
+  do ssh $h "echo ; hostname -s ; echo ; sudo yum -y update"
 done;
 }
 
@@ -167,7 +153,7 @@ done;
 ## TODO - support chronyc and ntpq
 COMMAND_CHECK_TIME() {
 for h in ${HOSTS[*]}; do
-  ssh $h "echo && hostname -f &&
+  ssh $h "echo && hostname -s &&
 	  if which chronyc ; then sudo chronyc -a tracking |grep 'Leap status'
  	  elif which ntpq ; then sudo ntpq -p
 	  else echo ${TXT_CHECK_TIME:=Chronyc or ntpq binaries are not present. Cannot check if time is synchronized.}
@@ -179,106 +165,35 @@ done
 COMMAND_CHECK_ACCESS_REGISTRY() {
 if [ "${AIRGAP_REGISTRY_INSECURE}" == "1" ] ; then
   for h in ${HOSTS[*]}; do
-    ssh $h "echo && hostname -f && curl -k -s -o /dev/null -I https://${AIRGAP_REGISTRY_URL}  && echo '${AIRGAP_REGISTRY_URL}: OK' || echo '${AIRGAP_REGISTRY_URL}: FAIL'"
+    ssh $h "echo && hostname -s && curl -k -s -o /dev/null -I https://${AIRGAP_REGISTRY_URL}  && echo '${AIRGAP_REGISTRY_URL}: OK' || echo '${AIRGAP_REGISTRY_URL}: FAIL'"
   done
   echo
 elif [[ ! -z ${AIRGAP_REGISTRY_CACERT} ]] ; then
   for h in ${HOSTS[*]}; do
-    ssh $h "echo && hostname -f && curl -s -o /dev/null -I --cacert /etc/docker/certs.d/${AIRGAP_REGISTRY_URL}/ca.crt  https://${AIRGAP_REGISTRY_URL}  && echo '${AIRGAP_REGISTRY_URL}: OK' || echo '${AIRGAP_REGISTRY_URL}: FAIL'"
+    ssh $h "echo && hostname -s && curl -s -o /dev/null -I --cacert /etc/docker/certs.d/${AIRGAP_REGISTRY_URL}/ca.crt  https://${AIRGAP_REGISTRY_URL}  && echo '${AIRGAP_REGISTRY_URL}: OK' || echo '${AIRGAP_REGISTRY_URL}: FAIL'"
   done
   echo
 else
   for h in ${HOSTS[*]}; do
-    ssh $h "echo && hostname -f && curl -s -o /dev/null -I https://${AIRGAP_REGISTRY_URL}  && echo '${AIRGAP_REGISTRY_URL}: OK' || echo '${AIRGAP_REGISTRY_URL}: FAIL'"
+    ssh $h "echo && hostname -s && curl -s -o /dev/null -I https://${AIRGAP_REGISTRY_URL}  && echo '${AIRGAP_REGISTRY_URL}: OK' || echo '${AIRGAP_REGISTRY_URL}: FAIL'"
   done
   echo
 fi
 }
 
 COMMAND_CHECK_ACCESS_STORAGE_NET() {
-for h in ${HOSTS[*]}; do ssh $h "echo && hostname -f && ping -c1 $STORAGE_TARGET > /dev/null  && echo 'ping $STORAGE_TARGET: OK' || echo 'ping $STORAGE_TARGET: FAIL'"; done;
-}
-
-## DOCKER INSTALL
-COMMAND_DOCKER_INSTALL_ZYPPER() {
-for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; sudo zypper ref ; sudo zypper --non-interactive in docker"; done;
-for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; sudo systemctl enable docker ; sudo systemctl start docker && echo 'Docker is activated' || echo 'Docker could not start'"; done;
-}
-COMMAND_DOCKER_INSTALL_YUM() {
-if [[ $AIRGAP_DEPLOY == 1 ]]; then
-  for h in ${HOSTS[*]}; do echo "$h" ; scp docker-ce*.rpm docker-scan-plugin*.rpm containerd.io*.rpm $h:/tmp ; done;
-  for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; cd /tmp ; sudo yum install -y docker-ce*.rpm docker-scan-plugin*.rpm containerd.io*.rpm"; done;
-else
-  for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; curl -s http://releases.rancher.com/install-docker/${DOCKER_VERSION}.sh | sudo /bin/bash"; done
-fi
-for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; sudo systemctl enable docker ; sudo systemctl start docker && echo 'Docker is activated' || echo 'Docker could not start'"; done;
-}
-
-COMMAND_CONFIGURE_DOCKER_DAEMON() {
-if [ "${AIRGAP_REGISTRY_INSECURE}" == "1" ] ; then
-  # Configure docker to use insecure private registry
-  for h in ${HOSTS[*]} ; do
-    ssh $h "hostname -f ; sudo tee /etc/docker/daemon.json <<EOF
-{\"insecure-registries\" : [\"${AIRGAP_REGISTRY_URL}\"]}
-EOF
-    echo
-    sudo systemctl restart docker"
-  done
-else
-# Configure docker to use private registry
-  for h in ${HOSTS[*]} ; do
-    ssh $h "hostname -f ; sudo tee /etc/docker/daemon.json <<EOF
-{\"registry-mirrors\": [\"https://${AIRGAP_REGISTRY_URL}\"]}
-EOF
-    echo"
-    if [[ ! -z ${AIRGAP_REGISTRY_CACERT} ]] ; then
-      echo "${TXT_REGISTRY_COPY_CACERT:=Copy registry CA certificate}"
-      ssh $h "sudo mkdir -p /etc/docker/certs.d/${AIRGAP_REGISTRY_URL}/"
-      scp ${AIRGAP_REGISTRY_CACERT} $h:/etc/docker/certs.d/${AIRGAP_REGISTRY_URL}/ca.crt
-    fi
-    ssh $h "sudo systemctl restart docker"
-  done
-fi
-}
-
-## DOCKER USER/GROUP FOR RKE
-COMMAND_CREATE_DOCKER_USER() {
-for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ;
-sudo useradd -m -G ${DOCKER_GROUP} ${DOCKER_USER} > /dev/null 2>&1 && echo \"${DOCKER_USER} user is created\" || echo \"Failed to create ${DOCKER_USER} user\" &&
-sudo mkdir /home/${DOCKER_USER}/.ssh &&
-sudo chown ${DOCKER_USER}:${DOCKER_GROUP} /home/${DOCKER_USER}/.ssh &&
-sudo chmod 700 /home/${DOCKER_USER}/.ssh &&
-echo "Ajout des clefs publiques dans /home/${DOCKER_USER}/.ssh/authorized_keys:" &&
-cat ${HOME}/.ssh/authorized_keys |sudo tee /home/${DOCKER_USER}/.ssh/authorized_keys &&
-sudo chown ${DOCKER_USER}:${DOCKER_GROUP} /home/${DOCKER_USER}/.ssh/authorized_keys &&
-sudo chmod 600 /home/${DOCKER_USER}/.ssh/authorized_keys "; done;
-}
-
-## DOCKER PROXY
-COMMAND_DOCKER_PROXY() {
-for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ;
-sudo mkdir -p /etc/systemd/system/docker.service.d
-sudo tee /etc/systemd/system/docker.service.d/http-proxy.conf <<EOF
-[Service]
-Environment="HTTP_PROXY=http://${_HTTP_PROXY}"
-Environment="HTTPS_PROXY=http://${_HTTPS_PROXY}"
-Environment="NO_PROXY=${_NO_PROXY}"
-EOF
-
-sudo systemctl daemon-reload
-sudo systemctl restart docker"
-done
+for h in ${HOSTS[*]}; do ssh $h "echo && hostname -s && ping -c1 $STORAGE_TARGET > /dev/null  && echo 'ping $STORAGE_TARGET: OK' || echo 'ping $STORAGE_TARGET: FAIL'"; done;
 }
 
 ## ACTIVATION IP FORWARDING
 COMMAND_IPFORWARD_ACTIVATE() {
-for h in ${HOSTS[*]};do ssh $h "echo; hostname -f ; sudo sed -i '/net.ipv4.ip_forward.*/d' /etc/sysctl.conf /etc/sysctl.d/*.conf ; echo 'net.ipv4.ip_forward = 1' |sudo tee -a /etc/sysctl.conf; sudo sed '/^#/d' /etc/sysctl.conf;sudo sysctl -p" ; done
+for h in ${HOSTS[*]};do ssh $h "echo; hostname -s ; sudo sed -i '/net.ipv4.ip_forward.*/d' /etc/sysctl.conf /etc/sysctl.d/*.conf ; echo 'net.ipv4.ip_forward = 1' |sudo tee -a /etc/sysctl.conf; sudo sed '/^#/d' /etc/sysctl.conf;sudo sysctl -p" ; done
 }
 
 ## DESACTIVATION DU SWAP
 COMMAND_NO_SWAP() {
 for h in ${HOSTS[*]};do ssh $h 'sudo sed -i "/swap/ s/defaults/&,noauto/" /etc/fstab';done
-for h in ${HOSTS[*]};do ssh $h "echo; hostname -f; grep swap /etc/fstab; sudo swapoff -a; free -g";done
+for h in ${HOSTS[*]};do ssh $h "echo; hostname -s; grep swap /etc/fstab; sudo swapoff -a; free -g";done
 }
 
 ## OUTILS K8S
@@ -287,13 +202,6 @@ if [[ $AIRGAP_DEPLOY != 1 ]] ; then
 curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
 fi
 sudo install -v -o root -g root -m 0755 kubectl /usr/bin/kubectl
-}
-COMMAND_K8S_TOOLS_ZYPPER() {
-sudo zypper -n in kubernetes1.18-client
-}
-COMMAND_K8S_TOOLS_YUM() {
-sudo yum install -y kubernetes-client
-# For Google repositories : sudo yum install -y kubectl
 }
 
 ## CHECK FIREWALLD
@@ -307,7 +215,7 @@ then
 fi
 for h in ${HOSTS[*]};do
 ssh $h "
-hostname -f
+hostname -s
 if sudo rpm -q $FIREWALL_SVC ; then
   echo "${TXT_FIREWALLD_STOP_DISABLE:=Stop and disable firewalld}"
   sudo systemctl stop $FIREWALL_SVC
@@ -315,7 +223,7 @@ if sudo rpm -q $FIREWALL_SVC ; then
 fi
 "
 done
-hostname -f
+hostname -s
 if sudo rpm -q $FIREWALL_SVC ; then
   echo "${TXT_FIREWALLD_STOP_DISABLE:=Stop and disable firewalld}"
   sudo systemctl stop $FIREWALL_SVC
@@ -341,19 +249,19 @@ COMMAND_INSTALL_LONGHORN_PREREQ() {
 if [[ $pkg_mgr_type == 'zypper' ]]
 then
   for h in ${HOSTS[*]}; do
-    ssh $h "hostname -f ; sudo zypper in -y open-iscsi ; sudo systemctl enable --now iscsid.service"
+    ssh $h "hostname -s ; sudo zypper in -y open-iscsi ; sudo systemctl enable --now iscsid.service"
   done
 elif [[ $pkg_mgr_type == 'yum' ]]
 then
   for h in ${HOSTS[*]}; do
-    ssh $h "hostname -f ; sudo yum install -y iscsi-initiator-utils"
+    ssh $h "hostname -s ; sudo yum install -y iscsi-initiator-utils"
   done
 fi
 }
 
-##################### BEGIN PRE-CHECK PACKAGES ##################################
-question_yn "${DESC_CHECK_PACKAGE:=Check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_RPM curl expect lsof"
-##################### END PRE-CHECK PACKAGES ####################################
+##################### BEGIN PRE-CHECK LOCAL PACKAGES ##################################
+question_yn "${DESC_CHECK_PACKAGE_RPM_LOCAL:=Check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_RPM_LOCAL curl expect"
+##################### END PRE-CHECK LOCAL PACKAGES ####################################
 #
 #
 ##################### BEGIN SSH KEYS EXCHANGE ###################################
@@ -361,6 +269,11 @@ question_yn "${DESC_SSH_KEYS:=Create a local SSH key pair?}" COMMAND_SSH_KEYS
 question_yn "${DESC_SSH_DEPLOY:=Push public key to nodes?}" COMMAND_SSH_DEPLOY
 question_yn "${DESC_SSH_CONNECT_TEST:=Test SSH connection to nodes?}" COMMAND_SSH_CONNECT_TEST
 ##################### END SSH KEYS EXCHANGE #####################################
+#
+#
+##################### BEGIN PRE-CHECK PACKAGES ##################################
+question_yn "${DESC_CHECK_PACKAGE_RPM:=Check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_RPM iptables apparmor-parser"
+##################### END PRE-CHECK PACKAGES ####################################
 #
 #
 ##################### BEGIN PROXY ###############################################
@@ -386,15 +299,11 @@ then
 question_yn "$pkg_mgr_type - ${DESC_REPOS:=List repositories on nodes}" COMMAND_REPOS_ZYPPER
 question_yn "$pkg_mgr_type - ${DESC_ADDREPOS:=Add sle-module-containers repositories on target and local nodes?}" COMMAND_ADDREPOS_ZYPPER
 question_yn "${DESC_NODES_UPDATE:=Update all nodes?}" COMMAND_NODES_UPDATE_ZYPPER
-question_yn "$pkg_mgr_type - ${DESC_DOCKER_INSTALL:=Install, enable and start Docker on target nodes?}" COMMAND_DOCKER_INSTALL_ZYPPER
-question_yn "${DESC_CREATE_DOCKER_USER:=Create docker user for RKE\n - Docker user: ${DOCKER_USER}\n - Docker group: ${DOCKER_GROUP}}" COMMAND_CREATE_DOCKER_USER
 
 elif [[ $pkg_mgr_type == 'yum' ]]
 then
 question_yn "$DESC_REPOS" COMMAND_REPOS_YUM
 question_yn "$pkg_mgr_type - ${DESC_NODES_UPDATE:=Update all nodes?}" COMMAND_NODES_UPDATE_YUM
-question_yn "$pkg_mgr_type - ${DESC_DOCKER_INSTALL_YUM:=Install, enable and start Docker on target nodes?}" COMMAND_DOCKER_INSTALL_YUM
-question_yn "${DESC_CREATE_DOCKER_USER:=Create docker user for RKE\n - Docker user: ${DOCKER_USER}\n - Docker group: ${DOCKER_GROUP}}" COMMAND_CREATE_DOCKER_USER
 fi
 
 question_yn "${DESC_INSTALL_KUBECTL:=Install kubectl on local node?}" COMMAND_INSTALL_KUBECTL
@@ -403,18 +312,9 @@ question_yn "${DESC_INSTALL_KUBECTL:=Install kubectl on local node?}" COMMAND_IN
 #
 ##################### BEGIN AIRGAP ##############################################
 if [[ $AIRGAP_DEPLOY == 1 ]] ; then
-  question_yn "Airgap - ${DESC_CONFIGURE_DOCKER_DAEMON:=Configure docker daemon to use private registry?}" COMMAND_CONFIGURE_DOCKER_DAEMON
   question_yn "Airgap - ${DESC_CHECK_ACCESS_REGISTRY:=Check ${AIRGAP_REGISTRY_URL} is accessible from all nodes?}" COMMAND_CHECK_ACCESS_REGISTRY
 fi
 ##################### END AIRGAP ################################################
-#
-#
-##################### BEGIN DOCKER PROXY SETTINGS ###############################
-if [[ $PROXY_DEPLOY == 1 ]]
-then
-question_yn "${DESC_DOCKER_PROXY:=Configure Proxy settings for Docker?}" COMMAND_DOCKER_PROXY
-fi
-##################### END DOCKER PROXY SETTINGS #################################
 #
 #
 ##################### BEGIN CHECK STORAGE ACCESS #################################
@@ -430,4 +330,4 @@ question_yn "${DESC_INSTALL_LONGHORN_PREREQ:=Install Longhorn pre-requisites (op
 
 echo
 echo "-- ${TXT_END:=END} --"
-echo "${TXT_NEXT_STEP:=Next step} 02-rke_deploy.sh"
+echo "${TXT_NEXT_STEP:=Next step} 02-rke2_deploy.sh"
