@@ -39,6 +39,18 @@ fi
 done
 }
 
+COMMAND_CHECK_PACKAGE_DPKG() {
+for i in $@;do echo "${TXT_CHECK_PACKAGE_PRESENT:=Checking if package is installed}: ${bold}$i${normal}"
+if sudo dpkg-query --show $i
+then
+  echo "${bold}$i${normal} ${TXT_IS_PRESENT:=is present}. OK!";echo
+else
+  echo "${bold}$i${normal} ${TXT_NOT_PRESENT:=is absent}. ERROR!"
+  echo "sudo dpkg-query --show ${bold}$i${normal}: 'not installed'"
+fi
+done
+}
+
 ## SSH KEYS CREATION
 COMMAND_SSH_KEYS() {
 ssh-keygen
@@ -135,6 +147,11 @@ for h in ${HOSTS[*]}
   do ssh $h "echo && hostname -f && echo && sudo yum repolist all"; 
 done
 }
+COMMAND_REPOS_APT() {
+for h in ${HOSTS[*]}
+  do ssh $h "echo && hostname -f && echo && sudo apt-cache policy"; 
+done
+}
 
 ## ADDING REPOSITORIES
 COMMAND_ADDREPOS_ZYPPER() {
@@ -163,6 +180,12 @@ for h in ${HOSTS[*]}
 done;
 }
 
+COMMAND_NODES_UPDATE_APT() {
+for h in ${HOSTS[*]}
+  do ssh $h "echo ; hostname -f ; echo ; sudo apt-get -y upgrade"
+done;
+}
+
 ## CHECK TIME
 ## TODO - support chronyc and ntpq
 COMMAND_CHECK_TIME() {
@@ -170,6 +193,7 @@ for h in ${HOSTS[*]}; do
   ssh $h "echo && hostname -f &&
 	  if which chronyc ; then sudo chronyc -a tracking |grep 'Leap status'
  	  elif which ntpq ; then sudo ntpq -p
+    elif which timedatectl; then sudo timedatectl | grep sync
 	  else echo ${TXT_CHECK_TIME:=Chronyc or ntpq binaries are not present. Cannot check if time is synchronized.}
 	  fi"
 done
@@ -209,10 +233,21 @@ if [[ $AIRGAP_DEPLOY == 1 ]]; then
   for h in ${HOSTS[*]}; do echo "$h" ; scp docker-ce*.rpm docker-scan-plugin*.rpm containerd.io*.rpm $h:/tmp ; done;
   for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; cd /tmp ; sudo yum install -y docker-ce*.rpm docker-scan-plugin*.rpm containerd.io*.rpm"; done;
 else
-  for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; curl -s http://releases.rancher.com/install-docker/${DOCKER_VERSION}.sh | sudo /bin/bash"; done
+  for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; curl -s https://releases.rancher.com/install-docker/${DOCKER_VERSION}.sh | sudo /bin/bash"; done
 fi
 for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; sudo systemctl enable docker ; sudo systemctl start docker && echo 'Docker is activated' || echo 'Docker could not start'"; done;
 }
+COMMAND_DOCKER_INSTALL_APT() {
+if [[ $AIRGAP_DEPLOY == 1 ]]; then
+	echo "FIX ME"
+  #for h in ${HOSTS[*]}; do echo "$h" ; scp docker-ce*.rpm docker-scan-plugin*.rpm containerd.io*.rpm $h:/tmp ; done;
+  #for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; cd /tmp ; sudo yum install -y docker-ce*.rpm docker-scan-plugin*.rpm containerd.io*.rpm"; done;
+else
+  for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; curl -s https://releases.rancher.com/install-docker/${DOCKER_VERSION}.sh | sudo /bin/bash"; done
+fi
+for h in ${HOSTS[*]}; do ssh $h "echo ; hostname -f ; sudo systemctl enable docker ; sudo systemctl start docker && echo 'Docker is activated' || echo 'Docker could not start'"; done;
+}
+
 
 COMMAND_CONFIGURE_DOCKER_DAEMON() {
 if [ "${AIRGAP_REGISTRY_INSECURE}" == "1" ] ; then
@@ -304,6 +339,9 @@ then
 elif [[ $pkg_mgr_type == 'yum' ]]
 then
 	FIREWALL_SVC="firewalld"
+elif [[ $pkg_mgr_type == 'apt' ]]
+then
+	FIREWALL_SVC="firewalld"
 fi
 for h in ${HOSTS[*]};do
 ssh $h "
@@ -348,11 +386,21 @@ then
   for h in ${HOSTS[*]}; do
     ssh $h "hostname -f ; sudo yum install -y iscsi-initiator-utils"
   done
+elif [[ $pkg_mgr_type == 'apt' ]]
+then
+  for h in ${HOSTS[*]}; do
+    ssh $h "hostname -f ; sudo apt-get install -y open-iscsi; sudo systemctl enable --now iscsid.service"
+  done
 fi
 }
 
 ##################### BEGIN PRE-CHECK PACKAGES ##################################
-question_yn "${DESC_CHECK_PACKAGE:=Check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_RPM curl expect lsof"
+if [[ $pkg_mgr_type == 'apt' ]]
+then
+  question_yn "${DESC_CHECK_PACKAGE:=Check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_DPKG curl expect lsof"
+else
+  question_yn "${DESC_CHECK_PACKAGE:=Check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_RPM curl expect lsof"
+fi
 ##################### END PRE-CHECK PACKAGES ####################################
 #
 #
@@ -394,6 +442,13 @@ then
 question_yn "$DESC_REPOS" COMMAND_REPOS_YUM
 question_yn "$pkg_mgr_type - ${DESC_NODES_UPDATE:=Update all nodes?}" COMMAND_NODES_UPDATE_YUM
 question_yn "$pkg_mgr_type - ${DESC_DOCKER_INSTALL_YUM:=Install, enable and start Docker on target nodes?}" COMMAND_DOCKER_INSTALL_YUM
+question_yn "${DESC_CREATE_DOCKER_USER:=Create docker user for RKE\n - Docker user: ${DOCKER_USER}\n - Docker group: ${DOCKER_GROUP}}" COMMAND_CREATE_DOCKER_USER
+
+elif [[ $pkg_mgr_type == 'apt' ]]
+then
+question_yn "$DESC_REPOS" COMMAND_REPOS_APT
+question_yn "$pkg_mgr_type - ${DESC_NODES_UPDATE:=Update all nodes?}" COMMAND_NODES_UPDATE_APT
+question_yn "$pkg_mgr_type - ${DESC_DOCKER_INSTALL_YUM:=Install, enable and start Docker on target nodes?}" COMMAND_DOCKER_INSTALL_APT
 question_yn "${DESC_CREATE_DOCKER_USER:=Create docker user for RKE\n - Docker user: ${DOCKER_USER}\n - Docker group: ${DOCKER_GROUP}}" COMMAND_CREATE_DOCKER_USER
 fi
 

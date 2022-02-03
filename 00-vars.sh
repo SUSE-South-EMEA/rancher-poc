@@ -44,8 +44,8 @@ STORAGE_TARGET="192.168.1.11"
 
 ######################## SELECT VERSIONS #########################
 ## K8S cluster, RKE and Helm versions to deploy
-KUBERNETES_VERSION="v1.19.15-rancher1-2"
-RKE_VERSION="v1.3.1"
+KUBERNETES_VERSION="v1.19.16-rancher1-2"
+RKE_VERSION="v1.3.4"
 HELM_VERSION="3.5.3"
 CERTMGR_VERSION="v1.0.4"
 RANCHER_VERSION="2.6.0"
