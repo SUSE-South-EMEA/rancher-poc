@@ -121,6 +121,11 @@ for h in ${HOSTS[*]}
   do ssh $h "echo && hostname -s && echo && sudo yum repolist all"; 
 done
 }
+COMMAND_REPOS_APT() {
+for h in ${HOSTS[*]}
+  do ssh $h "echo && hostname -f && echo && sudo apt-cache policy"; 
+done
+}
 
 ## ADDING REPOSITORIES
 COMMAND_ADDREPOS_ZYPPER() {
@@ -149,6 +154,12 @@ for h in ${HOSTS[*]}
 done;
 }
 
+COMMAND_NODES_UPDATE_APT() {
+for h in ${HOSTS[*]}
+  do ssh $h "echo ; hostname -f ; echo ; sudo apt-get -y upgrade"
+done;
+}
+
 ## CHECK TIME
 ## TODO - support chronyc and ntpq
 COMMAND_CHECK_TIME() {
@@ -156,6 +167,7 @@ for h in ${HOSTS[*]}; do
   ssh $h "echo && hostname -s &&
 	  if which chronyc ; then sudo chronyc -a tracking |grep 'Leap status'
  	  elif which ntpq ; then sudo ntpq -p
+    elif which timedatectl; then sudo timedatectl | grep sync
 	  else echo ${TXT_CHECK_TIME:=Chronyc or ntpq binaries are not present. Cannot check if time is synchronized.}
 	  fi"
 done
@@ -212,6 +224,9 @@ then
 elif [[ $pkg_mgr_type == 'yum' ]]
 then
 	FIREWALL_SVC="firewalld"
+elif [[ $pkg_mgr_type == 'apt' ]]
+then
+	FIREWALL_SVC="firewalld"
 fi
 for h in ${HOSTS[*]};do
 ssh $h "
@@ -256,11 +271,21 @@ then
   for h in ${HOSTS[*]}; do
     ssh $h "hostname -s ; sudo yum install -y iscsi-initiator-utils"
   done
+elif [[ $pkg_mgr_type == 'apt' ]]
+then
+  for h in ${HOSTS[*]}; do
+    ssh $h "hostname -f ; sudo apt-get install -y open-iscsi; sudo systemctl enable --now iscsid.service"
+  done
 fi
 }
 
 ##################### BEGIN PRE-CHECK LOCAL PACKAGES ##################################
-question_yn "${DESC_CHECK_PACKAGE_RPM_LOCAL:=Check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_RPM_LOCAL curl expect"
+if [[ $pkg_mgr_type == 'apt' ]]
+then
+  question_yn "${DESC_CHECK_PACKAGE:=Check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_DPKG curl expect"
+else
+  question_yn "${DESC_CHECK_PACKAGE_RPM_LOCAL:=Check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_RPM_LOCAL curl expect"
+fi
 ##################### END PRE-CHECK LOCAL PACKAGES ####################################
 #
 #
@@ -304,6 +329,11 @@ elif [[ $pkg_mgr_type == 'yum' ]]
 then
 question_yn "$DESC_REPOS" COMMAND_REPOS_YUM
 question_yn "$pkg_mgr_type - ${DESC_NODES_UPDATE:=Update all nodes?}" COMMAND_NODES_UPDATE_YUM
+
+elif [[ $pkg_mgr_type == 'apt' ]]
+then
+question_yn "$DESC_REPOS" COMMAND_REPOS_APT
+question_yn "$pkg_mgr_type - ${DESC_NODES_UPDATE:=Update all nodes?}" COMMAND_NODES_UPDATE_APT
 fi
 
 question_yn "${DESC_INSTALL_KUBECTL:=Install kubectl on local node?}" COMMAND_INSTALL_KUBECTL

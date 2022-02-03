@@ -59,3 +59,15 @@ for h in ${HOSTS[*]}; do
   done
 done
 }
+
+COMMAND_CHECK_PACKAGE_DPKG() {
+for i in $@;do echo "${TXT_CHECK_PACKAGE_PRESENT:=Checking if package is installed}: ${bold}$i${normal}"
+if sudo dpkg-query --show $i
+then
+  echo "${bold}$i${normal} ${TXT_IS_PRESENT:=is present}. OK!";echo
+else
+  echo "${bold}$i${normal} ${TXT_NOT_PRESENT:=is absent}. ERROR!"
+  echo "sudo dpkg-query --show ${bold}$i${normal}: 'not installed'"
+fi
+done
+}
