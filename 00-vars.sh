@@ -45,10 +45,10 @@ STORAGE_TARGET="192.168.1.11"
 ######################## SELECT VERSIONS #########################
 ## RKE2, Rancher and Helm versions to deploy
 HELM_VERSION="3.7.1"
-RKE2_VERSION="v1.21.6+rke2r1"
+RKE2_VERSION="v1.21.7+rke2r2"
 CERTMGR_VERSION="v1.6.1"
-RANCHER_VERSION="2.6.2"
+RANCHER_VERSION="2.6.3"
 
 ######################## FQDNs & DOMAINs #########################
 ## Rancher Management Load balancer FQDN (redirect to RKE nodes hosting Rancher)
-LB_RANCHER_FQDN="rancher.domain"
+LB_RANCHER_FQDN="rancher.15.237.111.86.sslip.io"

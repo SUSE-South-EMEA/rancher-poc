@@ -282,7 +282,7 @@ fi
 ##################### BEGIN PRE-CHECK LOCAL PACKAGES ##################################
 if [[ $pkg_mgr_type == 'apt' ]]
 then
-  question_yn "${DESC_CHECK_PACKAGE:=Check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_DPKG curl expect"
+  question_yn "${DESC_CHECK_PACKAGE:=Check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_DPKG_LOCAL curl expect"
 else
   question_yn "${DESC_CHECK_PACKAGE_RPM_LOCAL:=Check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_RPM_LOCAL curl expect"
 fi
@@ -297,7 +297,12 @@ question_yn "${DESC_SSH_CONNECT_TEST:=Test SSH connection to nodes?}" COMMAND_SS
 #
 #
 ##################### BEGIN PRE-CHECK PACKAGES ##################################
-question_yn "${DESC_CHECK_PACKAGE_RPM:=Check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_RPM iptables apparmor-parser"
+if [[ $pkg_mgr_type == 'apt' ]]
+then
+  question_yn "${DESC_CHECK_PACKAGE:=Check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_DPKG iptables apparmor"
+else
+  question_yn "${DESC_CHECK_PACKAGE_RPM:=Check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_RPM iptables apparmor-parser"
+fi
 ##################### END PRE-CHECK PACKAGES ####################################
 #
 #
