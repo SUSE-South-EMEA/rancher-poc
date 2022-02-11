@@ -384,7 +384,7 @@ then
 elif [[ $pkg_mgr_type == 'yum' ]]
 then
   for h in ${HOSTS[*]}; do
-    ssh $h "hostname -f ; sudo yum install -y iscsi-initiator-utils"
+    ssh $h "hostname -f ; sudo yum install -y iscsi-initiator-utils ; sudo systemctl enable --now iscsid"
   done
 elif [[ $pkg_mgr_type == 'apt' ]]
 then
