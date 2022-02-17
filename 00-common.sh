@@ -55,6 +55,13 @@ for h in ${HOSTS[*]}; do
   else
     echo "${bold}$i${normal} ${TXT_NOT_PRESENT:=is absent}. ERROR!"
     echo "sudo rpm -q ${bold}$i${normal}: 'not installed'"
+    if [[ $pkg_mgr_type == 'zypper' ]] ; then
+      ssh $h "sudo zypper in -y $i"
+    elif [[ $pkg_mgr_type == 'yum' ]] ; then
+      ssh $h "sudo yum install -y $i"
+    else
+      echo "Package manager should be zypper or yum"
+    fi 
   fi
   done
 done
