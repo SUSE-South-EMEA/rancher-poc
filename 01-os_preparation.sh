@@ -264,12 +264,12 @@ COMMAND_INSTALL_LONGHORN_PREREQ() {
 if [[ $pkg_mgr_type == 'zypper' ]]
 then
   for h in ${HOSTS[*]}; do
-    ssh $h "hostname -s ; sudo zypper in -y open-iscsi ; sudo systemctl enable --now iscsid.service"
+    ssh $h "hostname -s ; sudo zypper in -y open-iscsi nfs-utils ; sudo systemctl enable --now iscsid.service"
   done
 elif [[ $pkg_mgr_type == 'yum' ]]
 then
   for h in ${HOSTS[*]}; do
-    ssh $h "hostname -s ; sudo yum install -y iscsi-initiator-utils"
+    ssh $h "hostname -s ; sudo yum install -y iscsi-initiator-utils nfs-utils"
   done
 elif [[ $pkg_mgr_type == 'apt' ]]
 then
