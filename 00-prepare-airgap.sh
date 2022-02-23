@@ -54,7 +54,7 @@ sudo systemctl enable docker ; sudo systemctl start docker && echo 'Docker is ac
 }
 
 COMMAND_DOCKER_INSTALL_YUM_LOCAL() {
-curl -s http://releases.rancher.com/install-docker/${DOCKER_VERSION}.sh | sudo /bin/bash
+curl -O https://releases.rancher.com/install-docker/${DOCKER_VERSION}.sh && sudo /bin/sh ${DOCKER_VERSION}.sh
 sudo systemctl enable docker ; sudo systemctl start docker && echo 'Docker is activated' || echo 'Docker could not start'
 }
 
