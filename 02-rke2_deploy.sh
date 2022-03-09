@@ -56,10 +56,22 @@ fi
 cat registries.yaml
 }
 
+## RKE2 CONFIG PROXY
+COMMAND_RKE2_CONFIG_PROXY() {
+echo "${TXT_RKE2_CONFIG_PROXY:=Generate rke2 proxy configuration file}"
+echo
+cat << EOF > rke2-server
+HTTP_PROXY="http://$_HTTP_PROXY"
+HTTPS_PROXY="http://$_HTTPS_PROXY"
+NO_PROXY="$_NO_PROXY"
+EOF
+}
+
 ## RKE2 DEPLOY
 COMMAND_RKE2_BOOTSTRAP_DEPLOY() {
 echo "${bold}${TXT_RKE2_BOOTSTRAP_DEPLOY:=Bootstrap rke2 server on first node}: ${HOSTS[0]}${normal}"
 if [[ $AIRGAP_DEPLOY == 1 ]]; then scp registries.yaml ${HOSTS[0]}:/etc/rancher/rke2/registries.yaml ; fi
+if [[ $PROXY_DEPLOY == 1 ]]; then scp rke2-server ${HOSTS[0]}:/etc/default/rke2-server ; fi
 ssh ${HOSTS[0]} "sudo systemctl enable --now rke2-server"
 echo; echo "${TXT_RKE_DEPLOY_WAIT:=Please wait while resources are being deployed (could take a few minutes...)}"
 read -rsp "${TXT_RKE_DEPLOY_PRESS_KEY:=Press a key to monitor deployment...}" -n1 key
@@ -126,6 +138,9 @@ fi
 question_yn "${DESC_RKE2_INSTALL:=Install RKE2 on cluster nodes? \n RKE2 version}: ${RKE2_VERSION}" COMMAND_RKE2_INSTALL
 if [[ $AIRGAP_DEPLOY == 1 ]]; then
   question_yn "${DESC_RKE2_CONFIG_REGISTRY:=Create RKE2 registry configuration files?}" COMMAND_RKE2_CONFIG_REGISTRY
+fi
+if [[ $PROXY_DEPLOY == 1 ]]; then
+  question_yn "${DESC_RKE2_CONFIG_PROXY:=Create RKE2 proxy configuration file?}" COMMAND_RKE2_CONFIG_PROXY
 fi
 question_yn "${DESC_RKE2_BOOTSTRAP_DEPLOY:=Bootstrap first rke2 server node?}" COMMAND_RKE2_BOOTSTRAP_DEPLOY
 question_yn "${DESC_KUBECONFIG:=Copy Kubeconfig file to ~/.kube/config?}" COMMAND_KUBECONFIG
