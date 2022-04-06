@@ -40,7 +40,7 @@ done;
 
 ## SSH CONNECT TESTING
 COMMAND_SSH_CONNECT_TEST() {
-for h in ${HOSTS[*]}; do ssh $h "hostname -s" ; done;
+for h in ${HOSTS[*]}; do ssh $h "hostname -f" ; done;
 }
 
 ## Copy Proxy CA locally (specific to SUSE Lab FR)
@@ -79,7 +79,7 @@ export http_proxy=http://${_HTTP_PROXY}
 export https_proxy=http://${_HTTPS_PROXY}
 export no_proxy=${_NO_PROXY}
 EOF
-hostname -s
+hostname -f
 if [[ $pkg_mgr_type == 'zypper' ]]
 then 
 sudo update-ca-certificates
@@ -107,18 +107,18 @@ if [[ $pkg_mgr_type == 'yum' ]]
 then 
 sudo update-ca-trust
 fi
-echo "$(hostname -s) : Proxy parameters added to /etc/profile.d/proxy.sh"
+echo "$(hostname -f) : Proxy parameters added to /etc/profile.d/proxy.sh"
 }
 
 ## LIST REPOSITORIES
 COMMAND_REPOS_ZYPPER() {
 for h in ${HOSTS[*]}
-  do ssh $h "echo && hostname -s && echo && sudo zypper lr"; 
+  do ssh $h "echo && hostname -f && echo && sudo zypper lr"; 
 done
 }
 COMMAND_REPOS_YUM() {
 for h in ${HOSTS[*]}
-  do ssh $h "echo && hostname -s && echo && sudo yum repolist all"; 
+  do ssh $h "echo && hostname -f && echo && sudo yum repolist all"; 
 done
 }
 COMMAND_REPOS_APT() {
@@ -130,7 +130,7 @@ done
 ## ADDING REPOSITORIES
 COMMAND_ADDREPOS_ZYPPER() {
 for h in ${HOSTS[*]}
-  do ssh $h "echo ; hostname -s ; echo ; sudo zypper ref ; 
+  do ssh $h "echo ; hostname -f ; echo ; sudo zypper ref ; 
 sudo zypper ar -G http://${REPO_SERVER}/ks/dist/child/sle-module-containers15-sp3-pool-x86_64/sles15sp3 containers_product ; 
 sudo zypper ar -G http://${REPO_SERVER}/ks/dist/child/sle-module-containers15-sp3-updates-x86_64/sles15sp3 containers_updates" 
 done
@@ -141,7 +141,7 @@ sudo zypper ar -G http://${REPO_SERVER}/ks/dist/child/sle-module-containers15-sp
 ## ALL NODES UPDATE 
 COMMAND_NODES_UPDATE_ZYPPER() {
 for h in ${HOSTS[*]}
-  do ssh $h "echo ; hostname -s ; echo ; sudo zypper ref ; sudo zypper --non-interactive up"
+  do ssh $h "echo ; hostname -f ; echo ; sudo zypper ref ; sudo zypper --non-interactive up"
 done;
 for h in ${HOSTS[*]}
   do ssh $h "echo ; sudo zypper ps" 
@@ -150,7 +150,7 @@ done
 
 COMMAND_NODES_UPDATE_YUM() {
 for h in ${HOSTS[*]}
-  do ssh $h "echo ; hostname -s ; echo ; sudo yum -y update"
+  do ssh $h "echo ; hostname -f ; echo ; sudo yum -y update"
 done;
 }
 
@@ -164,7 +164,7 @@ done;
 ## TODO - support chronyc and ntpq
 COMMAND_CHECK_TIME() {
 for h in ${HOSTS[*]}; do
-  ssh $h "echo && hostname -s &&
+  ssh $h "echo && hostname -f &&
 	  if which chronyc ; then sudo chronyc -a tracking |grep 'Leap status'
  	  elif which ntpq ; then sudo ntpq -p
     elif which timedatectl; then sudo timedatectl | grep sync
@@ -177,35 +177,35 @@ done
 COMMAND_CHECK_ACCESS_REGISTRY() {
 if [ "${AIRGAP_REGISTRY_INSECURE}" == "1" ] ; then
   for h in ${HOSTS[*]}; do
-    ssh $h "echo && hostname -s && curl -k -s -o /dev/null -I https://${AIRGAP_REGISTRY_URL}  && echo '${AIRGAP_REGISTRY_URL}: OK' || echo '${AIRGAP_REGISTRY_URL}: FAIL'"
+    ssh $h "echo && hostname -f && curl -k -s -o /dev/null -I https://${AIRGAP_REGISTRY_URL}  && echo '${AIRGAP_REGISTRY_URL}: OK' || echo '${AIRGAP_REGISTRY_URL}: FAIL'"
   done
   echo
 elif [[ ! -z ${AIRGAP_REGISTRY_CACERT} ]] ; then
   for h in ${HOSTS[*]}; do
-    ssh $h "echo && hostname -s && curl -s -o /dev/null -I --cacert /etc/docker/certs.d/${AIRGAP_REGISTRY_URL}/ca.crt  https://${AIRGAP_REGISTRY_URL}  && echo '${AIRGAP_REGISTRY_URL}: OK' || echo '${AIRGAP_REGISTRY_URL}: FAIL'"
+    ssh $h "echo && hostname -f && curl -s -o /dev/null -I --cacert /etc/docker/certs.d/${AIRGAP_REGISTRY_URL}/ca.crt  https://${AIRGAP_REGISTRY_URL}  && echo '${AIRGAP_REGISTRY_URL}: OK' || echo '${AIRGAP_REGISTRY_URL}: FAIL'"
   done
   echo
 else
   for h in ${HOSTS[*]}; do
-    ssh $h "echo && hostname -s && curl -s -o /dev/null -I https://${AIRGAP_REGISTRY_URL}  && echo '${AIRGAP_REGISTRY_URL}: OK' || echo '${AIRGAP_REGISTRY_URL}: FAIL'"
+    ssh $h "echo && hostname -f && curl -s -o /dev/null -I https://${AIRGAP_REGISTRY_URL}  && echo '${AIRGAP_REGISTRY_URL}: OK' || echo '${AIRGAP_REGISTRY_URL}: FAIL'"
   done
   echo
 fi
 }
 
 COMMAND_CHECK_ACCESS_STORAGE_NET() {
-for h in ${HOSTS[*]}; do ssh $h "echo && hostname -s && ping -c1 $STORAGE_TARGET > /dev/null  && echo 'ping $STORAGE_TARGET: OK' || echo 'ping $STORAGE_TARGET: FAIL'"; done;
+for h in ${HOSTS[*]}; do ssh $h "echo && hostname -f && ping -c1 $STORAGE_TARGET > /dev/null  && echo 'ping $STORAGE_TARGET: OK' || echo 'ping $STORAGE_TARGET: FAIL'"; done;
 }
 
 ## ACTIVATION IP FORWARDING
 COMMAND_IPFORWARD_ACTIVATE() {
-for h in ${HOSTS[*]};do ssh $h "echo; hostname -s ; sudo sed -i '/net.ipv4.ip_forward.*/d' /etc/sysctl.conf /etc/sysctl.d/*.conf ; echo 'net.ipv4.ip_forward = 1' |sudo tee -a /etc/sysctl.conf; sudo sed '/^#/d' /etc/sysctl.conf;sudo sysctl -p" ; done
+for h in ${HOSTS[*]};do ssh $h "echo; hostname -f ; sudo sed -i '/net.ipv4.ip_forward.*/d' /etc/sysctl.conf /etc/sysctl.d/*.conf ; echo 'net.ipv4.ip_forward = 1' |sudo tee -a /etc/sysctl.conf; sudo sed '/^#/d' /etc/sysctl.conf;sudo sysctl -p" ; done
 }
 
 ## DESACTIVATION DU SWAP
 COMMAND_NO_SWAP() {
 for h in ${HOSTS[*]};do ssh $h 'sudo sed -i "/swap/ s/defaults/&,noauto/" /etc/fstab';done
-for h in ${HOSTS[*]};do ssh $h "echo; hostname -s; grep swap /etc/fstab; sudo swapoff -a; free -g";done
+for h in ${HOSTS[*]};do ssh $h "echo; hostname -f; grep swap /etc/fstab; sudo swapoff -a; free -g";done
 }
 
 ## OUTILS K8S
@@ -230,7 +230,7 @@ then
 fi
 for h in ${HOSTS[*]};do
 ssh $h "
-hostname -s
+hostname -f
 if sudo rpm -q $FIREWALL_SVC ; then
   echo "${TXT_FIREWALLD_STOP_DISABLE:=Stop and disable firewalld}"
   sudo systemctl stop $FIREWALL_SVC
@@ -238,7 +238,7 @@ if sudo rpm -q $FIREWALL_SVC ; then
 fi
 "
 done
-hostname -s
+hostname -f
 if sudo rpm -q $FIREWALL_SVC ; then
   echo "${TXT_FIREWALLD_STOP_DISABLE:=Stop and disable firewalld}"
   sudo systemctl stop $FIREWALL_SVC
@@ -264,17 +264,17 @@ COMMAND_INSTALL_LONGHORN_PREREQ() {
 if [[ $pkg_mgr_type == 'zypper' ]]
 then
   for h in ${HOSTS[*]}; do
-    ssh $h "hostname -s ; sudo zypper in -y open-iscsi nfs-client ; sudo systemctl enable --now iscsid.service"
+	  ssh $h "echo ${bold} ; hostname -f ; echo ${normal} ; sudo zypper in -y open-iscsi nfs-client ; sudo systemctl enable --now iscsid.service ; echo"
   done
 elif [[ $pkg_mgr_type == 'yum' ]]
 then
   for h in ${HOSTS[*]}; do
-    ssh $h "hostname -s ; sudo yum install -y iscsi-initiator-utils nfs-utils"
+    ssh $h "echo ${bold} ; hostname -f ; echo ${normal} ; sudo yum install -y iscsi-initiator-utils nfs-utils"
   done
 elif [[ $pkg_mgr_type == 'apt' ]]
 then
   for h in ${HOSTS[*]}; do
-    ssh $h "hostname -f ; sudo apt-get install -y open-iscsi nfs-common ; sudo systemctl enable --now iscsid.service"
+    ssh $h "echo ${bold} ; hostname -f ; echo ${normal} ; sudo apt-get install -y open-iscsi nfs-common ; sudo systemctl enable --now iscsid.service"
   done
 fi
 }
