@@ -14,7 +14,7 @@ It currently supports the following deployment options:
 - Zypper based or Yum based operating systems
 
 The following files are crucial for your experience:
-- `hosts.list` : List of target servers where RKE2 and Rancher will be deployed
+- `hosts.list` : List of target servers where RKE2 and Rancher will be deployed (generated)
 - `00-vars.sh` : Configuration variables
 - `00-prepare-airgap.sh` : Preparation for airgap deployment
 - `01-os_preparation.sh` : OS validations and preparation
