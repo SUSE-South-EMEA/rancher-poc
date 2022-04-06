@@ -67,15 +67,25 @@ NO_PROXY="$_NO_PROXY"
 EOF
 }
 
+## RKE2 CONFIG CREATE
+COMMAND_RKE2_CONFIG_CREATE() {
+echo "${bold}${TXT_RKE2_BOOTSTRAP_CONFIG:=Generating RKE2 configuration (./config.yaml)...}${normal}"
+echo "tls-san:" |tee config.yaml
+for h in ${HOSTS[*]};do
+  echo "  - $h" |tee -a config.yaml
+done
+}
+
 ## RKE2 DEPLOY
 COMMAND_RKE2_BOOTSTRAP_DEPLOY() {
 echo "${bold}${TXT_RKE2_BOOTSTRAP_DEPLOY:=Bootstrap rke2 server on first node}: ${HOSTS[0]}${normal}"
+echo "${TXT_COPY_FILES:=Copying files...}"
+scp config.yaml ${HOSTS[0]}:
+ssh ${HOSTS[0]} "sudo mv config.yaml /etc/rancher/rke2/config.yaml"
 if [[ $AIRGAP_DEPLOY == 1 ]]; then scp registries.yaml ${HOSTS[0]}:/etc/rancher/rke2/registries.yaml ; fi
-if [[ $PROXY_DEPLOY == 1 ]]; then scp rke2-server ${HOSTS[0]}:/etc/default/rke2-server ; fi
-ssh ${HOSTS[0]} "sudo systemctl enable --now rke2-server"
+if [[ $PROXY_DEPLOY == 1 ]]; then scp rke2-server ${HOSTS[0]}: && ssh ${HOSTS[0]} "sudo mv rke2-server /etc/default/rke2-server" ; fi
 echo; echo "${TXT_RKE_DEPLOY_WAIT:=Please wait while resources are being deployed (could take a few minutes...)}"
-read -rsp "${TXT_RKE_DEPLOY_PRESS_KEY:=Press a key to monitor deployment...}" -n1 key
-ssh ${HOSTS[0]} "sudo journalctl -f -u rke2-server"
+ssh ${HOSTS[0]} "sudo systemctl enable --now rke2-server"
 }
 
 COMMAND_RKE2_DEPLOY() {
@@ -83,14 +93,18 @@ echo "${TXT_RKE2_DEPLOY:=Bootstrap rke2 server on other nodes}: ${HOSTS[@]:1}"
 TOKEN=$(ssh ${HOSTS[0]} "sudo cat /var/lib/rancher/rke2/server/token")
 for h in ${HOSTS[@]:1};do
   echo -e "\n${bold}$h${normal}"
-  ssh $h "echo \"token: $TOKEN\" |sudo tee /etc/rancher/rke2/config.yaml ; echo \"server: https://${HOSTS[0]}:9345\" |sudo tee -a /etc/rancher/rke2/config.yaml"
+  echo "${TXT_COPY_FILES:=Copying files...}"
+  scp config.yaml $h:
+  ssh $h "sudo mv config.yaml /etc/rancher/rke2/config.yaml"
   if [[ $AIRGAP_DEPLOY == 1 ]]; then scp registries.yaml $h:/etc/rancher/rke2/registries.yaml ; fi
-  echo "${TXT_RKE2_DEPLOY_START:=Start rke2 server}"
+  echo
+  ssh $h "echo \"token: $TOKEN\" |sudo tee -a /etc/rancher/rke2/config.yaml ; echo \"server: https://${HOSTS[0]}:9345\" |sudo tee -a /etc/rancher/rke2/config.yaml"
+  echo ; echo "${TXT_RKE2_DEPLOY_START:=Start rke2 server}"
   ssh $h "sudo systemctl enable --now rke2-server"
 done
 echo; echo "${TXT_RKE_DEPLOY_WAIT:=Please wait while resources are being deployed (could take a few minutes...)}"
 read -rsp "${TXT_RKE_DEPLOY_PRESS_KEY:=Press a key to monitor deployment...}" -n1 key
-watch -n1 -d "kubectl get nodes,pods -A"
+watch -n1 -d "kubectl get nodes,pods -A ; echo -e '\nPlease wait. Ctrl+C to quit when all pods are Ready...'"
 }
 
 ## KUBECONFIG SETUP
@@ -103,7 +117,7 @@ sed -i "s/127.0.0.1/${HOSTS[0]}/" ~/.kube/config
 echo "${TXT_KUBECONFIG_PATH:=KUBECONFIG copied to ~/.kube/config}"
 echo
 read -rsp "${TXT_RKE_DEPLOY_PRESS_KEY:=Press a key to monitor deployment...}" -n1 key
-watch -n1 -d "kubectl get nodes,pods -A"
+watch -n1 -d "kubectl get nodes,pods -A ; echo -e '\nPlease wait. Ctrl+C to quit when all pods are Ready...'"
 }
 
 ## INSTALL HELM
@@ -127,7 +141,6 @@ COMMAND_HELM_REPOS() {
 if [[ $AIRGAP_DEPLOY == 1 ]]; then
   echo "${TXT_HELM_REPOS:=Helm charts must be previously synced with 00-prepare-airgap.sh and placed in current directory.}"
 else
-  helm repo add suse https://kubernetes-charts.suse.com/
   helm repo add rancher-stable https://releases.rancher.com/server-charts/stable
   helm repo list
 fi
@@ -136,6 +149,7 @@ fi
 
 ##################### BEGIN RKE2 DEPLOYMENT ##################################
 question_yn "${DESC_RKE2_INSTALL:=Install RKE2 on cluster nodes? \n RKE2 version}: ${RKE2_VERSION}" COMMAND_RKE2_INSTALL
+question_yn "${DESC_RKE2_CONFIG_CREATE:=Create RKE2 configuration file?}" COMMAND_RKE2_CONFIG_CREATE
 if [[ $AIRGAP_DEPLOY == 1 ]]; then
   question_yn "${DESC_RKE2_CONFIG_REGISTRY:=Create RKE2 registry configuration files?}" COMMAND_RKE2_CONFIG_REGISTRY
 fi
