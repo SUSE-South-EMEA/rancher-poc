@@ -4,9 +4,9 @@ normal=$(tput sgr0)
 clear
 
 # Create HOSTS variable from file defined in $HOST_LIST_FILE
-echo "${TXT_READ_HOST_FILE:=Reading hosts list from file} $HOST_LIST_FILE"
-#mapfile -t HOSTS < $HOST_LIST_FILE
-HOSTS="$(echo $HOST_LIST |tr ',' ' ')"
+echo "${TXT_READ_HOST_FILE:=Reading hosts list from variable} $HOST_LIST"
+echo $HOST_LIST | tr ',' '\n' > hosts.list
+mapfile -t HOSTS < hosts.list
 echo "${TXT_LIST_HOSTS:=List of remote target hosts}:"
 echo
 printf '%s\n' "${HOSTS[@]}"
