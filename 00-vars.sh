@@ -2,8 +2,9 @@
 LANGUAGE="fr"
 
 ######################## HOSTS LIST ##############################
-## Hosts to remote control in $HOST_LIST_FILE (one target per line)
-HOST_LIST_FILE=./hosts.list
+## Nodes to be handled by the script / FQDN
+## Used by RKE2 when generating TLS certs
+HOST_LIST="ranch1.domain,ranch2.domain,ranch3.domain"
 
 ######################## IF AIRGAP SETUP #########################
 ## Airgap deployment
@@ -51,4 +52,4 @@ RANCHER_VERSION="2.6.4"
 
 ######################## FQDNs & DOMAINs #########################
 ## Rancher Management Load balancer FQDN (redirect to RKE nodes hosting Rancher)
-LB_RANCHER_FQDN="rancher.15.237.111.86.sslip.io"
+LB_RANCHER_FQDN="rancher.domain"

@@ -5,7 +5,8 @@ clear
 
 # Create HOSTS variable from file defined in $HOST_LIST_FILE
 echo "${TXT_READ_HOST_FILE:=Reading hosts list from file} $HOST_LIST_FILE"
-mapfile -t HOSTS < $HOST_LIST_FILE
+#mapfile -t HOSTS < $HOST_LIST_FILE
+HOSTS="$(echo $HOST_LIST |tr ',' ' ')"
 echo "${TXT_LIST_HOSTS:=List of remote target hosts}:"
 echo
 printf '%s\n' "${HOSTS[@]}"
@@ -39,7 +40,7 @@ if sudo rpm -q $i
 then
   echo "${bold}$i${normal} ${TXT_IS_PRESENT:=is present}. OK!";echo
 else
-  echo "${bold}$i${normal} ${TXT_NOT_PRESENT:=is absent}. ERROR!"
+  echo "${bold}$i${normal} ${TXT_NOT_PRESENT:=is absent}. MISSING!"
   echo "sudo rpm -q ${bold}$i${normal}: 'not installed'"
 fi
 done
@@ -53,7 +54,7 @@ for h in ${HOSTS[*]}; do
   then
     echo "${bold}$i${normal} ${TXT_IS_PRESENT:=is present}. OK!";echo
   else
-    echo "${bold}$i${normal} ${TXT_NOT_PRESENT:=is absent}. ERROR!"
+    echo "${bold}$i${normal} ${TXT_NOT_PRESENT:=is absent}. MISSING! Trying to remediate..."
     echo "sudo rpm -q ${bold}$i${normal}: 'not installed'"
     if [[ $pkg_mgr_type == 'zypper' ]] ; then
       ssh $h "sudo zypper in -y $i"
@@ -73,7 +74,7 @@ if sudo dpkg-query --show $i
 then
   echo "${bold}$i${normal} ${TXT_IS_PRESENT:=is present}. OK!";echo
 else
-  echo "${bold}$i${normal} ${TXT_NOT_PRESENT:=is absent}. ERROR!"
+  echo "${bold}$i${normal} ${TXT_NOT_PRESENT:=is absent}. MISSING!"
   echo "sudo dpkg-query --show ${bold}$i${normal}: 'not installed'"
 fi
 done
@@ -87,8 +88,13 @@ for h in ${HOSTS[*]}; do
   then
     echo "${bold}$i${normal} ${TXT_IS_PRESENT:=is present}. OK!";echo
   else
-    echo "${bold}$i${normal} ${TXT_NOT_PRESENT:=is absent}. ERROR!"
+    echo "${bold}$i${normal} ${TXT_NOT_PRESENT:=is absent}. MISSING!"
     echo "sudo dpkg-query --show ${bold}$i${normal}: 'not installed'"
+    if [[ $pkg_mgr_type == 'apt' ]] ; then
+      ssh $h "sudo apt-get install -y $i"
+    else
+      echo "Package manager should be apt"
+    fi 
   fi
   done
 done
