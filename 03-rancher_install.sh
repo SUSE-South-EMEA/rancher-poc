@@ -75,6 +75,7 @@ ping -c 1 ${LB_RANCHER_FQDN}
 COMMAND_RANCHER_INSTALL() {
 # Private CA
 if [[ $PRIVATE_CA == 1 ]] ; then
+  if [[ $TLS_SOURCE == "rancher" ]] ; then echo "Cannot use PRIVATE_CA=1 with TLS_SOURCE=rancher. Exiting..." && exit 1 ; fi
   if [[ ! -f cacerts.pem ]] ; then echo "cacerts.pem not found. Exiting..." && exit 1 ; fi
   EXTRA_OPTS="--set privateCA=true"
   kubectl -n cattle-system create secret generic tls-ca --from-file=cacerts.pem=./cacerts.pem
