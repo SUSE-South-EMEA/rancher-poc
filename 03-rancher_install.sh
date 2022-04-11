@@ -73,13 +73,32 @@ ping -c 1 ${LB_RANCHER_FQDN}
 
 ## INSTALL RANCHER MANAGEMENT
 COMMAND_RANCHER_INSTALL() {
+# Private CA
+if [[ $PRIVATE_CA == 1 ]] ; then
+  if [[ ! -f cacerts.pem ]] ; then echo "cacerts.pem not found. Exiting..." && exit 1 ; fi
+  EXTRA_OPTS="--set privateCA=true"
+  kubectl -n cattle-system create secret generic tls-ca --from-file=cacerts.pem=./cacerts.pem
+fi
+# User provided certificate
+if [[ $TLS_SOURCE == "secret" ]] ; then
+  if [[ ! -f tls.crt ]] || [[ ! -f tls.key ]] ; then echo "tls.crt or tls.key not found. Exiting..." && exit 1 ; fi
+  EXTRA_OPTS="${EXTRA_OPTS} --set ingress.tls.source=secret"
+  kubectl -n cattle-system create secret tls tls-rancher-ingress --cert=tls.crt --key=tls.key
+elif [[ $TLS_SOURCE == "external" ]] ; then
+  EXTRA_OPTS="${EXTRA_OPTS} --set tls=external"
+else
+  echo "Self-signed certificate will be generated using Cert-manager"
+fi
+### Install Rancher
 kubectl create namespace cattle-system
+# Airgap
 if [[ $AIRGAP_DEPLOY == 1 ]]
 then
   echo
   echo "${bold}Rancher Management Server airgap deployment${normal}"
   echo
   kubectl -n cattle-system apply -R -f ./rancher
+# Proxy
 elif [[ $PROXY_DEPLOY == 1 ]] 
 then
   RANCHER_NO_PROXY=$(echo ${_NO_PROXY} |sed 's/,/\\,/g')
@@ -93,13 +112,14 @@ then
     --set hostname=${LB_RANCHER_FQDN} \
     --version ${RANCHER_VERSION} \
     --set proxy=http://${_HTTP_PROXY} \
-    --set no_proxy=${RANCHER_NO_PROXY}
+    --set no_proxy=${RANCHER_NO_PROXY} ${EXTRA_OPTS}
+# With Internet access
 else
   echo "${bold}Rancher Management Server deployment${normal}"
   helm upgrade --install rancher rancher-stable/rancher \
     --namespace cattle-system \
     --set hostname=${LB_RANCHER_FQDN} \
-    --version ${RANCHER_VERSION}
+    --version ${RANCHER_VERSION} ${EXTRA_OPTS}
 fi
 echo "${TXT_MONITOR_RANCHER_INSTALL:=Monitor Rancher resources deployment}"
 read -p "#> kubectl -n cattle-system get all"
