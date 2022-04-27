@@ -97,6 +97,7 @@ for h in ${HOSTS[@]:1};do
   scp config.yaml $h:
   ssh $h "sudo mv config.yaml /etc/rancher/rke2/config.yaml"
   if [[ $AIRGAP_DEPLOY == 1 ]]; then scp registries.yaml $h:/etc/rancher/rke2/registries.yaml ; fi
+  if [[ $PROXY_DEPLOY == 1 ]]; then scp rke2-server $h: && ssh $h "sudo mv rke2-server /etc/default/rke2-server" ; fi
   echo
   ssh $h "echo \"token: $TOKEN\" |sudo tee -a /etc/rancher/rke2/config.yaml ; echo \"server: https://${HOSTS[0]}:9345\" |sudo tee -a /etc/rancher/rke2/config.yaml"
   echo ; echo "${TXT_RKE2_DEPLOY_START:=Start rke2 server}"
