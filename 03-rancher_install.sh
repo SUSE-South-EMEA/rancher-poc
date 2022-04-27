@@ -23,7 +23,7 @@ then
   kubectl apply -f cert-manager/cert-manager-crd.yaml
   # Launch cert-manager
   kubectl apply -R -f ./cert-manager
-elif [[ $PROXY_DEPLOY == 1 ]]
+elif [[ $PROXY_DEPLOY == 1 ]] && [[ $AIRGAP_DEPLOY != 1 ]]
 then
   RANCHER_NO_PROXY=$(echo ${_NO_PROXY} |sed 's/,/\\,/g')
   echo
@@ -100,7 +100,7 @@ then
   echo
   kubectl -n cattle-system apply -R -f ./rancher
 # Proxy
-elif [[ $PROXY_DEPLOY == 1 ]] 
+elif [[ $PROXY_DEPLOY == 1 ]] && [[ $AIRGAP_DEPLOY != 1 ]]
 then
   RANCHER_NO_PROXY=$(echo ${_NO_PROXY} |sed 's/,/\\,/g')
   echo
