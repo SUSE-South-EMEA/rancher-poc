@@ -18,14 +18,11 @@ AIRGAP_REGISTRY_USER=""
 AIRGAP_REGISTRY_PASSWD=""
 
 ######################## IF PROXY SETUP ##########################
-## Proxy settings (leave empty aka "" if you don't want proxy setting to trigger)
-PROXY_ADDR="admin.g3.zypp.lo"
+## Proxy settings
 PROXY_DEPLOY="1"	# 1=proxy enabled / 0=proxy disabled
 _HTTP_PROXY="admin:3128"
 _HTTPS_PROXY="admin:3128"
-#_NO_PROXY=127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,.zypp.lo
 _NO_PROXY=127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,cattle-system.svc,.svc,.cluster.local,.zypp.lo
-PROXY_CA_LOCATION="/etc/squid/ssl_cert/proxyCA.pem"
 
 ######################## DOCKER SETUP (for Airgap)################
 ## Docker version to use (RHEL/CentOS)
@@ -36,8 +33,6 @@ DOCKER_USER="rkedeploy"
 DOCKER_GROUP="docker"	# 'dockerroot' for docker provided by RHEL
 
 ######################## REPOSITORIES ############################
-## NOT-IMPLEMENTED - Repositories (REPO_MODE: 1=SUSE Manager / 2=RMT Server / 3="Do nothing, I'm good")
-#REPO_MODE=1
 REPO_SERVER="suma01"
 
 ######################## CHECK STORAGE NETWORK ###################
