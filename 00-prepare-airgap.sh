@@ -200,11 +200,10 @@ question_yn "${DESC_CHECK_PACKAGE_RPM_LOCAL:=Check if required packages are inst
 ##################### END PRE-CHECK PACKAGES ####################################
 #
 #
-##################### BEGIN COMMANDS ###################################
+##################### BEGIN DOCKER PREPARATION###################################
 if [[ $pkg_mgr_type == 'zypper' ]]
 then
 question_yn "$pkg_mgr_type - ${DESC_DOCKER_INSTALL_ZYPPER_LOCAL:=Install, enable and start Docker on local host?}" COMMAND_DOCKER_INSTALL_ZYPPER_LOCAL
-# TODO - Get rke2 binary
 elif [[ $pkg_mgr_type == 'yum' ]]
 then
 question_yn "$pkg_mgr_type - ${DESC_INSTALL_YUM_UTILS:=Install yum-utils package (containing yumdownloader needed for next steps) ?}" COMMAND_INSTALL_YUM_UTILS
@@ -212,15 +211,23 @@ question_yn "$pkg_mgr_type - ${DESC_DOCKER_INSTALL_LOCAL_YUM:=Install, enable an
 # question_yn "$pkg_mgr_type - ${DESC_DL_RKE2_YUM:=Add RKE2 repo and download RKE2 RPMs?}" COMMAND_DL_RKE2_YUM
 fi
 question_yn "${DESC_CONFIGURE_DOCKER_DAEMON:=Configure docker daemon to use private registry?}" COMMAND_CONFIGURE_LOCAL_DOCKER_DAEMON
+##################### END DOCKER PREPARATION ####################################
+#
+##################### BEGIN DOWNLOAD/PREPARE RESOURCES ##########################
+# /!\ Internet connection required.
 question_yn "${DESC_DL_PREREQ_BINARIES:=Download Helm/kubectl/rke2 binaries and install Helm?}" COMMAND_DL_PREREQ_BINARIES
 question_yn "${DESC_DL_PREREQ_RANCHER:=Download images list and import/export scripts?}" COMMAND_DL_PREREQ_RANCHER
 question_yn "${DESC_DL_RKE2_IMAGES:=Download RKE2 images?}" COMMAND_DL_RKE2_IMAGES
-question_yn "${DESC_PUSH_RKE2_IMAGES:=Push RKE2 images to private registry?}" COMMAND_PUSH_RKE2_IMAGES
 question_yn "${DESC_FETCH_CERTMGR_IMAGES:=Fetch cert-manager images?}" COMMAND_FETCH_CERTMGR_IMAGES
 question_yn "${DESC_SAVE_RANCHER_IMAGES:=Save images locally?}" COMMAND_SAVE_RANCHER_IMAGES
-question_yn "${DESC_PUSH_RANCHER_IMAGES:=Push images to registry?\n - Registry URL: ${AIRGAP_REGISTRY_URL}}" COMMAND_PUSH_RANCHER_IMAGES
 question_yn "${DESC_HELM_MIRROR:=Fetch Helm charts and render templates?\n - Registry URL: ${AIRGAP_REGISTRY_URL}}" COMMAND_HELM_MIRROR
-##################### END COMMANDS ####################################
+##################### END DOWNLOAD/PREPARE RESOURCES ############################
+#
+##################### BEGIN PUSH IMAGES TO REGISTRY #############################
+# Everything should already be downloaded locally, no Internet connection required.
+question_yn "${DESC_PUSH_RKE2_IMAGES:=Push RKE2 images to private registry?}" COMMAND_PUSH_RKE2_IMAGES
+question_yn "${DESC_PUSH_RANCHER_IMAGES:=Push images to registry?\n - Registry URL: ${AIRGAP_REGISTRY_URL}}" COMMAND_PUSH_RANCHER_IMAGES
+##################### END PUSH IMAGES TO REGISTRY ###############################
 
 echo
 echo -e "${TXT_PREP_AIRGAP_COMPLETE:=${bold}Airgap preparation is complete.\nCopy the current directory to a system that has access to the Rancher server cluster to complete installation.}${normal}"
