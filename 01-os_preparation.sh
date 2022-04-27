@@ -43,35 +43,9 @@ COMMAND_SSH_CONNECT_TEST() {
 for h in ${HOSTS[*]}; do ssh $h "hostname -f" ; done;
 }
 
-## Copy Proxy CA locally (specific to SUSE Lab FR)
-COMMAND_COPY_PROXY_CA() {
-if [[ $pkg_mgr_type == 'zypper' ]]
-then
-	PRIV_KEY_PATH="/etc/pki/trust/anchors/"
-elif [[ $pkg_mgr_type == 'yum' ]]
-then
-	PRIV_KEY_PATH="/etc/pki/ca-trust/source/anchors/"
-fi
-echo "Get private certificate from proxy."
-sudo scp -o StrictHostKeyChecking=no $PROXY_ADDR:$PROXY_CA_LOCATION /tmp/proxyCA.pem
-for h in ${HOSTS[*]}
-  do
-ssh $h "hostname"
-scp /tmp/proxyCA.pem $h:$PRIV_KEY_PATH
-done
-}
-
 ## SET PROXY
 COMMAND_SET_PROXY() {
-if [[ $pkg_mgr_type == 'zypper' ]]
-then
-	PRIV_KEY_PATH="/etc/pki/trust/anchors/"
-elif [[ $pkg_mgr_type == 'yum' ]]
-then
-	PRIV_KEY_PATH="/etc/pki/ca-trust/source/anchors/"
-fi
-echo "$PROXY_ADDR:$PROXY_CA_LOCATION"
-echo
+# Configure proxy on hosts
 for h in ${HOSTS[*]}
   do
 ssh $h "sudo tee /etc/profile.d/proxy.sh <<EOF
@@ -80,33 +54,17 @@ export https_proxy=http://${_HTTPS_PROXY}
 export no_proxy=${_NO_PROXY}
 EOF
 hostname -f
-if [[ $pkg_mgr_type == 'zypper' ]]
-then 
-sudo update-ca-certificates
-fi
-if [[ $pkg_mgr_type == 'yum' ]]
-then 
-sudo update-ca-trust
-fi
 echo 'Proxy parameters added to /etc/profile.d/proxy.sh'
 echo"
 done
-# Add locally
+# Configure proxy on deploy node
 sudo tee /etc/profile.d/proxy.sh <<EOF
 export http_proxy=http://${_HTTP_PROXY}
 export https_proxy=http://${_HTTPS_PROXY}
 export no_proxy=${_NO_PROXY}
 EOF
+sudo chmod 0755 /etc/profile.d/proxy.sh
 source /etc/profile.d/proxy.sh
-sudo cp /tmp/proxyCA.pem $PRIV_KEY_PATH
-if [[ $pkg_mgr_type == 'zypper' ]]
-then 
-sudo update-ca-certificates
-fi
-if [[ $pkg_mgr_type == 'yum' ]]
-then 
-sudo update-ca-trust
-fi
 echo "$(hostname -f) : Proxy parameters added to /etc/profile.d/proxy.sh"
 }
 
@@ -261,21 +219,21 @@ echo "A Default Gateway should be set on all nodes (even if non-existent/non-wor
 
 ## LONGHORN
 COMMAND_INSTALL_LONGHORN_PREREQ() {
-if [[ $pkg_mgr_type == 'zypper' ]]
-then
+if [[ $pkg_mgr_type == 'zypper' ]] ; then
   for h in ${HOSTS[*]}; do
 	  ssh $h "echo ${bold} ; hostname -f ; echo ${normal} ; sudo zypper in -y open-iscsi nfs-client ; sudo systemctl enable --now iscsid.service ; echo"
   done
-elif [[ $pkg_mgr_type == 'yum' ]]
-then
+elif [[ $pkg_mgr_type == 'yum' ]] ; then
   for h in ${HOSTS[*]}; do
-    ssh $h "echo ${bold} ; hostname -f ; echo ${normal} ; sudo yum install -y iscsi-initiator-utils nfs-utils"
+    echo ; echo "${bold}${h}${normal}"
+    ssh $h "sudo yum install -y iscsi-initiator-utils nfs-utils"
   done
-elif [[ $pkg_mgr_type == 'apt' ]]
-then
+elif [[ $pkg_mgr_type == 'apt' ]] ; then
   for h in ${HOSTS[*]}; do
     ssh $h "echo ${bold} ; hostname -f ; echo ${normal} ; sudo apt-get install -y open-iscsi nfs-common ; sudo systemctl enable --now iscsid.service"
   done
+else
+  echo "Unknow package manager type. Exiting..." && exit 1
 fi
 }
 
@@ -309,7 +267,6 @@ fi
 ##################### BEGIN PROXY ###############################################
 if [[ $PROXY_DEPLOY == 1 ]]
 then
-question_yn "${DESC_COPY_PROXY_CA:=Copy proxy private key to clients. Apply parameters? (specific to SUSE FR Lab)}" COMMAND_COPY_PROXY_CA
 question_yn "${DESC_SET_PROXY:=PROXY variables are set in ./00-vars.sh. Apply parameters ? \n _HTTP_PROXY=${_HTTP_PROXY} \n _HTTPS_PROXY=${_HTTPS_PROXY} \n _NO_PROXY=${_NO_PROXY}}" COMMAND_SET_PROXY
 fi
 ##################### END PROXY #################################################
