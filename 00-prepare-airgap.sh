@@ -167,30 +167,84 @@ sudo ./rancher-load-images.sh --image-list ./rancher-images.txt --registry ${AIR
 }
 
 COMMAND_HELM_MIRROR() {
-# Fetch rancher
-helm repo add rancher-latest https://releases.rancher.com/server-charts/latest
-helm fetch rancher-latest/rancher --version=v${RANCHER_VERSION}
 # Fetch cert manager
 helm repo add jetstack https://charts.jetstack.io
 helm repo update
 helm fetch jetstack/cert-manager --version ${CERTMGR_VERSION}
 # Render cert manager
-helm template cert-manager ./cert-manager-${CERTMGR_VERSION}.tgz --output-dir . \
+if [[ $PROXY_DEPLOY == 1 ]] ; then
+  RANCHER_NO_PROXY=$(echo ${_NO_PROXY} |sed 's/,/\\,/g')
+  echo
+  echo "${bold}Cert Manager deployment with Proxy settings:"
+  echo "- http_proxy=${_HTTP_PROXY}"
+  echo "- https_proxy=${_HTTPS_PROXY}"
+  echo "- no_proxy=${RANCHER_NO_PROXY}${normal}"
+  echo
+  helm template cert-manager ./cert-manager-${CERTMGR_VERSION}.tgz --output-dir . \
+    --namespace cert-manager \
+    --set image.repository=${AIRGAP_REGISTRY_URL}/quay.io/jetstack/cert-manager-controller \
+    --set webhook.image.repository=${AIRGAP_REGISTRY_URL}/quay.io/jetstack/cert-manager-webhook \
+    --set cainjector.image.repository=${AIRGAP_REGISTRY_URL}/quay.io/jetstack/cert-manager-cainjector \
+    --set startupapicheck.image.repository=${AIRGAP_REGISTRY_URL}/quay.io/jetstack/cert-manager-ctl \
+    --set http_proxy=http://${_HTTP_PROXY} \
+    --set https_proxy=http://${_HTTPS_PROXY} \
+    --set no_proxy=${RANCHER_NO_PROXY}
+else
+  helm template cert-manager ./cert-manager-${CERTMGR_VERSION}.tgz --output-dir . \
     --namespace cert-manager \
     --set image.repository=${AIRGAP_REGISTRY_URL}/quay.io/jetstack/cert-manager-controller \
     --set webhook.image.repository=${AIRGAP_REGISTRY_URL}/quay.io/jetstack/cert-manager-webhook \
     --set cainjector.image.repository=${AIRGAP_REGISTRY_URL}/quay.io/jetstack/cert-manager-cainjector \
     --set startupapicheck.image.repository=${AIRGAP_REGISTRY_URL}/quay.io/jetstack/cert-manager-ctl
+fi
 curl -L -o cert-manager/cert-manager-crd.yaml https://github.com/jetstack/cert-manager/releases/download/${CERTMGR_VERSION}/cert-manager.crds.yaml
+
+# Certificates configuration
+## Private CA
+if [[ $PRIVATE_CA == 1 ]] ; then
+  if [[ $TLS_SOURCE == "rancher" ]] ; then echo "Cannot use PRIVATE_CA=1 with TLS_SOURCE=rancher. Exiting..." && exit 1 ; fi
+  EXTRA_OPTS="--set privateCA=true"
+fi
+## User provided certificate
+if [[ $TLS_SOURCE == "secret" ]] ; then
+  EXTRA_OPTS="${EXTRA_OPTS} --set ingress.tls.source=secret"
+elif [[ $TLS_SOURCE == "external" ]] ; then
+  EXTRA_OPTS="${EXTRA_OPTS} --set tls=external"
+else
+  echo "Self-signed certificate will be generated using Cert-manager"
+fi
+
+# Fetch rancher
+helm repo add rancher-latest https://releases.rancher.com/server-charts/latest
+helm fetch rancher-latest/rancher --version=v${RANCHER_VERSION}
 # Render rancher
-helm template rancher ./rancher-${RANCHER_VERSION}.tgz --output-dir . \
+if [[ $PROXY_DEPLOY == 1 ]] ; then
+  RANCHER_NO_PROXY=$(echo ${_NO_PROXY} |sed 's/,/\\,/g')
+  echo
+  echo "${bold}Rancher Management Server deployment with Proxy settings:"
+  echo "- proxy=${_HTTP_PROXY}"
+  echo "- no_proxy=${RANCHER_NO_PROXY}${normal}"
+  echo
+  helm template rancher ./rancher-${RANCHER_VERSION}.tgz --output-dir . \
     --no-hooks \
     --namespace cattle-system \
     --set hostname=${LB_RANCHER_FQDN} \
     --set rancherImage=${AIRGAP_REGISTRY_URL}/rancher/rancher \
     --set rancherImageTag=v${RANCHER_VERSION} \
     --set systemDefaultRegistry=${AIRGAP_REGISTRY_URL} \
-    --set useBundledSystemChart=true
+    --set useBundledSystemChart=true \
+    --set proxy=http://${_HTTP_PROXY} \
+    --set no_proxy=${RANCHER_NO_PROXY} ${EXTRA_OPTS}
+else
+  helm template rancher ./rancher-${RANCHER_VERSION}.tgz --output-dir . \
+    --no-hooks \
+    --namespace cattle-system \
+    --set hostname=${LB_RANCHER_FQDN} \
+    --set rancherImage=${AIRGAP_REGISTRY_URL}/rancher/rancher \
+    --set rancherImageTag=v${RANCHER_VERSION} \
+    --set systemDefaultRegistry=${AIRGAP_REGISTRY_URL} \
+    --set useBundledSystemChart=true ${EXTRA_OPTS}
+fi
 # Cleanup
 rm -f cert-manager-${CERTMGR_VERSION}.tgz rancher-${RANCHER_VERSION}.tgz
 }
