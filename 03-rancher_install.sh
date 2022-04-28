@@ -23,7 +23,7 @@ then
   kubectl apply -f cert-manager/cert-manager-crd.yaml
   # Launch cert-manager
   kubectl apply -R -f ./cert-manager
-elif [[ $PROXY_DEPLOY == 1 ]]
+elif [[ $PROXY_DEPLOY == 1 ]] && [[ $AIRGAP_DEPLOY != 1 ]]
 then
   RANCHER_NO_PROXY=$(echo ${_NO_PROXY} |sed 's/,/\\,/g')
   echo
@@ -32,10 +32,6 @@ then
   echo "- https_proxy=${_HTTPS_PROXY}"
   echo "- no_proxy=${RANCHER_NO_PROXY}${normal}"
   echo
-  # Install the CustomResourceDefinition resources separately
-  kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/${CERTMGR_VERSION}/cert-manager.crds.yaml
-  # Create the namespace for cert-manager
-  kubectl create namespace cert-manager
   # Add the Jetstack Helm repository
   helm repo add jetstack https://charts.jetstack.io
   # Update your local Helm chart repository cache
@@ -43,9 +39,9 @@ then
   # Install Cert-Manager
   helm upgrade --install cert-manager jetstack/cert-manager \
     --namespace cert-manager \
+    --create-namespace \
     --version ${CERTMGR_VERSION} \
-    --set global.podSecurityPolicy.enabled=True \
-    --set global.podSecurityPolicy.useAppArmor=False \
+    --set installCRDs=true \
     --set http_proxy=http://${_HTTP_PROXY} \
     --set https_proxy=http://${_HTTPS_PROXY} \
     --set no_proxy=${RANCHER_NO_PROXY}
@@ -53,10 +49,6 @@ else
   echo
   echo "Cert Manager deployment"
   echo
-  # Install the CustomResourceDefinition resources separately
-  kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/${CERTMGR_VERSION}/cert-manager.crds.yaml
-  # Create the namespace for cert-manager
-  kubectl create namespace cert-manager
   # Add the Jetstack Helm repository
   helm repo add jetstack https://charts.jetstack.io
   # Update your local Helm chart repository cache
@@ -64,18 +56,10 @@ else
   # Install Cert-Manager
   helm upgrade --install cert-manager jetstack/cert-manager \
     --namespace cert-manager \
+    --create-namespace \
     --version ${CERTMGR_VERSION} \
-    --set global.podSecurityPolicy.enabled=True \
-    --set global.podSecurityPolicy.useAppArmor=False
+    --set installCRDs=true
 fi
-
-# Fix for K8S 1.19 - Select PSP profile (apparmor forced whereas desactivated)
-kubectl annotate --overwrite psp cert-manager \
-  seccomp.security.alpha.kubernetes.io/allowedProfileNames=docker/default,runtime/default
-kubectl annotate --overwrite psp cert-manager-cainjector \
-  seccomp.security.alpha.kubernetes.io/allowedProfileNames=docker/default,runtime/default
-kubectl annotate --overwrite psp cert-manager-webhook \
-  seccomp.security.alpha.kubernetes.io/allowedProfileNames=docker/default,runtime/default
 
 echo "${TXT_MONITOR_CERTMGR_INSTALL:=Monitor Cert Manager installation}"
 read -p "#> kubectl get all --namespace cert-manager"
@@ -89,33 +73,54 @@ ping -c 1 ${LB_RANCHER_FQDN}
 
 ## INSTALL RANCHER MANAGEMENT
 COMMAND_RANCHER_INSTALL() {
+# Private CA
+if [[ $PRIVATE_CA == 1 ]] ; then
+  if [[ $TLS_SOURCE == "rancher" ]] ; then echo "Cannot use PRIVATE_CA=1 with TLS_SOURCE=rancher. Exiting..." && exit 1 ; fi
+  if [[ ! -f cacerts.pem ]] ; then echo "cacerts.pem not found. Exiting..." && exit 1 ; fi
+  EXTRA_OPTS="--set privateCA=true"
+  kubectl -n cattle-system create secret generic tls-ca --from-file=cacerts.pem=./cacerts.pem
+fi
+# User provided certificate
+if [[ $TLS_SOURCE == "secret" ]] ; then
+  if [[ ! -f tls.crt ]] || [[ ! -f tls.key ]] ; then echo "tls.crt or tls.key not found. Exiting..." && exit 1 ; fi
+  EXTRA_OPTS="${EXTRA_OPTS} --set ingress.tls.source=secret"
+  kubectl -n cattle-system create secret tls tls-rancher-ingress --cert=tls.crt --key=tls.key
+elif [[ $TLS_SOURCE == "external" ]] ; then
+  EXTRA_OPTS="${EXTRA_OPTS} --set tls=external"
+else
+  echo "Self-signed certificate will be generated using Cert-manager"
+fi
+### Install Rancher
 kubectl create namespace cattle-system
+# Airgap
 if [[ $AIRGAP_DEPLOY == 1 ]]
 then
   echo
   echo "${bold}Rancher Management Server airgap deployment${normal}"
   echo
   kubectl -n cattle-system apply -R -f ./rancher
-elif [[ $PROXY_DEPLOY == 1 ]] 
+# Proxy
+elif [[ $PROXY_DEPLOY == 1 ]] && [[ $AIRGAP_DEPLOY != 1 ]]
 then
   RANCHER_NO_PROXY=$(echo ${_NO_PROXY} |sed 's/,/\\,/g')
   echo
   echo "${bold}Rancher Management Server deployment with Proxy settings:"
   echo "- proxy=${_HTTP_PROXY}"
-  echo "- no_proxy=${RANCHER_NO_PROXY}${normal}"
+  echo "- noProxy=${RANCHER_NO_PROXY}${normal}"
   echo
-  helm upgrade --install rancher rancher-latest/rancher \
+  helm upgrade --install rancher rancher-stable/rancher \
     --namespace cattle-system \
     --set hostname=${LB_RANCHER_FQDN} \
     --version ${RANCHER_VERSION} \
     --set proxy=http://${_HTTP_PROXY} \
-    --set no_proxy=${RANCHER_NO_PROXY}
+    --set noProxy=${RANCHER_NO_PROXY} ${EXTRA_OPTS}
+# With Internet access
 else
   echo "${bold}Rancher Management Server deployment${normal}"
-  helm upgrade --install rancher rancher-latest/rancher \
+  helm upgrade --install rancher rancher-stable/rancher \
     --namespace cattle-system \
     --set hostname=${LB_RANCHER_FQDN} \
-    --version ${RANCHER_VERSION}
+    --version ${RANCHER_VERSION} ${EXTRA_OPTS}
 fi
 echo "${TXT_MONITOR_RANCHER_INSTALL:=Monitor Rancher resources deployment}"
 read -p "#> kubectl -n cattle-system get all"
