@@ -53,7 +53,6 @@ The Rancher UI will need a FQDN which load balances the connections toward the R
 ```bash
 git clone https://github.com/SUSE-South-EMEA/rancher-poc.git
 cd rancher-poc
-git checkout rke2
 ```
 
 ### hosts.list - List target nodes
