@@ -106,14 +106,14 @@ then
   echo
   echo "${bold}Rancher Management Server deployment with Proxy settings:"
   echo "- proxy=${_HTTP_PROXY}"
-  echo "- no_proxy=${RANCHER_NO_PROXY}${normal}"
+  echo "- noProxy=${RANCHER_NO_PROXY}${normal}"
   echo
   helm upgrade --install rancher rancher-stable/rancher \
     --namespace cattle-system \
     --set hostname=${LB_RANCHER_FQDN} \
     --version ${RANCHER_VERSION} \
     --set proxy=http://${_HTTP_PROXY} \
-    --set no_proxy=${RANCHER_NO_PROXY} ${EXTRA_OPTS}
+    --set noProxy=${RANCHER_NO_PROXY} ${EXTRA_OPTS}
 # With Internet access
 else
   echo "${bold}Rancher Management Server deployment${normal}"

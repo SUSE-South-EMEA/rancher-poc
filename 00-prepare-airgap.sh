@@ -223,7 +223,7 @@ if [[ $PROXY_DEPLOY == 1 ]] ; then
   echo
   echo "${bold}Rancher Management Server deployment with Proxy settings:"
   echo "- proxy=${_HTTP_PROXY}"
-  echo "- no_proxy=${RANCHER_NO_PROXY}${normal}"
+  echo "- noProxy=${RANCHER_NO_PROXY}${normal}"
   echo
   helm template rancher ./rancher-${RANCHER_VERSION}.tgz --output-dir . \
     --no-hooks \
@@ -234,7 +234,7 @@ if [[ $PROXY_DEPLOY == 1 ]] ; then
     --set systemDefaultRegistry=${AIRGAP_REGISTRY_URL} \
     --set useBundledSystemChart=true \
     --set proxy=http://${_HTTP_PROXY} \
-    --set no_proxy=${RANCHER_NO_PROXY} ${EXTRA_OPTS}
+    --set noProxy=${RANCHER_NO_PROXY} ${EXTRA_OPTS}
 else
   helm template rancher ./rancher-${RANCHER_VERSION}.tgz --output-dir . \
     --no-hooks \
