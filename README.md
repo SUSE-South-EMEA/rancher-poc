@@ -1,7 +1,6 @@
 # Rancher PoC - High Availability
 
 Rancher deployment based on RKE2 cluster.
-In progress...
 
 ## Objectives
 
@@ -11,17 +10,16 @@ It currently supports the following deployment options:
 - with direct access to Internet
 - Internet accessed via Proxy
 - Airgap
-- Zypper based or Yum based operating systems
+- zypper, yum or apt based operating systems (should work on SLES 15 SP2/SP3, CentOS/RHEL 8, Ubuntu 18.04/20.04)
 
 The following files are crucial for your experience:
 - `hosts.list` : List of target servers where RKE2 and Rancher will be deployed (generated)
 - `00-vars.sh` : Configuration variables
 - `00-prepare-airgap.sh` : Preparation for airgap deployment
 - `01-os_preparation.sh` : OS validations and preparation
-- `02-rke2_deploy.sh` : RKE2 deployment
-- `03-rancher_install.sh` : Rancher Management Server deployment
-- `04-cleanup-destroy.sh` : Cleanup target servers to start over
-- `05-def_gw-ipv6.sh` : Special configurations (remove and set default gw, disable ipv6...)
+- `02-rke2_deploy.sh`    : RKE2 deployment
+- `03-rancher_install.sh`: Rancher Management Server deployment
+- `04-cleanup-destroy.sh`: Cleanup target servers to start over
 
 ## Pre-requisites
 
@@ -32,11 +30,11 @@ The following files are crucial for your experience:
 
 - 3 rancher management servers
  > These 3 machines will be used for a 3 nodes RKE2 cluster which will hold the Rancher Management UI
- > The 3 nodes will have: ETCD, Controlplane and Worker roles
+ > The 3 nodes will have: etcd, controlplane and worker roles
 
 The servers are deployed using classic standards
  > Fixed network settings
- > Internet access (with or without proxy) / Airgap deployment is also possible but not yet implemented in the scripts
+ > Internet access (with or without proxy) or Airgap deployment (with or without proxy)
  > Time should be well set
  > DNS should be correct
  > Firewall should be deactivated
