@@ -80,9 +80,8 @@ done
 COMMAND_RKE2_BOOTSTRAP_DEPLOY() {
 echo "${bold}${TXT_RKE2_BOOTSTRAP_DEPLOY:=Bootstrap rke2 server on first node}: ${HOSTS[0]}${normal}"
 echo "${TXT_COPY_FILES:=Copying files...}"
-scp config.yaml ${HOSTS[0]}:
-ssh ${HOSTS[0]} "sudo mv config.yaml /etc/rancher/rke2/config.yaml"
-if [[ $AIRGAP_DEPLOY == 1 ]]; then scp registries.yaml ${HOSTS[0]}:/etc/rancher/rke2/registries.yaml ; fi
+scp config.yaml ${HOSTS[0]}: && ssh ${HOSTS[0]} "sudo mv config.yaml /etc/rancher/rke2/config.yaml"
+if [[ $AIRGAP_DEPLOY == 1 ]]; then scp registries.yaml ${HOSTS[0]}: && ssh ${HOSTS[0]} "sudo mv registries.yaml /etc/rancher/rke2/registries.yaml" ; fi
 if [[ $PROXY_DEPLOY == 1 ]]; then scp rke2-server ${HOSTS[0]}: && ssh ${HOSTS[0]} "sudo mv rke2-server /etc/default/rke2-server" ; fi
 echo; echo "${TXT_RKE_DEPLOY_WAIT:=Please wait while resources are being deployed (could take a few minutes...)}"
 ssh ${HOSTS[0]} "sudo systemctl enable --now rke2-server"
@@ -94,9 +93,8 @@ TOKEN=$(ssh ${HOSTS[0]} "sudo cat /var/lib/rancher/rke2/server/token")
 for h in ${HOSTS[@]:1};do
   echo -e "\n${bold}$h${normal}"
   echo "${TXT_COPY_FILES:=Copying files...}"
-  scp config.yaml $h:
-  ssh $h "sudo mv config.yaml /etc/rancher/rke2/config.yaml"
-  if [[ $AIRGAP_DEPLOY == 1 ]]; then scp registries.yaml $h:/etc/rancher/rke2/registries.yaml ; fi
+  scp config.yaml $h: && ssh $h "sudo mv config.yaml /etc/rancher/rke2/config.yaml"
+  if [[ $AIRGAP_DEPLOY == 1 ]]; then scp registries.yaml $h: && ssh $h "sudo mv registries.yaml /etc/rancher/rke2/registries.yaml" ; fi
   if [[ $PROXY_DEPLOY == 1 ]]; then scp rke2-server $h: && ssh $h "sudo mv rke2-server /etc/default/rke2-server" ; fi
   echo
   ssh $h "echo \"token: $TOKEN\" |sudo tee -a /etc/rancher/rke2/config.yaml ; echo \"server: https://${HOSTS[0]}:9345\" |sudo tee -a /etc/rancher/rke2/config.yaml"
