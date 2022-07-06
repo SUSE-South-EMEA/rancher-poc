@@ -19,7 +19,7 @@ AIRGAP_REGISTRY_PASSWD=""
 
 ######################## IF PROXY SETUP ##########################
 ## Proxy settings
-PROXY_DEPLOY="1"	# 1=proxy enabled / 0=proxy disabled
+PROXY_DEPLOY="0"	# 1=proxy enabled / 0=proxy disabled
 _HTTP_PROXY="admin:3128"
 _HTTPS_PROXY="admin:3128"
 _NO_PROXY=127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,cattle-system.svc,.svc,.cluster.local,.zypp.lo
@@ -42,9 +42,9 @@ STORAGE_TARGET="192.168.1.11"
 ######################## SELECT VERSIONS #########################
 ## RKE2, Rancher and Helm versions to deploy
 HELM_VERSION="3.7.1"
-RKE2_VERSION="v1.21.7+rke2r2"
+RKE2_VERSION="v1.23.6+rke2r1 "
 CERTMGR_VERSION="v1.7.1"
-RANCHER_VERSION="2.6.4"
+RANCHER_VERSION="2.6.6"
 
 ######### RANCHER MGMT SERVER CERTIFICATE AND PRIVATE CA #########
 ## Rancher TLS configuration. Available options are [rancher,secret,external]
