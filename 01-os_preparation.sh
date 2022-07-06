@@ -221,7 +221,8 @@ echo "A Default Gateway should be set on all nodes (even if non-existent/non-wor
 COMMAND_INSTALL_LONGHORN_PREREQ() {
 if [[ $pkg_mgr_type == 'zypper' ]] ; then
   for h in ${HOSTS[*]}; do
-	  ssh $h "echo ${bold} ; hostname -f ; echo ${normal} ; sudo zypper in -y open-iscsi nfs-client ; sudo systemctl enable --now iscsid.service ; echo"
+    echo ; echo "${bold}${h}${normal}"
+    ssh $h "sudo zypper in -y open-iscsi nfs-client ; sudo systemctl enable --now iscsid.service"
   done
 elif [[ $pkg_mgr_type == 'yum' ]] ; then
   for h in ${HOSTS[*]}; do
@@ -230,7 +231,8 @@ elif [[ $pkg_mgr_type == 'yum' ]] ; then
   done
 elif [[ $pkg_mgr_type == 'apt' ]] ; then
   for h in ${HOSTS[*]}; do
-    ssh $h "echo ${bold} ; hostname -f ; echo ${normal} ; sudo apt-get install -y open-iscsi nfs-common ; sudo systemctl enable --now iscsid.service"
+    echo ; echo "${bold}${h}${normal}"
+    ssh $h "sudo apt-get install -y open-iscsi nfs-common ; sudo systemctl enable --now iscsid.service"
   done
 else
   echo "Unknow package manager type. Exiting..." && exit 1
