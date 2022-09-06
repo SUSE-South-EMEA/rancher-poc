@@ -73,6 +73,8 @@ ping -c 1 ${LB_RANCHER_FQDN}
 
 ## INSTALL RANCHER MANAGEMENT
 COMMAND_RANCHER_INSTALL() {
+### Install Rancher
+kubectl create namespace cattle-system
 # Private CA
 if [[ $PRIVATE_CA == 1 ]] ; then
   if [[ $TLS_SOURCE == "rancher" ]] ; then echo "Cannot use PRIVATE_CA=1 with TLS_SOURCE=rancher. Exiting..." && exit 1 ; fi
@@ -90,8 +92,6 @@ elif [[ $TLS_SOURCE == "external" ]] ; then
 else
   echo "Self-signed certificate will be generated using Cert-manager"
 fi
-### Install Rancher
-kubectl create namespace cattle-system
 # Airgap
 if [[ $AIRGAP_DEPLOY == 1 ]]
 then
