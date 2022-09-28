@@ -40,8 +40,15 @@ if sudo rpm -q $i
 then
   echo "${bold}$i${normal} ${TXT_IS_PRESENT:=is present}. OK!";echo
 else
-  echo "${bold}$i${normal} ${TXT_NOT_PRESENT:=is absent}. MISSING!"
+  echo "${bold}$i${normal} ${TXT_NOT_PRESENT:=is absent}. MISSING! Trying to remediate..."
   echo "sudo rpm -q ${bold}$i${normal}: 'not installed'"
+    if [[ $pkg_mgr_type == 'zypper' ]] ; then
+      sudo zypper in -y $i
+    elif [[ $pkg_mgr_type == 'yum' ]] ; then
+      sudo yum install -y $i
+    else
+      echo "Package manager should be zypper or yum"
+    fi 
 fi
 done
 }
@@ -74,8 +81,13 @@ if sudo dpkg-query --show $i
 then
   echo "${bold}$i${normal} ${TXT_IS_PRESENT:=is present}. OK!";echo
 else
-  echo "${bold}$i${normal} ${TXT_NOT_PRESENT:=is absent}. MISSING!"
+  echo "${bold}$i${normal} ${TXT_NOT_PRESENT:=is absent}. MISSING! Trying to remediate..."
   echo "sudo dpkg-query --show ${bold}$i${normal}: 'not installed'"
+    if [[ $pkg_mgr_type == 'apt' ]] ; then
+      sudo apt-get install -y $i
+    else
+      echo "Package manager should be apt"
+    fi 
 fi
 done
 }
@@ -88,7 +100,7 @@ for h in ${HOSTS[*]}; do
   then
     echo "${bold}$i${normal} ${TXT_IS_PRESENT:=is present}. OK!";echo
   else
-    echo "${bold}$i${normal} ${TXT_NOT_PRESENT:=is absent}. MISSING!"
+    echo "${bold}$i${normal} ${TXT_NOT_PRESENT:=is absent}. MISSING! Trying to remediate..."
     echo "sudo dpkg-query --show ${bold}$i${normal}: 'not installed'"
     if [[ $pkg_mgr_type == 'apt' ]] ; then
       ssh $h "sudo apt-get install -y $i"
