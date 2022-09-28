@@ -9,15 +9,15 @@ source ./00-common.sh
 while true; do
    read -p "${bold}Package manager type? (zypper/yum/apt) ${normal}" pkg_mgr_type
    case $pkg_mgr_type in
-      [zypper]* )
+      zypper )
             echo "$pkg_mgr_type selected."
             echo
             break;;
-      [yum]* ) 
+      yum ) 
             echo "$pkg_mgr_type selected."
             echo
 	    break;;
-      [apt]* ) 
+      apt ) 
             echo "$pkg_mgr_type selected."
             echo
 	    break;;
@@ -89,11 +89,11 @@ done
 COMMAND_ADDREPOS_ZYPPER() {
 for h in ${HOSTS[*]}
   do ssh $h "echo ; hostname -f ; echo ; sudo zypper ref ; 
-sudo zypper ar -G http://${REPO_SERVER}/ks/dist/child/sle-module-containers15-sp3-pool-x86_64/sles15sp3 containers_product ; 
-sudo zypper ar -G http://${REPO_SERVER}/ks/dist/child/sle-module-containers15-sp3-updates-x86_64/sles15sp3 containers_updates" 
+sudo zypper ar -G http://${REPO_SERVER}/ks/dist/child/sle-module-containers15-sp4-pool-x86_64/sles15sp4 containers_product ; 
+sudo zypper ar -G http://${REPO_SERVER}/ks/dist/child/sle-module-containers15-sp4-updates-x86_64/sles15sp4 containers_updates" 
 done
-sudo zypper ar -G http://${REPO_SERVER}/ks/dist/child/sle-module-containers15-sp3-pool-x86_64/sles15sp3 containers_product
-sudo zypper ar -G http://${REPO_SERVER}/ks/dist/child/sle-module-containers15-sp3-updates-x86_64/sles15sp3 containers_updates
+sudo zypper ar -G http://${REPO_SERVER}/ks/dist/child/sle-module-containers15-sp4-pool-x86_64/sles15sp4 containers_product
+sudo zypper ar -G http://${REPO_SERVER}/ks/dist/child/sle-module-containers15-sp4-updates-x86_64/sles15sp4 containers_updates
 }
 
 ## ALL NODES UPDATE 
