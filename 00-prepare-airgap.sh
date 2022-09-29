@@ -25,15 +25,15 @@ fi
 while true; do
    read -p "${bold}Package manager type? (zypper/yum/apt) ${normal}" pkg_mgr_type
    case $pkg_mgr_type in
-      [zypper]* )
+      zypper )
             echo "$pkg_mgr_type selected."
             echo
             break;;
-      [yum]* )
+      yum )
             echo "$pkg_mgr_type selected."
             echo
             break;;
-      [apt]* )
+      apt )
             echo "$pkg_mgr_type selected."
             echo
             break;;
@@ -41,15 +41,46 @@ while true; do
     esac
 done
 
-## PRE-CHECK PACKAGE
+# Select server role to use for next steps
+while true; do
+   echo "Select the appropriate option. Note that option 1 is a prerequisites to option 2."
+   echo "  1. internet: the server is connected to Internet and will be responsible to download and cache all pre-requisites."
+   echo "  2. internal: the server is internal with no Internet access. It will be reponsible to push the images in the private registry and deploy rke2+rancher."
+   echo
+   read -p "${bold}Server role (internet/internal). ${normal}" option_role
+   case $option_role in
+      internet )
+            echo "$option_role selected."
+            echo
+            break;;
+      internal )
+            echo "$option_role selected."
+            echo
+            break;;
+      * ) echo "Please answer: internet or internal.";;
+    esac
+done
+
 
 COMMAND_INSTALL_YUM_UTILS() {
 # Install yum-utils package (needed for 'yumdownloader')
 sudo yum install -y yum-utils
 }
 
+COMMAND_CONFIG_ZYPPER_REPOS() {
+# add containers module repos
+sudo zypper ar -G http://${REPO_SERVER}/ks/dist/child/sle-module-containers15-sp4-pool-x86_64/sles15sp4 containers_product
+sudo zypper ar -G http://${REPO_SERVER}/ks/dist/child/sle-module-containers15-sp4-updates-x86_64/sles15sp4 containers_updates
+}
+
+COMMAND_DOCKER_DL_ZYPPER_LOCAL() {
+# download docker packages + dependencies and move to current directory
+sudo zypper download catatonit containerd docker docker-bash-completion runc
+sudo find /var/cache/zypp/packages/ -type f \( -name "catatonit*" -o -name "containerd*" -o -name "docker*" -o -name "docker-bash-completion*" -o -name "runc*" \) | sudo xargs -I {} mv {} .
+}
+
 COMMAND_DOCKER_INSTALL_ZYPPER_LOCAL() {
-sudo zypper ref ; sudo zypper --non-interactive in docker
+sudo zypper --non-interactive in *.rpm
 sudo systemctl enable docker ; sudo systemctl start docker && echo 'Docker is activated' || echo 'Docker could not start'
 }
 
@@ -105,17 +136,6 @@ for file in rancher-images.txt rancher-save-images.sh rancher-load-images.sh ; d
 done
 sudo chmod +x rancher-save-images.sh rancher-load-images.sh
 }
-
-# COMMAND_DL_RKE2_IMAGES_YUM() {
-# RKE2_VERSION="v$(rpm --nosignature -q --qf "%{VERSION}\n" rke2-common-*.rpm |tr '~' '+')"
-# for file in rke2-images-canal.linux-amd64 rke2-images-core.linux-amd64 ; do
-#   if [ -f $file.txt ]; then rm -f $file.txt ; fi
-#   if [ -f $file.tar.gz ]; then rm -f $file.tar.gz ; fi
-#   wget https://github.com/rancher/rke2/releases/download/${RKE2_VERSION}/$file.txt
-#   wget https://github.com/rancher/rke2/releases/download/${RKE2_VERSION}/$file.tar.gz
-#   sed -i 's/docker.io\///g' $file.txt
-# done
-# }
 
 COMMAND_DL_RKE2_IMAGES() {
 for file in rke2-images-canal.linux-amd64 rke2-images-core.linux-amd64 ; do
@@ -249,41 +269,59 @@ fi
 rm -f cert-manager-${CERTMGR_VERSION}.tgz rancher-${RANCHER_VERSION}.tgz
 }
 
-##################### BEGIN PRE-CHECK PACKAGES ##################################
-question_yn "${DESC_CHECK_PACKAGE_RPM_LOCAL:=Check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_RPM_LOCAL curl wget"
-##################### END PRE-CHECK PACKAGES ####################################
+##################### BEGIN PRE-CHECK LOCAL PACKAGES ##################################
+if [ $option_role == "internet" ] ; then
+  if [[ $pkg_mgr_type == 'apt' ]]
+  then
+    question_yn "${DESC_CHECK_PACKAGE:=Check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_DPKG_LOCAL curl wget"
+  else
+    question_yn "${DESC_CHECK_PACKAGE_RPM_LOCAL:=Check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_RPM_LOCAL curl wget"
+  fi
+fi
+##################### END PRE-CHECK LOCAL PACKAGES ####################################
 #
 #
 ##################### BEGIN DOCKER PREPARATION###################################
 if [[ $pkg_mgr_type == 'zypper' ]]
 then
-question_yn "$pkg_mgr_type - ${DESC_DOCKER_INSTALL_ZYPPER_LOCAL:=Install, enable and start Docker on local host?}" COMMAND_DOCKER_INSTALL_ZYPPER_LOCAL
+  if [ $option_role == "internet" ] ; then
+    question_yn "$pkg_mgr_type - ${DESC_DOCKER_DL_ZYPPER_LOCAL:=Download Docker packages and required dependencies on local host?}" COMMAND_DOCKER_DL_ZYPPER_LOCAL
+  fi
+  question_yn "$pkg_mgr_type - ${DESC_DOCKER_INSTALL_ZYPPER_LOCAL:=Install, enable and start Docker on local host?}" COMMAND_DOCKER_INSTALL_ZYPPER_LOCAL
 elif [[ $pkg_mgr_type == 'yum' ]]
 then
-question_yn "$pkg_mgr_type - ${DESC_INSTALL_YUM_UTILS:=Install yum-utils package (containing yumdownloader needed for next steps) ?}" COMMAND_INSTALL_YUM_UTILS
-question_yn "$pkg_mgr_type - ${DESC_DOCKER_INSTALL_LOCAL_YUM:=Install, enable and start Docker on local host?}" COMMAND_DOCKER_INSTALL_YUM_LOCAL
-# question_yn "$pkg_mgr_type - ${DESC_DL_RKE2_YUM:=Add RKE2 repo and download RKE2 RPMs?}" COMMAND_DL_RKE2_YUM
+  if [ $option_role == "internet" ] ; then
+    question_yn "$pkg_mgr_type - ${DESC_INSTALL_YUM_UTILS:=Install yum-utils package (containing yumdownloader needed for next steps) ?}" COMMAND_INSTALL_YUM_UTILS
+  fi
+  question_yn "$pkg_mgr_type - ${DESC_DOCKER_INSTALL_LOCAL_YUM:=Install, enable and start Docker on local host?}" COMMAND_DOCKER_INSTALL_YUM_LOCAL
 fi
 question_yn "${DESC_CONFIGURE_DOCKER_DAEMON:=Configure docker daemon to use private registry?}" COMMAND_CONFIGURE_LOCAL_DOCKER_DAEMON
 ##################### END DOCKER PREPARATION ####################################
 #
 ##################### BEGIN DOWNLOAD/PREPARE RESOURCES ##########################
 # /!\ Internet connection required.
-question_yn "${DESC_DL_PREREQ_BINARIES:=Download Helm/kubectl/rke2 binaries and install Helm?}" COMMAND_DL_PREREQ_BINARIES
-question_yn "${DESC_DL_PREREQ_RANCHER:=Download images list and import/export scripts?}" COMMAND_DL_PREREQ_RANCHER
-question_yn "${DESC_DL_RKE2_IMAGES:=Download RKE2 images?}" COMMAND_DL_RKE2_IMAGES
-question_yn "${DESC_FETCH_CERTMGR_IMAGES:=Fetch cert-manager images?}" COMMAND_FETCH_CERTMGR_IMAGES
-question_yn "${DESC_SAVE_RANCHER_IMAGES:=Save images locally?}" COMMAND_SAVE_RANCHER_IMAGES
-question_yn "${DESC_HELM_MIRROR:=Fetch Helm charts and render templates?\n - Registry URL: ${AIRGAP_REGISTRY_URL}}" COMMAND_HELM_MIRROR
+if [ $option_role == "internet" ] ; then
+  question_yn "${DESC_DL_PREREQ_BINARIES:=Download Helm/kubectl/rke2 binaries and install Helm?}" COMMAND_DL_PREREQ_BINARIES
+  question_yn "${DESC_DL_PREREQ_RANCHER:=Download images list and import/export scripts?}" COMMAND_DL_PREREQ_RANCHER
+  question_yn "${DESC_DL_RKE2_IMAGES:=Download RKE2 images?}" COMMAND_DL_RKE2_IMAGES
+  question_yn "${DESC_FETCH_CERTMGR_IMAGES:=Fetch cert-manager images?}" COMMAND_FETCH_CERTMGR_IMAGES
+  question_yn "${DESC_SAVE_RANCHER_IMAGES:=Save images locally?}" COMMAND_SAVE_RANCHER_IMAGES
+  question_yn "${DESC_HELM_MIRROR:=Fetch Helm charts and render templates?\n - Registry URL: ${AIRGAP_REGISTRY_URL}}" COMMAND_HELM_MIRROR
+  echo
+  echo -e "${TXT_PREP_AIRGAP_COMPLETE:=${bold}Airgap preparation is complete.\nCopy the current directory to a system that has access to your private registry to push Rancher images.}${normal}"
+  echo
+fi
 ##################### END DOWNLOAD/PREPARE RESOURCES ############################
 #
 ##################### BEGIN PUSH IMAGES TO REGISTRY #############################
 # Everything should already be downloaded locally, no Internet connection required.
-question_yn "${DESC_PUSH_RKE2_IMAGES:=Push RKE2 images to private registry?}" COMMAND_PUSH_RKE2_IMAGES
-question_yn "${DESC_PUSH_RANCHER_IMAGES:=Push images to registry?\n - Registry URL: ${AIRGAP_REGISTRY_URL}}" COMMAND_PUSH_RANCHER_IMAGES
+if [ $option_role == "internal" ] ; then
+  question_yn "${DESC_PUSH_RKE2_IMAGES:=Push RKE2 images to private registry?}" COMMAND_PUSH_RKE2_IMAGES
+  question_yn "${DESC_PUSH_RANCHER_IMAGES:=Push images to registry?\n - Registry URL: ${AIRGAP_REGISTRY_URL}}" COMMAND_PUSH_RANCHER_IMAGES
+  echo
+  echo -e "${TXT_PUSH_IMAGES_COMPLETE:=${bold}Rancher images push is complete.\nRun 01-os_preparation.sh script on a system that has access to the Rancher server cluster to complete installation.}${normal}"
+  echo
+fi
 ##################### END PUSH IMAGES TO REGISTRY ###############################
 
-echo
-echo -e "${TXT_PREP_AIRGAP_COMPLETE:=${bold}Airgap preparation is complete.\nCopy the current directory to a system that has access to the Rancher server cluster to complete installation.}${normal}"
-echo
 echo "-- ${TXT_END:=END} --"
