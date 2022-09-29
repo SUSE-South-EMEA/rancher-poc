@@ -45,19 +45,19 @@ done
 while true; do
    echo "Select the appropriate option. Note that option 1 is a prerequisites to option 2."
    echo "  1. internet: the server is connected to Internet and will be responsible to download and cache all pre-requisites."
-   echo "  2. internal: the server is internal with no Internet access. It will be reponsible to push the images in the private registry and deploy rke2+rancher."
+   echo "  2. airgap: the server is airgap with no Internet access. It will be reponsible to push the images in the private registry and deploy rke2+rancher."
    echo
-   read -p "${bold}Server role (internet/internal). ${normal}" option_role
+   read -p "${bold}Server role? (internet/airgap) ${normal}" option_role
    case $option_role in
       internet )
             echo "$option_role selected."
             echo
             break;;
-      internal )
+      airgap )
             echo "$option_role selected."
             echo
             break;;
-      * ) echo "Please answer: internet or internal.";;
+      * ) echo "Please answer: internet or airgap.";;
     esac
 done
 
@@ -68,9 +68,18 @@ sudo yum install -y yum-utils
 }
 
 COMMAND_CONFIG_ZYPPER_REPOS() {
-# add containers module repos
-sudo zypper ar -G http://${REPO_SERVER}/ks/dist/child/sle-module-containers15-sp4-pool-x86_64/sles15sp4 containers_product
-sudo zypper ar -G http://${REPO_SERVER}/ks/dist/child/sle-module-containers15-sp4-updates-x86_64/sles15sp4 containers_updates
+if SUSEConnect -s |grep "Not Registered" ; then
+  echo "System is not registered, make sure Containers Module repositories are added."
+  echo 
+  echo "i.e: add containers module repos hosted in SUMA"
+  echo "sudo zypper ar -G http://${REPO_SERVER}/ks/dist/child/sle-module-containers15-sp4-pool-x86_64/sles15sp4 containers_product"
+  echo "sudo zypper ar -G http://${REPO_SERVER}/ks/dist/child/sle-module-containers15-sp4-updates-x86_64/sles15sp4 containers_updates"
+elif SUSEConnect -l |grep "Containers Module" |grep Activated ; then
+  echo "Containers Module is activated. Nothing to do."
+else
+  echo "Activating Containers Module"
+  SUSEConnect -p sle-module-containers/15.4/x86_64
+fi
 }
 
 COMMAND_DOCKER_DL_ZYPPER_LOCAL() {
@@ -285,6 +294,7 @@ fi
 if [[ $pkg_mgr_type == 'zypper' ]]
 then
   if [ $option_role == "internet" ] ; then
+    question_yn "$pkg_mgr_type - ${DESC_CONFIG_ZYPPER_REPOS:=Configure containers module?}" COMMAND_CONFIG_ZYPPER_REPOS
     question_yn "$pkg_mgr_type - ${DESC_DOCKER_DL_ZYPPER_LOCAL:=Download Docker packages and required dependencies on local host?}" COMMAND_DOCKER_DL_ZYPPER_LOCAL
   fi
   question_yn "$pkg_mgr_type - ${DESC_DOCKER_INSTALL_ZYPPER_LOCAL:=Install, enable and start Docker on local host?}" COMMAND_DOCKER_INSTALL_ZYPPER_LOCAL
@@ -295,7 +305,6 @@ then
   fi
   question_yn "$pkg_mgr_type - ${DESC_DOCKER_INSTALL_LOCAL_YUM:=Install, enable and start Docker on local host?}" COMMAND_DOCKER_INSTALL_YUM_LOCAL
 fi
-question_yn "${DESC_CONFIGURE_DOCKER_DAEMON:=Configure docker daemon to use private registry?}" COMMAND_CONFIGURE_LOCAL_DOCKER_DAEMON
 ##################### END DOCKER PREPARATION ####################################
 #
 ##################### BEGIN DOWNLOAD/PREPARE RESOURCES ##########################
@@ -315,7 +324,8 @@ fi
 #
 ##################### BEGIN PUSH IMAGES TO REGISTRY #############################
 # Everything should already be downloaded locally, no Internet connection required.
-if [ $option_role == "internal" ] ; then
+if [ $option_role == "airgap" ] ; then
+  question_yn "${DESC_CONFIGURE_DOCKER_DAEMON:=Configure docker daemon to use private registry?}" COMMAND_CONFIGURE_LOCAL_DOCKER_DAEMON
   question_yn "${DESC_PUSH_RKE2_IMAGES:=Push RKE2 images to private registry?}" COMMAND_PUSH_RKE2_IMAGES
   question_yn "${DESC_PUSH_RANCHER_IMAGES:=Push images to registry?\n - Registry URL: ${AIRGAP_REGISTRY_URL}}" COMMAND_PUSH_RANCHER_IMAGES
   echo
