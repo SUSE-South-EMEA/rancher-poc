@@ -42,7 +42,7 @@ STORAGE_TARGET="192.168.1.11"
 ######################## SELECT VERSIONS #########################
 ## RKE2, Rancher and Helm versions to deploy
 HELM_VERSION="3.7.1"
-RKE2_VERSION="v1.24.6+rke2r1"
+RKE2_VERSION="v1.24.4+rke2r1"
 CERTMGR_VERSION="v1.7.1"
 RANCHER_VERSION="2.6.8"
 
