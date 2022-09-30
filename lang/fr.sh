@@ -22,7 +22,7 @@ DESC_FETCH_CERTMGR_IMAGES="Fetch des images cert-manager ?"
 DESC_SAVE_RANCHER_IMAGES="Enregistrement des images en local ?"
 TXT_SAVE_RANCHER_IMAGES="Images sauvegardées dans le fichier rancher-images.tar.gz."
 DESC_PUSH_RANCHER_IMAGES="Push des images dans la registry ?\n - Registry URL: ${AIRGAP_REGISTRY_URL}"
-DESC_HELM_MIRROR="Fetch des Helm charts et rendering des templates ?\n - Registry URL: ${AIRGAP_REGISTRY_URL}"
+DESC_HELM_RENDER="Rendering des templates Helm ?\n - Registry URL: ${AIRGAP_REGISTRY_URL}"
 TXT_PREP_AIRGAP_COMPLETE="${bold}Les préparatifs pour le déploiement Airgap sont terminés.\nCopier le répertoire courant sur un serveur ayant accès à votre registry privée pour y pousser les images Rancher.${normal}"
 TXT_PUSH_IMAGES_COMPLETE="${bold}Les images Rancher ont été poussées dans la registry.\nExécuter le script 01-os_preparation.sh sur un système ayant accès aux serveurs qui hébergeront le Rancher Management Server pour continuer l'installation.}${normal}"
 

@@ -135,6 +135,17 @@ curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stabl
 echo
 echo "${TXT_DL_RKE2:=Download rke2 tarball} - version: ${RKE2_VERSION}"
 curl -LO https://github.com/rancher/rke2/releases/download/${RKE2_VERSION}/rke2.linux-amd64.tar.gz
+
+echo
+echo "${TXT_FETCH_CERTMGR:=Fetch cert manager Helm chart}"
+helm repo add jetstack https://charts.jetstack.io
+helm repo update
+helm fetch jetstack/cert-manager --version ${CERTMGR_VERSION}
+
+echo
+echo "${TXT_FETCH_RANCHER:=Fetch Rancher Helm chart}"
+helm repo add rancher-latest https://releases.rancher.com/server-charts/latest
+helm fetch rancher-latest/rancher --version=v${RANCHER_VERSION}
 }
 
 COMMAND_DL_PREREQ_RANCHER() {
@@ -195,11 +206,7 @@ fi
 sudo ./rancher-load-images.sh --image-list ./rancher-images.txt --registry ${AIRGAP_REGISTRY_URL}
 }
 
-COMMAND_HELM_MIRROR() {
-# Fetch cert manager
-helm repo add jetstack https://charts.jetstack.io
-helm repo update
-helm fetch jetstack/cert-manager --version ${CERTMGR_VERSION}
+COMMAND_HELM_RENDER() {
 # Render cert manager
 if [[ $PROXY_DEPLOY == 1 ]] ; then
   RANCHER_NO_PROXY=$(echo ${_NO_PROXY} |sed 's/,/\\,/g')
@@ -243,9 +250,6 @@ else
   echo "Self-signed certificate will be generated using Cert-manager"
 fi
 
-# Fetch rancher
-helm repo add rancher-latest https://releases.rancher.com/server-charts/latest
-helm fetch rancher-latest/rancher --version=v${RANCHER_VERSION}
 # Render rancher
 if [[ $PROXY_DEPLOY == 1 ]] ; then
   RANCHER_NO_PROXY=$(echo ${_NO_PROXY} |sed 's/,/\\,/g')
@@ -315,7 +319,6 @@ if [ $option_role == "internet" ] ; then
   question_yn "${DESC_DL_RKE2_IMAGES:=Download RKE2 images?}" COMMAND_DL_RKE2_IMAGES
   question_yn "${DESC_FETCH_CERTMGR_IMAGES:=Fetch cert-manager images?}" COMMAND_FETCH_CERTMGR_IMAGES
   question_yn "${DESC_SAVE_RANCHER_IMAGES:=Save images locally?}" COMMAND_SAVE_RANCHER_IMAGES
-  question_yn "${DESC_HELM_MIRROR:=Fetch Helm charts and render templates?\n - Registry URL: ${AIRGAP_REGISTRY_URL}}" COMMAND_HELM_MIRROR
   echo
   echo -e "${TXT_PREP_AIRGAP_COMPLETE:=${bold}Airgap preparation is complete.\nCopy the current directory to a system that has access to your private registry to push Rancher images.}${normal}"
   echo
@@ -328,6 +331,7 @@ if [ $option_role == "airgap" ] ; then
   question_yn "${DESC_CONFIGURE_DOCKER_DAEMON:=Configure docker daemon to use private registry?}" COMMAND_CONFIGURE_LOCAL_DOCKER_DAEMON
   question_yn "${DESC_PUSH_RKE2_IMAGES:=Push RKE2 images to private registry?}" COMMAND_PUSH_RKE2_IMAGES
   question_yn "${DESC_PUSH_RANCHER_IMAGES:=Push images to registry?\n - Registry URL: ${AIRGAP_REGISTRY_URL}}" COMMAND_PUSH_RANCHER_IMAGES
+  question_yn "${DESC_HELM_RENDER=Render Helm charts templates?\n - Registry URL: ${AIRGAP_REGISTRY_URL}}" COMMAND_HELM_RENDER
   echo
   echo -e "${TXT_PUSH_IMAGES_COMPLETE:=${bold}Rancher images push is complete.\nRun 01-os_preparation.sh script on a system that has access to the Rancher server cluster to complete installation.}${normal}"
   echo
