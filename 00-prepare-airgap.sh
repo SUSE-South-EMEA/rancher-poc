@@ -207,6 +207,10 @@ sudo ./rancher-load-images.sh --image-list ./rancher-images.txt --registry ${AIR
 }
 
 COMMAND_HELM_RENDER() {
+# Install Helm
+tar zxvf helm-v${HELM_VERSION}-linux-amd64.tar.gz
+sudo mv linux-amd64/helm /usr/local/bin/helm
+rm -rf linux-amd64/
 # Render cert manager
 if [[ $PROXY_DEPLOY == 1 ]] ; then
   RANCHER_NO_PROXY=$(echo ${_NO_PROXY} |sed 's/,/\\,/g')
@@ -278,8 +282,6 @@ else
     --set systemDefaultRegistry=${AIRGAP_REGISTRY_URL} \
     --set useBundledSystemChart=true ${EXTRA_OPTS}
 fi
-# Cleanup
-rm -f cert-manager-${CERTMGR_VERSION}.tgz rancher-${RANCHER_VERSION}.tgz
 }
 
 ##################### BEGIN PRE-CHECK LOCAL PACKAGES ##################################
