@@ -27,13 +27,8 @@ while true; do
    case $yn in
       [Yy]* )
         source /etc/os-release
-	    if [[ $VERSION_ID =~ "15" ]]; then
-		zypper -n in wget
-	        wget https://download.opensuse.org/repositories/openSUSE:/Backports:/SLE-15-SP1/standard/x86_64/docker-distribution-registry-2.6.2-bp151.3.3.x86_64.rpm
-	        zypper --no-gpg-checks -n in docker-distribution-registry-2.6.2-bp151.3.3.x86_64.rpm
-        fi
-        if [[ $VERSION_ID =~ "12" ]]; then
-            zypper -n in docker-distribution-registry
+	if [[ $VERSION_ID =~ "15" ]]; then
+	    zypper -n in ../distribution-registry*.rpm
         fi
         break;;
       [Nn]* ) 
