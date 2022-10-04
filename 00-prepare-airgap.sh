@@ -84,8 +84,8 @@ fi
 
 COMMAND_DOCKER_DL_ZYPPER_LOCAL() {
 # download docker packages + dependencies and move to current directory
-sudo zypper download catatonit containerd docker docker-bash-completion runc
-sudo find /var/cache/zypp/packages/ -type f \( -name "catatonit*" -o -name "containerd*" -o -name "docker*" -o -name "docker-bash-completion*" -o -name "runc*" \) | sudo xargs -I {} mv {} .
+sudo zypper download catatonit containerd docker docker-bash-completion runc distribution-registry
+sudo find /var/cache/zypp/packages/ -type f \( -name "catatonit*" -o -name "containerd*" -o -name "docker*" -o -name "docker-bash-completion*" -o -name "runc*" -o -name "distribution-registry*" \) | sudo xargs -I {} mv {} .
 }
 
 COMMAND_DOCKER_INSTALL_ZYPPER_LOCAL() {
