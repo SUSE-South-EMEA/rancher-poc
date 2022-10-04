@@ -4,26 +4,11 @@ normal=$(tput sgr0)
 HOST_NAME=`hostname -f`
 echo -e "Verification de la commande hostname -f: $HOST_NAME"
 echo -e "Veuillez verifier le nom de la machine en cours"
+echo
 
 clear
 while true; do
-   read -p "${bold}Installation de paquets: docker ? (y/n) ${normal}" yn
-   case $yn in
-      [Yy]* )
-            zypper -n in docker
-	    systemctl enable --now docker
-            break;;
-      [Nn]* ) 
-	        echo;
-			echo "> Annulation de l'etape.";
-			echo;
-			break;;
-      * ) echo "Please answer yes (y) or no (n).";;
-    esac
-done
-echo
-while true; do
-   read -p "${bold}Installation du paquet: Docker-distribution-registry? (y/n) ${normal}" yn
+   read -p "${bold}Installation du paquet: distribution-registry? (y/n) ${normal}" yn
    case $yn in
       [Yy]* )
         source /etc/os-release
@@ -47,6 +32,7 @@ while true; do
             cd /etc/registry
             openssl genrsa 1024 > host.key
             chmod 400 host.key
+	    chown registry: host.key
             openssl req -new -x509 -nodes -sha1 -subj "/CN=$HOST_NAME/C=FR/emailAddress=root@localhost" -days 365 -key host.key -out host.cert
             mkdir -p /etc/docker/certs.d/${HOST_NAME}\:5000/
             cp host.cert /etc/docker/certs.d/${HOST_NAME}\:5000/ca.crt
