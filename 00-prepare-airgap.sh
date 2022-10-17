@@ -288,9 +288,9 @@ fi
 if [ $option_role == "internet" ] ; then
   if [[ $pkg_mgr_type == 'apt' ]]
   then
-    question_yn "${DESC_CHECK_PACKAGE:=Check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_DPKG_LOCAL curl wget"
+    question_yn "${DESC_CHECK_PACKAGE:=Check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_DPKG_LOCAL curl wget sudo"
   else
-    question_yn "${DESC_CHECK_PACKAGE_RPM_LOCAL:=Check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_RPM_LOCAL curl wget"
+    question_yn "${DESC_CHECK_PACKAGE_RPM_LOCAL:=Check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_RPM_LOCAL curl wget sudo"
   fi
 fi
 ##################### END PRE-CHECK LOCAL PACKAGES ####################################
