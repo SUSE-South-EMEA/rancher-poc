@@ -242,9 +242,9 @@ fi
 ##################### BEGIN PRE-CHECK LOCAL PACKAGES ##################################
 if [[ $pkg_mgr_type == 'apt' ]]
 then
-  question_yn "${DESC_CHECK_PACKAGE:=Check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_DPKG_LOCAL curl expect"
+  question_yn "${DESC_CHECK_PACKAGE:=Check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_DPKG_LOCAL curl expect sudo"
 else
-  question_yn "${DESC_CHECK_PACKAGE_RPM_LOCAL:=Check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_RPM_LOCAL curl expect"
+  question_yn "${DESC_CHECK_PACKAGE_RPM_LOCAL:=Check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_RPM_LOCAL curl expect sudo"
 fi
 ##################### END PRE-CHECK LOCAL PACKAGES ####################################
 #
@@ -259,9 +259,9 @@ question_yn "${DESC_SSH_CONNECT_TEST:=Test SSH connection to nodes?}" COMMAND_SS
 ##################### BEGIN PRE-CHECK PACKAGES ##################################
 if [[ $pkg_mgr_type == 'apt' ]]
 then
-  question_yn "${DESC_CHECK_PACKAGE:=Check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_DPKG iptables apparmor"
+  question_yn "${DESC_CHECK_PACKAGE:=Check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_DPKG iptables apparmor sudo"
 else
-  question_yn "${DESC_CHECK_PACKAGE_RPM:=Check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_RPM iptables apparmor-parser"
+  question_yn "${DESC_CHECK_PACKAGE_RPM:=Check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_RPM iptables apparmor-parser sudo"
 fi
 ##################### END PRE-CHECK PACKAGES ####################################
 #
