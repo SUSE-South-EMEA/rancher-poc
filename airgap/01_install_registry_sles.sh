@@ -30,7 +30,7 @@ while true; do
    case $yn in
       [Yy]* )
             cd /etc/registry
-            openssl genrsa 1024 > host.key
+            openssl genrsa 2048 > host.key
             chmod 400 host.key
 	    chown registry: host.key
             openssl req -new -x509 -nodes -sha1 -subj "/CN=$HOST_NAME/C=FR/emailAddress=root@localhost" -days 365 -key host.key -out host.cert
