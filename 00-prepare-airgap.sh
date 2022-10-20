@@ -141,6 +141,7 @@ echo "${TXT_FETCH_CERTMGR:=Fetch cert manager Helm chart}"
 helm repo add jetstack https://charts.jetstack.io
 helm repo update
 helm fetch jetstack/cert-manager --version ${CERTMGR_VERSION}
+curl -L -o cert-manager-crd.yaml https://github.com/jetstack/cert-manager/releases/download/${CERTMGR_VERSION}/cert-manager.crds.yaml
 
 echo
 echo "${TXT_FETCH_RANCHER:=Fetch Rancher Helm chart}"
@@ -237,7 +238,7 @@ else
     --set cainjector.image.repository=${AIRGAP_REGISTRY_URL}/quay.io/jetstack/cert-manager-cainjector \
     --set startupapicheck.image.repository=${AIRGAP_REGISTRY_URL}/quay.io/jetstack/cert-manager-ctl
 fi
-curl -L -o cert-manager/cert-manager-crd.yaml https://github.com/jetstack/cert-manager/releases/download/${CERTMGR_VERSION}/cert-manager.crds.yaml
+cp cert-manager-crd.yaml cert-manager/
 
 # Certificates configuration
 ## Private CA
