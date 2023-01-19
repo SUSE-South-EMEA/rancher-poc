@@ -140,7 +140,7 @@ COMMAND_HELM_REPOS() {
 if [[ $AIRGAP_DEPLOY == 1 ]]; then
   echo "${TXT_HELM_REPOS:=Helm charts must be previously synced with 00-prepare-airgap.sh and placed in current directory.}"
 else
-  helm repo add rancher-stable https://releases.rancher.com/server-charts/stable
+  helm repo add rancher-prime https://charts.rancher.com/server-charts/prime
   helm repo list
 fi
 }

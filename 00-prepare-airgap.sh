@@ -144,9 +144,9 @@ helm fetch jetstack/cert-manager --version ${CERTMGR_VERSION}
 curl -L -o cert-manager-crd.yaml https://github.com/jetstack/cert-manager/releases/download/${CERTMGR_VERSION}/cert-manager.crds.yaml
 
 echo
-echo "${TXT_FETCH_RANCHER:=Fetch Rancher Helm chart}"
-helm repo add rancher-latest https://releases.rancher.com/server-charts/latest
-helm fetch rancher-latest/rancher --version=v${RANCHER_VERSION}
+echo "${TXT_FETCH_RANCHER:=Fetch Rancher Prime Helm chart}"
+helm repo add rancher-prime https://charts.rancher.com/server-charts/prime
+helm fetch rancher-prime/rancher --version=v${RANCHER_VERSION}
 }
 
 COMMAND_DL_PREREQ_RANCHER() {
