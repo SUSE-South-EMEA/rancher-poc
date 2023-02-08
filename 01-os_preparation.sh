@@ -41,6 +41,7 @@ done;
 ## SSH CONNECT TESTING
 COMMAND_SSH_CONNECT_TEST() {
 for h in ${HOSTS[*]}; do ssh $h "hostname -f" ; done;
+echo "Domain in use must not be using *.local !!!"
 }
 
 ## SET PROXY
