@@ -184,7 +184,7 @@ then
 	FIREWALL_SVC="firewalld"
 elif [[ $pkg_mgr_type == 'apt' ]]
 then
-	FIREWALL_SVC="firewalld"
+	FIREWALL_SVC="ufw"
 fi
 for h in ${HOSTS[*]};do
 ssh $h "
