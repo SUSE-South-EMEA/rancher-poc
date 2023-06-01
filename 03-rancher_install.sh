@@ -111,6 +111,7 @@ then
   helm upgrade --install rancher rancher-prime/rancher \
     --namespace cattle-system \
     --set hostname=${LB_RANCHER_FQDN} \
+    --set global.cattle.psp.enabled=false \
     --version ${RANCHER_VERSION} \
     --set proxy=http://${_HTTP_PROXY} \
     --set noProxy=${RANCHER_NO_PROXY} ${EXTRA_OPTS}
@@ -120,6 +121,7 @@ else
   helm upgrade --install rancher rancher-prime/rancher \
     --namespace cattle-system \
     --set hostname=${LB_RANCHER_FQDN} \
+    --set global.cattle.psp.enabled=false \
     --version ${RANCHER_VERSION} ${EXTRA_OPTS}
 fi
 echo "${TXT_MONITOR_RANCHER_INSTALL:=Monitor Rancher resources deployment}"

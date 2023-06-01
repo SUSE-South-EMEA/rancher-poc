@@ -41,10 +41,10 @@ STORAGE_TARGET="192.168.1.11"
 
 ######################## SELECT VERSIONS #########################
 ## RKE2, Rancher and Helm versions to deploy
-HELM_VERSION="3.7.1"
-RKE2_VERSION="v1.24.4+rke2r1"
-CERTMGR_VERSION="v1.7.1"
-RANCHER_VERSION="2.6.8"
+HELM_VERSION="3.12.0"
+RKE2_VERSION="v1.25.9+rke2r1"
+CERTMGR_VERSION="v1.11.0"
+RANCHER_VERSION="2.7.3"
 
 ######### RANCHER MGMT SERVER CERTIFICATE AND PRIVATE CA #########
 ## Rancher TLS configuration. Available options are [rancher,secret,external]
@@ -58,3 +58,7 @@ PRIVATE_CA="0"
 ######################## FQDNs & DOMAINs #########################
 ## Rancher Management Load balancer FQDN (redirect to RKE nodes hosting Rancher)
 LB_RANCHER_FQDN="rancher.domain"
+## RKE2 KUBE-VIP configuration (leave empty if you do not want to use kube-vip)
+RKE2_VIP_IP=192.168.100.20
+RKE2_VIP_NAME="rancher-vip.domain"
+RKE2_VIP_INTERFACE="eth0"

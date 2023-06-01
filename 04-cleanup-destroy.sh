@@ -69,7 +69,7 @@ COMMAND_LOCAL_AIRGAP_RESOURCES_CLEANUP() {
 # Rancher images and scripts
 sudo rm -f rancher-images.tar.gz rancher-images.txt rancher-load-images.sh rancher-save-images.sh
 # RKE2 images, scripts and configuration files
-sudo rm -f rke2-*.tar.gz rke2-*.txt registries.yaml rke2-server
+sudo rm -f rke2-*.tar.gz rke2-*.txt registries.yaml rke2-server kube-vip-rbac.yaml kube-vip.yaml
 # Prereqs binaries
 sudo rm -f helm-v*-linux-amd64.tar.gz kubectl rke2.linux-amd64.tar.gz
 # Docker RPMs
