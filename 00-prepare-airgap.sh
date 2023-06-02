@@ -147,6 +147,13 @@ echo
 echo "${TXT_FETCH_RANCHER:=Fetch Rancher Prime Helm chart}"
 helm repo add rancher-prime https://charts.rancher.com/server-charts/prime
 helm fetch rancher-prime/rancher --version=v${RANCHER_VERSION}
+
+echo
+echo "${TXT_DL_KUBEVIP:=Download kube-vip deployment manifests and generate image list}"
+curl -sL kube-vip.io/manifests/rbac.yaml > kube-vip-rbac.yaml
+curl -sL kube-vip.io/k3s |  vipAddress=${RKE2_VIP_IP} vipInterface=${RKE2_VIP_INTERFACE} sh > kube-vip.yaml
+sed -i 's/k3s/rke2/g' kube-vip.yaml
+grep "image:" kube-vip.yaml |awk '{print $2}' |tee kube-vip-images.txt
 }
 
 COMMAND_DL_PREREQ_RANCHER() {
@@ -181,21 +188,42 @@ for file in rke2-images-canal.linux-amd64 rke2-images-core.linux-amd64 ; do
 done
 }
 
+COMMAND_SAVE_KUBEVIP_IMAGES() {
+# Save kube-vip images
+chmod +x rancher-save-images.sh
+sudo ./rancher-save-images.sh --image-list ./kube-vip-images.txt --images kube-vip-images.tar.gz
+echo "${TXT_SAVE_KUBEVIP_IMAGES:=Images saved in kube-vip-images.tar.gz.}"
+}
+
+COMMAND_PUSH_KUBEVIP_IMAGES() {
+# Push kube-vip images
+sudo chmod +x rancher-load-images.sh
+if [[ ! -z ${AIRGAP_REGISTRY_USER} ]] ; then
+  echo "${AIRGAP_REGISTRY_PASSWD}" | docker login -u ${AIRGAP_REGISTRY_USER} --password-stdin ${AIRGAP_REGISTRY_URL}
+fi
+sudo ./rancher-load-images.sh --image-list ./kube-vip-images.txt --images kube-vip-images.tar.gz --registry ${AIRGAP_REGISTRY_URL}
+# Modify deployment manifest to specify target registry
+sed -i "s/ghcr.io/${AIRGAP_REGISTRY_URL}\/ghcr.io/g" kube-vip.yaml
+}
+
 COMMAND_FETCH_CERTMGR_IMAGES() {
 # Fetch cert-manager images
 helm repo add jetstack https://charts.jetstack.io
 helm repo update
 helm fetch jetstack/cert-manager --version ${CERTMGR_VERSION}
-helm template ./cert-manager-${CERTMGR_VERSION}.tgz | grep -oP '(?<=image: ").*(?=")' >> ./rancher-images.txt
+helm template ./cert-manager-${CERTMGR_VERSION}.tgz | grep -oP '(?<=image: ").*(?=")' > ./cert-manager-images.txt
 }
 
 COMMAND_SAVE_RANCHER_IMAGES() {
 # Remove overlap between sources
-sort -u rancher-images.txt -o rancher-images.txt
+#sort -u rancher-images.txt -o rancher-images.txt
 # Save images
 chmod +x rancher-save-images.sh
-sudo ./rancher-save-images.sh --image-list ./rancher-images.txt
-echo "${TXT_SAVE_RANCHER_IMAGES:=Images saved in rancher-images.tar.gz.}"
+sudo ./rancher-save-images.sh --image-list ./cert-manager-images.txt --images cert-manager-images.tar.gz
+echo "${TXT_SAVE_CERTMGR_IMAGES:=Cert-manager images saved in cert-manager-images.tar.gz.}"
+echo
+sudo ./rancher-save-images.sh --image-list ./rancher-images.txt --source-registry registry.rancher.com
+echo "${TXT_SAVE_RANCHER_IMAGES:=Rancher images saved in rancher-images.tar.gz.}"
 }
 
 COMMAND_PUSH_RANCHER_IMAGES() {
@@ -204,7 +232,8 @@ sudo chmod +x rancher-load-images.sh
 if [[ ! -z ${AIRGAP_REGISTRY_USER} ]] ; then
   echo "${AIRGAP_REGISTRY_PASSWD}" | docker login -u ${AIRGAP_REGISTRY_USER} --password-stdin ${AIRGAP_REGISTRY_URL}
 fi
-sudo ./rancher-load-images.sh --image-list ./rancher-images.txt --registry ${AIRGAP_REGISTRY_URL}
+sudo ./rancher-load-images.sh --image-list ./cert-manager-images.txt --images cert-manager-images.tar.gz --registry ${AIRGAP_REGISTRY_URL}
+sudo ./rancher-load-images.sh --image-list ./rancher-images.txt --registry ${AIRGAP_REGISTRY_URL} --source-registry registry.rancher.com
 }
 
 COMMAND_HELM_RENDER() {
@@ -270,6 +299,7 @@ if [[ $PROXY_DEPLOY == 1 ]] ; then
     --set rancherImage=${AIRGAP_REGISTRY_URL}/rancher/rancher \
     --set rancherImageTag=v${RANCHER_VERSION} \
     --set systemDefaultRegistry=${AIRGAP_REGISTRY_URL} \
+    --set global.cattle.psp.enabled=false \
     --set useBundledSystemChart=true \
     --set proxy=http://${_HTTP_PROXY} \
     --set noProxy=${RANCHER_NO_PROXY} ${EXTRA_OPTS}
@@ -280,6 +310,7 @@ else
     --set hostname=${LB_RANCHER_FQDN} \
     --set rancherImage=${AIRGAP_REGISTRY_URL}/rancher/rancher \
     --set rancherImageTag=v${RANCHER_VERSION} \
+    --set global.cattle.psp.enabled=false \
     --set systemDefaultRegistry=${AIRGAP_REGISTRY_URL} \
     --set useBundledSystemChart=true ${EXTRA_OPTS}
 fi
@@ -322,6 +353,7 @@ if [ $option_role == "internet" ] ; then
   question_yn "${DESC_DL_RKE2_IMAGES:=Download RKE2 images?}" COMMAND_DL_RKE2_IMAGES
   question_yn "${DESC_FETCH_CERTMGR_IMAGES:=Fetch cert-manager images?}" COMMAND_FETCH_CERTMGR_IMAGES
   question_yn "${DESC_SAVE_RANCHER_IMAGES:=Save images locally?}" COMMAND_SAVE_RANCHER_IMAGES
+  question_yn "${DESC_SAVE_KUBEVIP_IMAGES:=Save kube-vip images locally?}" COMMAND_SAVE_KUBEVIP_IMAGES
   echo
   echo -e "${TXT_PREP_AIRGAP_COMPLETE:=${bold}Airgap preparation is complete.\nCopy the current directory to a system that has access to your private registry to push Rancher images.}${normal}"
   echo
@@ -334,6 +366,7 @@ if [ $option_role == "airgap" ] ; then
   question_yn "${DESC_CONFIGURE_DOCKER_DAEMON:=Configure docker daemon to use private registry?}" COMMAND_CONFIGURE_LOCAL_DOCKER_DAEMON
   question_yn "${DESC_PUSH_RKE2_IMAGES:=Push RKE2 images to private registry?}" COMMAND_PUSH_RKE2_IMAGES
   question_yn "${DESC_PUSH_RANCHER_IMAGES:=Push images to registry?\n - Registry URL: ${AIRGAP_REGISTRY_URL}}" COMMAND_PUSH_RANCHER_IMAGES
+  question_yn "${DESC_PUSH_KUBEVIP_IMAGES:=Push kube-vip images to registry?\n - Registry URL: ${AIRGAP_REGISTRY_URL}}" COMMAND_PUSH_KUBEVIP_IMAGES
   question_yn "${DESC_HELM_RENDER=Render Helm charts templates?\n - Registry URL: ${AIRGAP_REGISTRY_URL}}" COMMAND_HELM_RENDER
   echo
   echo -e "${TXT_PUSH_IMAGES_COMPLETE:=${bold}Rancher images push is complete.\nRun 01-os_preparation.sh script on a system that has access to the Rancher server cluster to complete installation.}${normal}"
