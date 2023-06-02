@@ -123,9 +123,7 @@ echo ; echo "${TXT_RKE2_DEPLOY_RESTART:=Restart rke2 server}"
 ssh ${HOSTS[0]} "sudo systemctl restart rke2-server"
 echo
 read -rsp "${TXT_RKE_DEPLOY_PRESS_KEY:=Press a key to monitor deployment...}" -n1 key
-watch -n1 -d "kubectl get pods -n kube-system ; echo -e '\nPlease wait. Ctrl+C to quit when all pods are Ready...'"
-echo
-watch -d "ssh ranch1 \"if ip a show dev ${RKE2_VIP_INTERFACE} |grep ${RKE2_VIP_IP} ; then echo 'VIP is up.' ; else echo 'VIP is not up yet...' ; fi ;  echo -e '\nPlease wait. Ctrl+C to quit when VIP is up...'\""
+watch -d "kubectl get pods -n kube-system -l name=kube-vip-ds ; echo ; ssh ranch1 \"if ip a show dev ${RKE2_VIP_INTERFACE} |grep ${RKE2_VIP_IP} ; then echo 'VIP is up.' ; else echo 'VIP is not up yet...' ; fi \" ; echo -e '\nPlease wait. Ctrl+C to quit when all pods are Ready...'"
 echo
 sed -i "s/${HOSTS[0]}/${RKE2_VIP_NAME}/" ~/.kube/config
 echo "${TXT_KUBECONFIG_KUBEVIP:=KUBECONFIG (~/.kube/config) modified to use VIP hostname: ${RKE2_VIP_NAME}}"
