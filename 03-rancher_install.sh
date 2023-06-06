@@ -108,6 +108,7 @@ then
   echo "- proxy=${_HTTP_PROXY}"
   echo "- noProxy=${RANCHER_NO_PROXY}${normal}"
   echo
+  helm repo update
   helm upgrade --install rancher rancher-prime/rancher \
     --namespace cattle-system \
     --set hostname=${LB_RANCHER_FQDN} \
@@ -118,6 +119,7 @@ then
 # With Internet access
 else
   echo "${bold}Rancher Management Server deployment${normal}"
+  helm repo update
   helm upgrade --install rancher rancher-prime/rancher \
     --namespace cattle-system \
     --set hostname=${LB_RANCHER_FQDN} \
