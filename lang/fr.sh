@@ -48,7 +48,6 @@ DESC_CONFIGURE_DOCKER_DAEMON="Configuration du daemon docker pour utiliser la re
 DESC_INSTALL_KUBECTL="Installation de kubectl en local ?"
 DESC_DOCKER_PROXY="Configurer Docker pour utiliser le proxy ?"
 DESC_CHECK_ACCESS_REGISTRY="Vérifier que la registry ${AIRGAP_REGISTRY_URL} est accessible depuis l'ensemble des noeuds ?"
-DESC_CHECK_ACCESS_STORAGE_NET="Vérifier que le réseau de stockage $STORAGE_TARGET est accessible depuis l'ensemble des noeuds ?"
 DESC_IPFORWARD_ACTIVATE="Activation de l'IP forwarding ?"
 DESC_NO_SWAP="Désactivation du swap ?"
 DESC_K8S_TOOLS="Installation des outils Kubernetes en local ?"

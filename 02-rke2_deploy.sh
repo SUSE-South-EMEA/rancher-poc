@@ -74,8 +74,8 @@ echo "tls-san:" |tee config.yaml
 for h in ${HOSTS[*]};do
   echo "  - $h" |tee -a config.yaml
 done
-if [[ ! -z ${RKE2_VIP_NAME} ]] && [[ ! -z ${RKE2_VIP_IP} ]]; then
-  echo "  - ${RKE2_VIP_NAME}" |tee -a config.yaml
+if [[ ! -z ${RKE2_VIP_FQDN} ]] && [[ ! -z ${RKE2_VIP_IP} ]]; then
+  echo "  - ${RKE2_VIP_FQDN}" |tee -a config.yaml
   echo "  - ${RKE2_VIP_IP}" |tee -a config.yaml
 fi
 }
@@ -125,8 +125,8 @@ echo
 read -rsp "${TXT_RKE_DEPLOY_PRESS_KEY:=Press a key to monitor deployment...}" -n1 key
 watch -d "kubectl get pods -n kube-system -l name=kube-vip-ds ; echo ; ssh ranch1 \"if ip a show dev ${RKE2_VIP_INTERFACE} |grep ${RKE2_VIP_IP} ; then echo 'VIP is up.' ; else echo 'VIP is not up yet...' ; fi \" ; echo -e '\nPlease wait. Ctrl+C to quit when all pods are Ready...'"
 echo
-sed -i "s/${HOSTS[0]}/${RKE2_VIP_NAME}/" ~/.kube/config
-echo "${TXT_KUBECONFIG_KUBEVIP:=KUBECONFIG (~/.kube/config) modified to use VIP hostname: ${RKE2_VIP_NAME}}"
+sed -i "s/${HOSTS[0]}/${RKE2_VIP_FQDN}/" ~/.kube/config
+echo "${TXT_KUBECONFIG_KUBEVIP:=KUBECONFIG (~/.kube/config) modified to use VIP hostname: ${RKE2_VIP_FQDN}}"
 }
 
 ## RKE2 DEPLOY (ADDITIONNAL NODES)
@@ -140,8 +140,8 @@ for h in ${HOSTS[@]:1};do
   if [[ $AIRGAP_DEPLOY == 1 ]]; then scp registries.yaml $h: && ssh $h "sudo mv registries.yaml /etc/rancher/rke2/registries.yaml" ; fi
   if [[ $PROXY_DEPLOY == 1 ]]; then scp rke2-server $h: && ssh $h "sudo mv rke2-server /etc/default/rke2-server" ; fi
   echo
-  if [[ ! -z ${RKE2_VIP_NAME} ]] ; then
-    ssh $h "echo \"token: $TOKEN\" |sudo tee -a /etc/rancher/rke2/config.yaml ; echo \"server: https://${RKE2_VIP_NAME}:9345\" |sudo tee -a /etc/rancher/rke2/config.yaml"
+  if [[ ! -z ${RKE2_VIP_FQDN} ]] ; then
+    ssh $h "echo \"token: $TOKEN\" |sudo tee -a /etc/rancher/rke2/config.yaml ; echo \"server: https://${RKE2_VIP_FQDN}:9345\" |sudo tee -a /etc/rancher/rke2/config.yaml"
   else
     ssh $h "echo \"token: $TOKEN\" |sudo tee -a /etc/rancher/rke2/config.yaml ; echo \"server: https://${HOSTS[0]}:9345\" |sudo tee -a /etc/rancher/rke2/config.yaml"
   fi
@@ -191,7 +191,7 @@ if [[ $PROXY_DEPLOY == 1 ]]; then
 fi
 question_yn "${DESC_RKE2_BOOTSTRAP_DEPLOY:=Bootstrap first rke2 server node?}" COMMAND_RKE2_BOOTSTRAP_DEPLOY
 question_yn "${DESC_KUBECONFIG:=Copy Kubeconfig file to ~/.kube/config?}" COMMAND_KUBECONFIG
-if [[ ! -z ${RKE2_VIP_NAME} ]] && [[ ! -z ${RKE2_VIP_IP} ]]; then
+if [[ ! -z ${RKE2_VIP_FQDN} ]] && [[ ! -z ${RKE2_VIP_IP} ]]; then
   question_yn "${DESC_KUBEVIP_DEPLOY:=Deploy kube-vip in the rke2 cluster?}" COMMAND_KUBEVIP_DEPLOY
 fi
 question_yn "${DESC_RKE2_DEPLOY:=Deploy remaining rke2 server node?}" COMMAND_RKE2_DEPLOY

@@ -35,16 +35,12 @@ DOCKER_GROUP="docker"	# 'dockerroot' for docker provided by RHEL
 ######################## REPOSITORIES ############################
 REPO_SERVER="suma01"
 
-######################## CHECK STORAGE NETWORK ###################
-## Existing storage network host for basic check
-STORAGE_TARGET="192.168.1.11"
-
 ######################## SELECT VERSIONS #########################
 ## RKE2, Rancher and Helm versions to deploy
-HELM_VERSION="3.8.2"
-RKE2_VERSION="v1.25.9+rke2r1"
+HELM_VERSION="3.12.3"
+RKE2_VERSION="v1.26.9+rke2r1"
 CERTMGR_VERSION="v1.11.0"
-RANCHER_VERSION="2.7.3"
+RANCHER_VERSION="2.7.6"
 
 ######### RANCHER MGMT SERVER CERTIFICATE AND PRIVATE CA #########
 ## Rancher TLS configuration. Available options are [rancher,secret,external]
@@ -59,6 +55,7 @@ PRIVATE_CA="0"
 ## Rancher Management Load balancer FQDN (redirect to RKE nodes hosting Rancher)
 LB_RANCHER_FQDN="rancher.domain"
 ## RKE2 KUBE-VIP configuration (leave empty if you do not want to use kube-vip)
+## RKE2_VIP_FQDN and RKE2_VIP_IP are both mandatory for kube-vip deployment.
 RKE2_VIP_IP=192.168.100.20
-RKE2_VIP_NAME="rancher-vip.domain"
+RKE2_VIP_FQDN="ranch-vip.domain"
 RKE2_VIP_INTERFACE="eth0"
