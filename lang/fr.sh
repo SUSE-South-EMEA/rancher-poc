@@ -43,7 +43,6 @@ TXT_CHECK_TIME="Les binaires chronyc ou ntpq ne sont pas présents. Vérificatio
 DESC_CHECK_ACCESS="Vérification de l'accès des noeuds cibles aux reseaux: public et stockage ?"
 DESC_DOCKER_INSTALL="Installation, activation et démarrage de Docker sur les noeuds ?"
 DESC_DOCKER_INSTALL_YUM="Installation, activation et demarrage de Docker sur les noeuds?"
-DESC_CREATE_DOCKER_USER="Création de l'utilisateur docker pour RKE\n Docker user: ${DOCKER_USER}\n Docker group: ${DOCKER_GROUP}"
 DESC_CONFIGURE_DOCKER_DAEMON="Configuration du daemon docker pour utiliser la registry interne ?"
 DESC_INSTALL_KUBECTL="Installation de kubectl en local ?"
 DESC_DOCKER_PROXY="Configurer Docker pour utiliser le proxy ?"

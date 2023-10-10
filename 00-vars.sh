@@ -16,6 +16,8 @@ AIRGAP_REGISTRY_INSECURE="1" # 1=insecure / 0=secured
 # Optional user/password
 AIRGAP_REGISTRY_USER=""
 AIRGAP_REGISTRY_PASSWD=""
+## Docker version to use for Airgap image synchronization (RHEL/CentOS)
+DOCKER_VERSION="20.10"  # options [20.10|23.0|24.0]
 
 ######################## IF PROXY SETUP ##########################
 ## Proxy settings
@@ -24,22 +26,11 @@ _HTTP_PROXY="admin:3128"
 _HTTPS_PROXY="admin:3128"
 _NO_PROXY=127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,cattle-system.svc,.svc,.cluster.local,.zypp.lo
 
-######################## DOCKER SETUP (for Airgap)################
-## Docker version to use (RHEL/CentOS)
-DOCKER_VERSION="20.10"  # options [19.03|20.10]
-## Docker user to be created on target hosts
-DOCKER_USER="rkedeploy"
-## Docker group to be joined by Docker user
-DOCKER_GROUP="docker"	# 'dockerroot' for docker provided by RHEL
-
-######################## REPOSITORIES ############################
-REPO_SERVER="suma01"
-
 ######################## SELECT VERSIONS #########################
 ## RKE2, Rancher and Helm versions to deploy
-HELM_VERSION="3.12.3"
+HELM_VERSION="3.8.2"
 RKE2_VERSION="v1.26.9+rke2r1"
-CERTMGR_VERSION="v1.11.0"
+CERTMGR_VERSION="v1.12.5"
 RANCHER_VERSION="2.7.6"
 
 ######### RANCHER MGMT SERVER CERTIFICATE AND PRIVATE CA #########
@@ -56,6 +47,6 @@ PRIVATE_CA="0"
 LB_RANCHER_FQDN="rancher.domain"
 ## RKE2 KUBE-VIP configuration (leave empty if you do not want to use kube-vip)
 ## RKE2_VIP_FQDN and RKE2_VIP_IP are both mandatory for kube-vip deployment.
-RKE2_VIP_IP=192.168.100.20
+RKE2_VIP_IP=192.168.100.27
 RKE2_VIP_FQDN="ranch-vip.domain"
 RKE2_VIP_INTERFACE="eth0"
