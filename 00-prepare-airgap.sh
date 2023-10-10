@@ -72,13 +72,13 @@ if SUSEConnect -s |grep "Not Registered" ; then
   echo "System is not registered, make sure Containers Module repositories are added."
   echo 
   echo "i.e: add containers module repos hosted in SUMA"
-  echo "sudo zypper ar -G http://${REPO_SERVER}/ks/dist/child/sle-module-containers15-sp4-pool-x86_64/sles15sp4 containers_product"
-  echo "sudo zypper ar -G http://${REPO_SERVER}/ks/dist/child/sle-module-containers15-sp4-updates-x86_64/sles15sp4 containers_updates"
+  echo "sudo zypper ar -G http://{REPO_SERVER}/ks/dist/child/sle-module-containers15-sp5-pool-x86_64/sles15sp5 containers_product"
+  echo "sudo zypper ar -G http://{REPO_SERVER}/ks/dist/child/sle-module-containers15-sp5-updates-x86_64/sles15sp5 containers_updates"
 elif SUSEConnect -l |grep "Containers Module" |grep Activated ; then
   echo "Containers Module is activated. Nothing to do."
 else
   echo "Activating Containers Module"
-  SUSEConnect -p sle-module-containers/15.4/x86_64
+  SUSEConnect -p sle-module-containers/15.5/x86_64
 fi
 }
 
