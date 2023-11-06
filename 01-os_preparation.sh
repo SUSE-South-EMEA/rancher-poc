@@ -152,10 +152,6 @@ else
 fi
 }
 
-COMMAND_CHECK_ACCESS_STORAGE_NET() {
-for h in ${HOSTS[*]}; do ssh $h "echo && hostname -f && ping -c1 $STORAGE_TARGET > /dev/null  && echo 'ping $STORAGE_TARGET: OK' || echo 'ping $STORAGE_TARGET: FAIL'"; done;
-}
-
 ## ACTIVATION IP FORWARDING
 COMMAND_IPFORWARD_ACTIVATE() {
 for h in ${HOSTS[*]};do ssh $h "echo; hostname -f ; sudo sed -i '/net.ipv4.ip_forward.*/d' /etc/sysctl.conf /etc/sysctl.d/*.conf ; echo 'net.ipv4.ip_forward = 1' |sudo tee -a /etc/sysctl.conf; sudo sed '/^#/d' /etc/sysctl.conf;sudo sysctl -p" ; done
@@ -262,7 +258,7 @@ if [[ $pkg_mgr_type == 'apt' ]]
 then
   question_yn "${DESC_CHECK_PACKAGE:=Check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_DPKG iptables apparmor sudo"
 else
-  question_yn "${DESC_CHECK_PACKAGE_RPM:=Check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_RPM iptables apparmor-parser sudo"
+  question_yn "${DESC_CHECK_PACKAGE_RPM:=Check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_RPM iptables apparmor-parser sudo lsof"
 fi
 ##################### END PRE-CHECK PACKAGES ####################################
 #
@@ -279,7 +275,7 @@ question_yn "$pkg_mgr_type - ${DESC_FIREWALL:=Check firewalld status (must be di
 question_yn "${DESC_DEFAULT_GW:=Check for a defined default gateway?}" COMMAND_DEFAULT_GW
 question_yn "${DESC_CHECK_TIME:=Verify date and time on all nodes?}" COMMAND_CHECK_TIME
 question_yn "${DESC_IPFORWARD_ACTIVATE:=Enable IP forwarding?}" COMMAND_IPFORWARD_ACTIVATE
-question_yn "${DESC_NO_SWAP:=Disable swap on target nodes?}" COMMAND_NO_SWAP
+#question_yn "${DESC_NO_SWAP:=Disable swap on target nodes?}" COMMAND_NO_SWAP
 ##################### END OS REQUIREMENTS #######################################
 #
 #
@@ -287,7 +283,7 @@ question_yn "${DESC_NO_SWAP:=Disable swap on target nodes?}" COMMAND_NO_SWAP
 if [[ $pkg_mgr_type == 'zypper' ]]
 then 
 question_yn "$pkg_mgr_type - ${DESC_REPOS:=List repositories on nodes}" COMMAND_REPOS_ZYPPER
-question_yn "$pkg_mgr_type - ${DESC_ADDREPOS:=Add sle-module-containers repositories on target and local nodes?}" COMMAND_ADDREPOS_ZYPPER
+#question_yn "$pkg_mgr_type - ${DESC_ADDREPOS:=Add sle-module-containers repositories on target and local nodes?}" COMMAND_ADDREPOS_ZYPPER
 question_yn "${DESC_NODES_UPDATE:=Update all nodes?}" COMMAND_NODES_UPDATE_ZYPPER
 
 elif [[ $pkg_mgr_type == 'yum' ]]
@@ -310,13 +306,6 @@ if [[ $AIRGAP_DEPLOY == 1 ]] ; then
   question_yn "Airgap - ${DESC_CHECK_ACCESS_REGISTRY:=Check ${AIRGAP_REGISTRY_URL} is accessible from all nodes?}" COMMAND_CHECK_ACCESS_REGISTRY
 fi
 ##################### END AIRGAP ################################################
-#
-#
-##################### BEGIN CHECK STORAGE ACCESS #################################
-if [[ ! -z ${STORAGE_TARGET} ]] ; then
-  question_yn "${DESC_CHECK_ACCESS_STORAGE_NET:=Check $STORAGE_TARGET is accessible from all nodes?}" COMMAND_CHECK_ACCESS_STORAGE_NET
-fi
-##################### END CHECK STORAGE ACCESS ###################################
 #
 #
 ##################### BEGIN LONGHORN REQUIREMENTS ################################

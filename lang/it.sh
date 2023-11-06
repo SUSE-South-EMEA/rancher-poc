@@ -24,7 +24,6 @@ TXT_CHECK_TIME="Non sono presenti Chronyc o ntpq. Non è possibile controllare c
 DESC_CHECK_ACCESS="Testare l'accesso alle reti pubbliche e di archiviazione da tutti i nodi?"
 DESC_DOCKER_INSTALL="Installazione, Attivare e startare Docker su tutti i nodi?"
 DESC_DOCKER_INSTALL_YUM="Installazione, Attivare e startare Docker su tutti i nodi?"
-DESC_CREATE_DOCKER_USER="Creato utente Docker per RKE\n Docker user: ${DOCKER_USER}\n Docker group: ${DOCKER_GROUP}"
 DESC_DOCKER_PROXY="Configure Proxy settings for Docker?"
 DESC_IPFORWARD_ACTIVATE="Abilitare IP forwarding?"
 DESC_NO_SWAP="Disabilitare lo swap sui target nodes?"
