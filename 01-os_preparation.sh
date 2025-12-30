@@ -261,6 +261,28 @@ question_yn "${DESC_SSH_CONNECT_TEST:=Test SSH connection to nodes?}" COMMAND_SS
 ##################### END SSH KEYS EXCHANGE #####################################
 #
 #
+##################### BEGIN REPOS & BINARIES ####################################
+if [[ $pkg_mgr_type == 'zypper' ]]
+then 
+question_yn "$pkg_mgr_type - ${DESC_REPOS:=List repositories on nodes}" COMMAND_REPOS_ZYPPER
+#question_yn "$pkg_mgr_type - ${DESC_ADDREPOS:=Add sle-module-containers repositories on target and local nodes?}" COMMAND_ADDREPOS_ZYPPER
+question_yn "${DESC_NODES_UPDATE:=Update all nodes?}" COMMAND_NODES_UPDATE_ZYPPER
+
+elif [[ $pkg_mgr_type == 'yum' ]]
+then
+question_yn "$DESC_REPOS" COMMAND_REPOS_YUM
+question_yn "$pkg_mgr_type - ${DESC_NODES_UPDATE:=Update all nodes?}" COMMAND_NODES_UPDATE_YUM
+
+elif [[ $pkg_mgr_type == 'apt' ]]
+then
+question_yn "$DESC_REPOS" COMMAND_REPOS_APT
+question_yn "$pkg_mgr_type - ${DESC_NODES_UPDATE:=Update all nodes?}" COMMAND_NODES_UPDATE_APT
+fi
+
+question_yn "${DESC_INSTALL_KUBECTL:=Install kubectl on local node?}" COMMAND_INSTALL_KUBECTL
+##################### END REPOS & BINARIES ######################################
+#
+#
 ##################### BEGIN PRE-CHECK PACKAGES ##################################
 if [[ $pkg_mgr_type == 'apt' ]]
 then
@@ -285,28 +307,6 @@ question_yn "${DESC_CHECK_TIME:=Verify date and time on all nodes?}" COMMAND_CHE
 question_yn "${DESC_IPFORWARD_ACTIVATE:=Enable IP forwarding?}" COMMAND_IPFORWARD_ACTIVATE
 #question_yn "${DESC_NO_SWAP:=Disable swap on target nodes?}" COMMAND_NO_SWAP
 ##################### END OS REQUIREMENTS #######################################
-#
-#
-##################### BEGIN REPOS & BINARIES ####################################
-if [[ $pkg_mgr_type == 'zypper' ]]
-then 
-question_yn "$pkg_mgr_type - ${DESC_REPOS:=List repositories on nodes}" COMMAND_REPOS_ZYPPER
-#question_yn "$pkg_mgr_type - ${DESC_ADDREPOS:=Add sle-module-containers repositories on target and local nodes?}" COMMAND_ADDREPOS_ZYPPER
-question_yn "${DESC_NODES_UPDATE:=Update all nodes?}" COMMAND_NODES_UPDATE_ZYPPER
-
-elif [[ $pkg_mgr_type == 'yum' ]]
-then
-question_yn "$DESC_REPOS" COMMAND_REPOS_YUM
-question_yn "$pkg_mgr_type - ${DESC_NODES_UPDATE:=Update all nodes?}" COMMAND_NODES_UPDATE_YUM
-
-elif [[ $pkg_mgr_type == 'apt' ]]
-then
-question_yn "$DESC_REPOS" COMMAND_REPOS_APT
-question_yn "$pkg_mgr_type - ${DESC_NODES_UPDATE:=Update all nodes?}" COMMAND_NODES_UPDATE_APT
-fi
-
-question_yn "${DESC_INSTALL_KUBECTL:=Install kubectl on local node?}" COMMAND_INSTALL_KUBECTL
-##################### END REPOS & BINARIES ######################################
 #
 #
 ##################### BEGIN AIRGAP ##############################################
