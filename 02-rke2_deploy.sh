@@ -17,11 +17,11 @@ if [[ $AIRGAP_DEPLOY != 1 ]]; then
   echo "${TXT_DL_RKE2:=Download rke2 tarball} - version: ${RKE2_VERSION}"
   curl -LO https://github.com/rancher/rke2/releases/download/${RKE2_VERSION}/rke2.linux-amd64.tar.gz
 fi
-for h in ${HOSTS[*]};do
+for h in "${HOSTS[@]}";do
   echo -e "\n${bold}$h${normal}"
-  scp rke2.linux-amd64.tar.gz $h:
-  ssh $h "sudo tar xvzf rke2.linux-amd64.tar.gz -C /usr/local/"
-  ssh $h "echo ; rke2 --version && sudo mkdir -p /etc/rancher/rke2/"
+  scp_host rke2.linux-amd64.tar.gz "$h:"
+  ssh_host "$h" "sudo tar xvzf rke2.linux-amd64.tar.gz -C /usr/local/"
+  ssh_host "$h" "echo ; rke2 --version && sudo mkdir -p /etc/rancher/rke2/"
 done
 }
 
@@ -84,18 +84,18 @@ fi
 COMMAND_RKE2_BOOTSTRAP_DEPLOY() {
 echo "${bold}${TXT_RKE2_BOOTSTRAP_DEPLOY:=Bootstrap rke2 server on first node}: ${HOSTS[0]}${normal}"
 echo "${TXT_COPY_FILES:=Copying files...}"
-scp config.yaml ${HOSTS[0]}: && ssh ${HOSTS[0]} "sudo mv config.yaml /etc/rancher/rke2/config.yaml"
-if [[ $AIRGAP_DEPLOY == 1 ]]; then scp registries.yaml ${HOSTS[0]}: && ssh ${HOSTS[0]} "sudo mv registries.yaml /etc/rancher/rke2/registries.yaml" ; fi
-if [[ $PROXY_DEPLOY == 1 ]]; then scp rke2-server ${HOSTS[0]}: && ssh ${HOSTS[0]} "sudo mv rke2-server /etc/default/rke2-server" ; fi
+scp_host config.yaml "${HOSTS[0]}:" && ssh_host "${HOSTS[0]}" "sudo mv config.yaml /etc/rancher/rke2/config.yaml"
+if [[ $AIRGAP_DEPLOY == 1 ]]; then scp_host registries.yaml "${HOSTS[0]}:" && ssh_host "${HOSTS[0]}" "sudo mv registries.yaml /etc/rancher/rke2/registries.yaml" ; fi
+if [[ $PROXY_DEPLOY == 1 ]]; then scp_host rke2-server "${HOSTS[0]}:" && ssh_host "${HOSTS[0]}" "sudo mv rke2-server /etc/default/rke2-server" ; fi
 echo; echo "${TXT_RKE_DEPLOY_WAIT:=Please wait while resources are being deployed (could take a few minutes...)}"
-ssh ${HOSTS[0]} "sudo systemctl enable --now rke2-server"
+ssh_host "${HOSTS[0]}" "sudo systemctl enable --now rke2-server"
 }
 
 ## KUBECONFIG SETUP
 COMMAND_KUBECONFIG() {
 echo "${TXT_KUBECONFIG:=Get rke2 cluster kubeconfig from first node}: ${HOSTS[0]}"
 mkdir -p ~/.kube/
-ssh ${HOSTS[0]} "sudo cat /etc/rancher/rke2/rke2.yaml" > ~/.kube/config
+ssh_host "${HOSTS[0]}" "sudo cat /etc/rancher/rke2/rke2.yaml" > ~/.kube/config
 chmod 600 ~/.kube/config
 sed -i "s/127.0.0.1/${HOSTS[0]}/" ~/.kube/config
 echo "${TXT_KUBECONFIG_PATH:=KUBECONFIG copied to ~/.kube/config}"
@@ -116,11 +116,11 @@ fi
 # Push kube-vip rbac and deployment manifests on bootstrap node
 echo
 echo "${TXT_COPY_FILES:=Copying files...}"
-scp kube-vip-rbac.yaml ${HOSTS[0]}: && ssh ${HOSTS[0]} "sudo mkdir -p /var/lib/rancher/rke2/server/manifests/ && sudo mv kube-vip-rbac.yaml /var/lib/rancher/rke2/server/manifests/kube-vip-rbac.yaml"
-scp kube-vip.yaml ${HOSTS[0]}: && ssh ${HOSTS[0]} "sudo mv kube-vip.yaml /var/lib/rancher/rke2/server/manifests/kube-vip.yaml"
+scp_host kube-vip-rbac.yaml "${HOSTS[0]}:" && ssh_host "${HOSTS[0]}" "sudo mkdir -p /var/lib/rancher/rke2/server/manifests/ && sudo mv kube-vip-rbac.yaml /var/lib/rancher/rke2/server/manifests/kube-vip-rbac.yaml"
+scp_host kube-vip.yaml "${HOSTS[0]}:" && ssh_host "${HOSTS[0]}" "sudo mv kube-vip.yaml /var/lib/rancher/rke2/server/manifests/kube-vip.yaml"
 # Restart rke2-server to deploy kube-vip
 echo ; echo "${TXT_RKE2_DEPLOY_RESTART:=Restart rke2 server}"
-ssh ${HOSTS[0]} "sudo systemctl restart rke2-server"
+ssh_host "${HOSTS[0]}" "sudo systemctl restart rke2-server"
 echo
 read -rsp "${TXT_RKE_DEPLOY_PRESS_KEY:=Press a key to monitor deployment...}" -n1 key
 watch -d "kubectl get pods -n kube-system -l name=kube-vip-ds ; echo ; ssh ranch1 \"if ip a show dev ${RKE2_VIP_INTERFACE} |grep ${RKE2_VIP_IP} ; then echo 'VIP is up.' ; else echo 'VIP is not up yet...' ; fi \" ; echo -e '\nPlease wait. Ctrl+C to quit when all pods are Ready...'"
@@ -132,21 +132,21 @@ echo "${TXT_KUBECONFIG_KUBEVIP:=KUBECONFIG (~/.kube/config) modified to use VIP 
 ## RKE2 DEPLOY (ADDITIONNAL NODES)
 COMMAND_RKE2_DEPLOY() {
 echo "${TXT_RKE2_DEPLOY:=Bootstrap rke2 server on other nodes}: ${HOSTS[@]:1}"
-TOKEN=$(ssh ${HOSTS[0]} "sudo cat /var/lib/rancher/rke2/server/token")
-for h in ${HOSTS[@]:1};do
+TOKEN=$(ssh_host "${HOSTS[0]}" "sudo cat /var/lib/rancher/rke2/server/token")
+for h in "${HOSTS[@]:1}";do
   echo -e "\n${bold}$h${normal}"
   echo "${TXT_COPY_FILES:=Copying files...}"
-  scp config.yaml $h: && ssh $h "sudo mv config.yaml /etc/rancher/rke2/config.yaml"
-  if [[ $AIRGAP_DEPLOY == 1 ]]; then scp registries.yaml $h: && ssh $h "sudo mv registries.yaml /etc/rancher/rke2/registries.yaml" ; fi
-  if [[ $PROXY_DEPLOY == 1 ]]; then scp rke2-server $h: && ssh $h "sudo mv rke2-server /etc/default/rke2-server" ; fi
+  scp_host config.yaml "$h:" && ssh_host "$h" "sudo mv config.yaml /etc/rancher/rke2/config.yaml"
+  if [[ $AIRGAP_DEPLOY == 1 ]]; then scp_host registries.yaml "$h:" && ssh_host "$h" "sudo mv registries.yaml /etc/rancher/rke2/registries.yaml" ; fi
+  if [[ $PROXY_DEPLOY == 1 ]]; then scp_host rke2-server "$h:" && ssh_host "$h" "sudo mv rke2-server /etc/default/rke2-server" ; fi
   echo
   if [[ ! -z ${RKE2_VIP_FQDN} ]] ; then
-    ssh $h "echo \"token: $TOKEN\" |sudo tee -a /etc/rancher/rke2/config.yaml ; echo \"server: https://${RKE2_VIP_FQDN}:9345\" |sudo tee -a /etc/rancher/rke2/config.yaml"
+    ssh_host "$h" "echo \"token: $TOKEN\" |sudo tee -a /etc/rancher/rke2/config.yaml ; echo \"server: https://${RKE2_VIP_FQDN}:9345\" |sudo tee -a /etc/rancher/rke2/config.yaml"
   else
-    ssh $h "echo \"token: $TOKEN\" |sudo tee -a /etc/rancher/rke2/config.yaml ; echo \"server: https://${HOSTS[0]}:9345\" |sudo tee -a /etc/rancher/rke2/config.yaml"
+    ssh_host "$h" "echo \"token: $TOKEN\" |sudo tee -a /etc/rancher/rke2/config.yaml ; echo \"server: https://${HOSTS[0]}:9345\" |sudo tee -a /etc/rancher/rke2/config.yaml"
   fi
   echo ; echo "${TXT_RKE2_DEPLOY_START:=Start rke2 server}"
-  ssh $h "sudo systemctl enable --now rke2-server"
+  ssh_host "$h" "sudo systemctl enable --now rke2-server"
 done
 echo; echo "${TXT_RKE_DEPLOY_WAIT:=Please wait while resources are being deployed (could take a few minutes...)}"
 read -rsp "${TXT_RKE_DEPLOY_PRESS_KEY:=Press a key to monitor deployment...}" -n1 key

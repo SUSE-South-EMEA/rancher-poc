@@ -12,6 +12,43 @@ echo
 printf '%s\n' "${HOSTS[@]}"
 echo
 
+# SSH helper function to use configured SSH_USER
+# Usage: ssh_host <host> "<command>"
+# Example: ssh_host "node1" "sudo systemctl status docker"
+ssh_host() {
+    local host="$1"
+    local command="$2"
+    if [[ -n "${SSH_USER:-}" ]]; then
+        ssh "${SSH_USER}@${host}" "$command"
+    else
+        ssh "$host" "$command"
+    fi
+}
+
+# SCP helper function to use configured SSH_USER
+# Usage: scp_host <source> <host>:<destination> or scp_host <source> <host>:
+# Example: scp_host "file.txt" "node1:/tmp/file.txt" or scp_host "file.txt" "node1:"
+scp_host() {
+    local source="$1"
+    local destination="$2"
+    if [[ -n "${SSH_USER:-}" ]]; then
+        # Extract host from destination (format: host:path or host:)
+        if [[ "$destination" =~ ^([^:]+):(.*)$ ]]; then
+            local host="${BASH_REMATCH[1]}"
+            local path="${BASH_REMATCH[2]}"
+            if [[ -n "$path" ]]; then
+                scp "$source" "${SSH_USER}@${host}:${path}"
+            else
+                scp "$source" "${SSH_USER}@${host}:"
+            fi
+        else
+            scp "$source" "$destination"
+        fi
+    else
+        scp "$source" "$destination"
+    fi
+}
+
 # Generic yes/no function
 question_yn() {
 while true; do

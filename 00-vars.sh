@@ -6,6 +6,12 @@ LANGUAGE="fr"
 ## Used by RKE2 when generating TLS certs
 HOST_LIST="ranch1.domain,ranch2.domain,ranch3.domain"
 
+######################## SSH CONFIGURATION #######################
+## SSH user to use for remote commands
+## Leave empty to use current user or user from SSH config
+## Example: SSH_USER="admin" or SSH_USER=""
+SSH_USER=""
+
 ######################## IF AIRGAP SETUP #########################
 ## Airgap deployment
 AIRGAP_DEPLOY="0"	# 1=airgap enabled / 0=airgap disabled
