@@ -16,7 +16,9 @@ COMMAND_RKE2_INSTALL() {
 if [[ $AIRGAP_DEPLOY != 1 ]]; then
   echo "${TXT_DL_RKE2:=Download rke2 tarball} - version: ${RKE2_VERSION}"
   # Use GitHub releases as default, fallback to RKE2_REPO if defined
-  RKE2_DOWNLOAD_URL="${RKE2_REPO:-https://github.com/rancher/rke2/releases/download}/${RKE2_VERSION}/rke2.linux-amd64.tar.gz"
+  # URL encode the version to handle special characters like +
+  RKE2_VERSION_ENCODED=$(echo "${RKE2_VERSION}" | sed 's/+/%2B/g')
+  RKE2_DOWNLOAD_URL="${RKE2_REPO:-https://github.com/rancher/rke2/releases/download}/${RKE2_VERSION_ENCODED}/rke2.linux-amd64.tar.gz"
   echo "Downloading from: ${RKE2_DOWNLOAD_URL}"
   
   # Build curl command with appropriate options
