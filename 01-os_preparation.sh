@@ -159,7 +159,17 @@ fi
 
 ## ACTIVATION IP FORWARDING
 COMMAND_IPFORWARD_ACTIVATE() {
-for h in "${HOSTS[@]}";do ssh_host "$h" "echo; hostname -f ; sudo sed -i '/net.ipv4.ip_forward.*/d' /etc/sysctl.conf /etc/sysctl.d/*.conf ; echo 'net.ipv4.ip_forward = 1' |sudo tee -a /etc/sysctl.conf; sudo sed '/^#/d' /etc/sysctl.conf;sudo sysctl -p" ; done
+for h in "${HOSTS[@]}";do 
+  echo -e "\n${bold}$h${normal}"
+  ssh_host "$h" "echo; hostname -f ; sudo sed -i '/net.ipv4.ip_forward.*/d' /etc/sysctl.conf ; if [ -d /etc/sysctl.d ] && [ -n \"\$(ls -A /etc/sysctl.d/*.conf 2>/dev/null)\" ] ; then sudo sed -i '/net.ipv4.ip_forward.*/d' /etc/sysctl.d/*.conf ; fi ; echo 'net.ipv4.ip_forward = 1' | sudo tee -a /etc/sysctl.conf ; sudo sysctl -p"
+done
+echo -e "\n${bold}$(hostname -f)${normal} (local node)"
+sudo sed -i '/net.ipv4.ip_forward.*/d' /etc/sysctl.conf
+if [ -d /etc/sysctl.d ] && [ -n "$(ls -A /etc/sysctl.d/*.conf 2>/dev/null)" ]; then
+  sudo sed -i '/net.ipv4.ip_forward.*/d' /etc/sysctl.d/*.conf
+fi
+echo 'net.ipv4.ip_forward = 1' | sudo tee -a /etc/sysctl.conf
+sudo sysctl -p
 }
 
 ## DESACTIVATION DU SWAP
