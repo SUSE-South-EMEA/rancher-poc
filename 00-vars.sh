@@ -32,12 +32,14 @@ _HTTP_PROXY="admin:3128"
 _HTTPS_PROXY="admin:3128"
 _NO_PROXY=127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,cattle-system.svc,.svc,.cluster.local,.zypp.lo
 
-######################## SELECT VERSIONS #########################
+######################## SELECT VERSIONS & SOURCES################
 ## RKE2, Rancher and Helm versions to deploy
 HELM_VERSION="4.0.1"
-RKE2_VERSION="v1.34.2+rke2r1"
+RKE2_VERSION="v1.33.7+rke2r1"
 CERTMGR_VERSION="v1.19.1"
-RANCHER_VERSION="2.13.0"
+RANCHER_VERSION="2.13.1"
+## RKE2 Community (https://github.com/rancher/rke2/releases/download) or Prime (https://prime.ribs.rancher.io/rke2)
+RKE2_REPO="https://prime.ribs.rancher.io/rke2"
 
 ######### RANCHER MGMT SERVER CERTIFICATE AND PRIVATE CA #########
 ## Rancher TLS configuration. Available options are [rancher,secret,external]
@@ -53,6 +55,6 @@ PRIVATE_CA="0"
 LB_RANCHER_FQDN="rancher.domain"
 ## RKE2 KUBE-VIP configuration (leave empty if you do not want to use kube-vip)
 ## RKE2_VIP_FQDN and RKE2_VIP_IP are both mandatory for kube-vip deployment.
-RKE2_VIP_IP=192.168.100.27
-RKE2_VIP_FQDN="ranch-vip.domain"
+RKE2_VIP_IP=172.16.3.22
+RKE2_VIP_FQDN="ranchvip.home.lo"
 RKE2_VIP_INTERFACE="eth0"

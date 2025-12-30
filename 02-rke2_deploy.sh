@@ -15,7 +15,19 @@ fi
 COMMAND_RKE2_INSTALL() {
 if [[ $AIRGAP_DEPLOY != 1 ]]; then
   echo "${TXT_DL_RKE2:=Download rke2 tarball} - version: ${RKE2_VERSION}"
-  curl -LO https://github.com/rancher/rke2/releases/download/${RKE2_VERSION}/rke2.linux-amd64.tar.gz
+  # Use GitHub releases as default, fallback to RKE2_REPO if defined
+  RKE2_DOWNLOAD_URL="${RKE2_REPO:-https://github.com/rancher/rke2/releases/download}/${RKE2_VERSION}/rke2.linux-amd64.tar.gz"
+  echo "Downloading from: ${RKE2_DOWNLOAD_URL}"
+  if ! curl -LO --fail --silent --show-error "${RKE2_DOWNLOAD_URL}"; then
+    echo "Error: Failed to download RKE2 from ${RKE2_DOWNLOAD_URL}" >&2
+    echo "Please check:" >&2
+    echo "  - Internet connectivity" >&2
+    echo "  - Proxy settings if PROXY_DEPLOY=1" >&2
+    echo "  - RKE2_VERSION=${RKE2_VERSION} is correct" >&2
+    echo "  - RKE2_REPO=${RKE2_REPO:-not set} if using custom repository" >&2
+    exit 1
+  fi
+  echo "Download completed successfully"
 fi
 for h in "${HOSTS[@]}";do
   echo -e "\n${bold}$h${normal}"
