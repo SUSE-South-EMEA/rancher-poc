@@ -91,19 +91,19 @@ done
 }
 
 COMMAND_CHECK_PACKAGE_RPM() {
-for h in ${HOSTS[*]}; do
+for h in "${HOSTS[@]}"; do
   echo -e "\n${bold}$h${normal}"
   for i in $@;do echo "${TXT_CHECK_PACKAGE_PRESENT:=Checking if package is installed}: ${bold}$i${normal}"
-  if ssh $h "sudo rpm -q $i"
+  if ssh_host "$h" "sudo rpm -q $i"
   then
     echo "${bold}$i${normal} ${TXT_IS_PRESENT:=is present}. OK!";echo
   else
     echo "${bold}$i${normal} ${TXT_NOT_PRESENT:=is absent}. MISSING! Trying to remediate..."
     echo "sudo rpm -q ${bold}$i${normal}: 'not installed'"
     if [[ $pkg_mgr_type == 'zypper' ]] ; then
-      ssh $h "sudo zypper in -y $i"
+      ssh_host "$h" "sudo zypper in -y $i"
     elif [[ $pkg_mgr_type == 'yum' ]] ; then
-      ssh $h "sudo yum install -y $i"
+      ssh_host "$h" "sudo yum install -y $i"
     else
       echo "Package manager should be zypper or yum"
     fi 
@@ -130,17 +130,17 @@ done
 }
 
 COMMAND_CHECK_PACKAGE_DPKG() {
-for h in ${HOSTS[*]}; do
+for h in "${HOSTS[@]}"; do
   echo -e "\n${bold}$h${normal}"
   for i in $@;do echo "${TXT_CHECK_PACKAGE_PRESENT:=Checking if package is installed}: ${bold}$i${normal}"
-  if ssh $h "sudo dpkg-query --show $i"
+  if ssh_host "$h" "sudo dpkg-query --show $i"
   then
     echo "${bold}$i${normal} ${TXT_IS_PRESENT:=is present}. OK!";echo
   else
     echo "${bold}$i${normal} ${TXT_NOT_PRESENT:=is absent}. MISSING! Trying to remediate..."
     echo "sudo dpkg-query --show ${bold}$i${normal}: 'not installed'"
     if [[ $pkg_mgr_type == 'apt' ]] ; then
-      ssh $h "sudo apt-get install -y $i"
+      ssh_host "$h" "sudo apt-get install -y $i"
     else
       echo "Package manager should be apt"
     fi 
