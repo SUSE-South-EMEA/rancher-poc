@@ -126,7 +126,6 @@ done;
 }
 
 ## CHECK TIME
-## TODO - support chronyc and ntpq
 COMMAND_CHECK_TIME() {
 for h in "${HOSTS[@]}"; do
   ssh_host "$h" "echo && hostname -f &&
@@ -182,25 +181,21 @@ COMMAND_FIREWALL() {
 if [[ $pkg_mgr_type == 'zypper' ]]
 then
 	FIREWALL_SVC="firewalld"
+	CHECK_CMD="rpm -q"
 elif [[ $pkg_mgr_type == 'yum' ]]
 then
 	FIREWALL_SVC="firewalld"
+	CHECK_CMD="rpm -q"
 elif [[ $pkg_mgr_type == 'apt' ]]
 then
 	FIREWALL_SVC="ufw"
+	CHECK_CMD="dpkg-query -W"
 fi
 for h in "${HOSTS[@]}";do
-ssh_host "$h" "
-hostname -f
-if sudo rpm -q $FIREWALL_SVC ; then
-  echo "${TXT_FIREWALLD_STOP_DISABLE:=Stop and disable firewalld}"
-  sudo systemctl stop $FIREWALL_SVC
-  sudo systemctl disable $FIREWALL_SVC
-fi
-"
+ssh_host "$h" "hostname -f && if sudo $CHECK_CMD $FIREWALL_SVC >/dev/null 2>&1 ; then echo '${TXT_FIREWALLD_STOP_DISABLE:=Stop and disable firewalld}' ; sudo systemctl stop $FIREWALL_SVC ; sudo systemctl disable $FIREWALL_SVC ; fi"
 done
 hostname -f
-if sudo rpm -q $FIREWALL_SVC ; then
+if sudo $CHECK_CMD $FIREWALL_SVC >/dev/null 2>&1 ; then
   echo "${TXT_FIREWALLD_STOP_DISABLE:=Stop and disable firewalld}"
   sudo systemctl stop $FIREWALL_SVC
   sudo systemctl disable $FIREWALL_SVC
@@ -245,9 +240,9 @@ fi
 ##################### BEGIN PRE-CHECK LOCAL PACKAGES ##################################
 if [[ $pkg_mgr_type == 'apt' ]]
 then
-  question_yn "${DESC_CHECK_PACKAGE:=Check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_DPKG_LOCAL curl expect sudo"
+  question_yn "${DESC_CHECK_PACKAGE:=Local deployment system : check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_DPKG_LOCAL curl expect sudo"
 else
-  question_yn "${DESC_CHECK_PACKAGE_RPM_LOCAL:=Check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_RPM_LOCAL curl expect sudo"
+  question_yn "${DESC_CHECK_PACKAGE_RPM_LOCAL:=Local deployment system : check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_RPM_LOCAL curl expect sudo"
 fi
 ##################### END PRE-CHECK LOCAL PACKAGES ####################################
 #
