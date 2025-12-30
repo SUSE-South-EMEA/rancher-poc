@@ -129,23 +129,7 @@ done;
 COMMAND_CHECK_TIME() {
 for h in "${HOSTS[@]}"; do
   echo -e "\n${bold}$h${normal}"
-  ssh_host "$h" "hostname -f &&
-	  if which chronyc >/dev/null 2>&1 ; then 
-	    echo '${TXT_CHECK_TIME_CHRONY_INFO:=Chrony time synchronization status:}' ; 
-	    REF_ID=\$(sudo chronyc -a tracking | grep 'Reference ID' | awk '{print \$4, \$5, \$6, \$7}') ; 
-	    LEAP_STATUS=\$(sudo chronyc -a tracking | grep 'Leap status' | awk '{print \$3, \$4, \$5, \$6}') ; 
-	    echo \"  Reference ID: \$REF_ID\" ; 
-	    echo \"  Leap Status: \$LEAP_STATUS\" ; 
-	    sudo chronyc -a tracking | grep -E 'Reference time|System time|Last offset|RMS offset|Frequency|Stratum'
- 	  elif which ntpq >/dev/null 2>&1 ; then 
-	    echo '${TXT_CHECK_TIME_NTPQ_INFO:=NTP time synchronization status:}' ; 
-	    sudo ntpq -p
-    elif which timedatectl >/dev/null 2>&1 ; then 
-	    echo '${TXT_CHECK_TIME_TIMEDATECTL_INFO:=System time status:}' ; 
-	    sudo timedatectl | grep -E 'System clock synchronized|NTP service|RTC in local TZ'
-	  else 
-	    echo '${TXT_CHECK_TIME:=Chronyc or ntpq binaries are not present. Cannot check if time is synchronized.}'
-	  fi"
+  ssh_host "$h" "hostname -f && if which chronyc >/dev/null 2>&1 ; then echo \"${TXT_CHECK_TIME_CHRONY_INFO:=Chrony time synchronization status:}\" ; REF_ID=\$(sudo chronyc -a tracking | grep 'Reference ID' | awk '{print \$4, \$5, \$6, \$7}') ; LEAP_STATUS=\$(sudo chronyc -a tracking | grep 'Leap status' | awk '{print \$3, \$4, \$5, \$6}') ; echo \"  Reference ID: \$REF_ID\" ; echo \"  Leap Status: \$LEAP_STATUS\" ; sudo chronyc -a tracking | grep -E 'Reference time|System time|Last offset|RMS offset|Frequency|Stratum' ; elif which ntpq >/dev/null 2>&1 ; then echo \"${TXT_CHECK_TIME_NTPQ_INFO:=NTP time synchronization status:}\" ; sudo ntpq -p ; elif which timedatectl >/dev/null 2>&1 ; then echo \"${TXT_CHECK_TIME_TIMEDATECTL_INFO:=System time status:}\" ; sudo timedatectl | grep -E 'System clock synchronized|NTP service|RTC in local TZ' ; else echo \"${TXT_CHECK_TIME:=Chronyc or ntpq binaries are not present. Cannot check if time is synchronized.}\" ; fi"
 done
 }
 
