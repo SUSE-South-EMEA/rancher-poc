@@ -129,7 +129,7 @@ done;
 COMMAND_CHECK_TIME() {
 for h in "${HOSTS[@]}"; do
   echo -e "\n${bold}$h${normal}"
-  ssh_host "$h" "hostname -f && if which chronyc >/dev/null 2>&1 ; then echo \"${TXT_CHECK_TIME_CHRONY_INFO:=Chrony time synchronization status:}\" ; REF_ID=\$(sudo chronyc -a tracking | grep 'Reference ID' | awk '{print \$4, \$5, \$6, \$7}') ; LEAP_STATUS=\$(sudo chronyc -a tracking | grep 'Leap status' | awk '{print \$3, \$4, \$5, \$6}') ; echo \"  Reference ID: \$REF_ID\" ; echo \"  Leap Status: \$LEAP_STATUS\" ; sudo chronyc -a tracking | grep -E 'Reference time|System time|Last offset|RMS offset|Frequency|Stratum' ; elif which ntpq >/dev/null 2>&1 ; then echo \"${TXT_CHECK_TIME_NTPQ_INFO:=NTP time synchronization status:}\" ; sudo ntpq -p ; elif which timedatectl >/dev/null 2>&1 ; then echo \"${TXT_CHECK_TIME_TIMEDATECTL_INFO:=System time status:}\" ; sudo timedatectl | grep -E 'System clock synchronized|NTP service|RTC in local TZ' ; else echo \"${TXT_CHECK_TIME:=Chronyc or ntpq binaries are not present. Cannot check if time is synchronized.}\" ; fi"
+  ssh_host "$h" "if which chronyc >/dev/null 2>&1 ; then echo \"${TXT_CHECK_TIME_CHRONY_INFO:=Chrony time synchronization status:}\" ; REF_ID=\$(sudo chronyc -a tracking | grep 'Reference ID' | awk '{print \$4, \$5, \$6, \$7}') ; LEAP_STATUS=\$(sudo chronyc -a tracking | grep 'Leap status' | awk '{print \$3, \$4, \$5, \$6}') ; echo \"  Reference ID: \$REF_ID\" ; echo \"  Leap Status: \$LEAP_STATUS\" ; sudo chronyc -a tracking | grep -E 'Reference time|System time|Last offset|RMS offset|Frequency|Stratum' ; elif which ntpq >/dev/null 2>&1 ; then echo \"${TXT_CHECK_TIME_NTPQ_INFO:=NTP time synchronization status:}\" ; sudo ntpq -p ; elif which timedatectl >/dev/null 2>&1 ; then echo \"${TXT_CHECK_TIME_TIMEDATECTL_INFO:=System time status:}\" ; sudo timedatectl | grep -E 'System clock synchronized|NTP service|RTC in local TZ' ; else echo \"${TXT_CHECK_TIME:=Chronyc or ntpq binaries are not present. Cannot check if time is synchronized.}\" ; fi"
 done
 }
 
@@ -157,7 +157,7 @@ fi
 COMMAND_IPFORWARD_ACTIVATE() {
 for h in "${HOSTS[@]}";do 
   echo -e "\n${bold}$h${normal}"
-  ssh_host "$h" "hostname -f ; if [ -f /etc/sysctl.conf ] ; then sudo sed -i '/net.ipv4.ip_forward.*/d' /etc/sysctl.conf ; fi ; if [ -d /etc/sysctl.d ] && [ -n \"\$(ls -A /etc/sysctl.d/*.conf 2>/dev/null)\" ] ; then sudo sed -i '/net.ipv4.ip_forward.*/d' /etc/sysctl.d/*.conf ; fi ; if [ -f /etc/sysctl.conf ] ; then echo 'net.ipv4.ip_forward = 1' | sudo tee -a /etc/sysctl.conf >/dev/null ; else echo 'net.ipv4.ip_forward = 1' | sudo tee /etc/sysctl.conf >/dev/null ; fi ; sudo sysctl -p 2>/dev/null | grep -v '^$' || echo 'IP forwarding enabled'"
+  ssh_host "$h" "if [ -f /etc/sysctl.conf ] ; then sudo sed -i '/net.ipv4.ip_forward.*/d' /etc/sysctl.conf ; fi ; if [ -d /etc/sysctl.d ] && [ -n \"\$(ls -A /etc/sysctl.d/*.conf 2>/dev/null)\" ] ; then sudo sed -i '/net.ipv4.ip_forward.*/d' /etc/sysctl.d/*.conf ; fi ; if [ -f /etc/sysctl.conf ] ; then echo 'net.ipv4.ip_forward = 1' | sudo tee -a /etc/sysctl.conf >/dev/null ; else echo 'net.ipv4.ip_forward = 1' | sudo tee /etc/sysctl.conf >/dev/null ; fi ; sudo sysctl -p 2>/dev/null | grep -v '^$' || echo 'IP forwarding enabled'"
 done
 }
 
