@@ -18,16 +18,41 @@ if [[ $AIRGAP_DEPLOY != 1 ]]; then
   # Use GitHub releases as default, fallback to RKE2_REPO if defined
   RKE2_DOWNLOAD_URL="${RKE2_REPO:-https://github.com/rancher/rke2/releases/download}/${RKE2_VERSION}/rke2.linux-amd64.tar.gz"
   echo "Downloading from: ${RKE2_DOWNLOAD_URL}"
-  if ! curl -LO --fail --silent --show-error "${RKE2_DOWNLOAD_URL}"; then
-    echo "Error: Failed to download RKE2 from ${RKE2_DOWNLOAD_URL}" >&2
-    echo "Please check:" >&2
-    echo "  - Internet connectivity" >&2
-    echo "  - Proxy settings if PROXY_DEPLOY=1" >&2
-    echo "  - RKE2_VERSION=${RKE2_VERSION} is correct" >&2
-    echo "  - RKE2_REPO=${RKE2_REPO:-not set} if using custom repository" >&2
+  
+  # Build curl command with appropriate options
+  CURL_OPTS="-LO --fail --location --max-redirs 5"
+  
+  # Add User-Agent to mimic browser
+  CURL_OPTS="${CURL_OPTS} --user-agent 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'"
+  
+  # Add proxy if configured
+  if [[ $PROXY_DEPLOY == 1 ]] && [[ -n "${_HTTP_PROXY:-}" ]]; then
+    CURL_OPTS="${CURL_OPTS} --proxy http://${_HTTP_PROXY}"
+  fi
+  
+  # Try with SSL verification first, then without if it fails
+  if ! eval "curl ${CURL_OPTS} --show-error '${RKE2_DOWNLOAD_URL}'" 2>&1; then
+    echo "First attempt failed, trying without SSL verification..." >&2
+    if ! eval "curl ${CURL_OPTS} --insecure --show-error '${RKE2_DOWNLOAD_URL}'" 2>&1; then
+      echo "" >&2
+      echo "Error: Failed to download RKE2 from ${RKE2_DOWNLOAD_URL}" >&2
+      echo "Please check:" >&2
+      echo "  - Internet connectivity" >&2
+      echo "  - Proxy settings if PROXY_DEPLOY=1" >&2
+      echo "  - RKE2_VERSION=${RKE2_VERSION} is correct" >&2
+      echo "  - RKE2_REPO=${RKE2_REPO:-not set} if using custom repository" >&2
+      echo "  - Try downloading manually: curl -LO '${RKE2_DOWNLOAD_URL}'" >&2
+      exit 1
+    fi
+  fi
+  
+  if [[ ! -f rke2.linux-amd64.tar.gz ]]; then
+    echo "Error: Downloaded file rke2.linux-amd64.tar.gz not found" >&2
     exit 1
   fi
+  
   echo "Download completed successfully"
+  ls -lh rke2.linux-amd64.tar.gz
 fi
 for h in "${HOSTS[@]}";do
   echo -e "\n${bold}$h${normal}"
