@@ -300,7 +300,7 @@ fi
 
 
 ###################### BEGIN OS CHECKS ###########################################
-question_yn "$pkg_mgr_type - ${DESC_FIREWALL:=Check firewalld status (must be disabled)?}" COMMAND_FIREWALL
+question_yn "${DESC_FIREWALL:=Check firewall status (must be disabled)?}" COMMAND_FIREWALL
 question_yn "${DESC_DEFAULT_GW:=Check for a defined default gateway?}" COMMAND_DEFAULT_GW
 question_yn "${DESC_CHECK_TIME:=Verify date and time on all nodes?}" COMMAND_CHECK_TIME
 question_yn "${DESC_IPFORWARD_ACTIVATE:=Enable IP forwarding?}" COMMAND_IPFORWARD_ACTIVATE
