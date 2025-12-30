@@ -116,6 +116,8 @@ done
 if [[ ! -z ${RKE2_VIP_FQDN} ]] && [[ ! -z ${RKE2_VIP_IP} ]]; then
   echo "  - ${RKE2_VIP_FQDN}" |tee -a config.yaml
   echo "  - ${RKE2_VIP_IP}" |tee -a config.yaml
+  echo "  - ${LB_RANCHER_FQDN}" |tee -a config.yaml
+  echo "  - ${LB2_RANCHER_FQDN}" |tee -a config.yaml
 fi
 }
 
@@ -148,9 +150,20 @@ COMMAND_KUBEVIP_DEPLOY() {
 if [[ $AIRGAP_DEPLOY != 1 ]]; then
   # Download and configure the kube-vip rbac and deployment manifests
   curl -sL kube-vip.io/manifests/rbac.yaml | sudo tee kube-vip-rbac.yaml
-  curl -sL kube-vip.io/k3s |  vipAddress=${RKE2_VIP_IP} vipInterface=${RKE2_VIP_INTERFACE} sh | sudo tee kube-vip.yaml
+  # Ensure VIP IP is properly formatted (kube-vip expects CIDR format or plain IP)
+  # Use export to ensure variables are properly passed to the script
+  export vipAddress="${RKE2_VIP_IP}"
+  export vipInterface="${RKE2_VIP_INTERFACE}"
+  curl -sL kube-vip.io/k3s | sh | sudo tee kube-vip.yaml
   # Find/Replace all k3s entries to represent rke2
   sed -i 's/k3s/rke2/g' kube-vip.yaml
+  # Verify the VIP address in the generated manifest
+  if grep -q "${RKE2_VIP_IP}" kube-vip.yaml; then
+    echo "VIP address ${RKE2_VIP_IP} found in kube-vip.yaml"
+  else
+    echo "Warning: VIP address ${RKE2_VIP_IP} not found in kube-vip.yaml, checking content..." >&2
+    grep -i "vip\|address" kube-vip.yaml | head -5
+  fi
 fi
 # Push kube-vip rbac and deployment manifests on bootstrap node
 echo
@@ -162,7 +175,7 @@ echo ; echo "${TXT_RKE2_DEPLOY_RESTART:=Restart rke2 server}"
 ssh_host "${HOSTS[0]}" "sudo systemctl restart rke2-server"
 echo
 read -rsp "${TXT_RKE_DEPLOY_PRESS_KEY:=Press a key to monitor deployment...}" -n1 key
-watch -d "kubectl get pods -n kube-system -l name=kube-vip-ds ; echo ; ssh ranch1 \"if ip a show dev ${RKE2_VIP_INTERFACE} |grep ${RKE2_VIP_IP} ; then echo 'VIP is up.' ; else echo 'VIP is not up yet...' ; fi \" ; echo -e '\nPlease wait. Ctrl+C to quit when all pods are Ready...'"
+watch -d "kubectl get pods -n kube-system -l name=kube-vip-ds ; echo ; ssh_host \"${HOSTS[0]}\" \"if ip a show dev ${RKE2_VIP_INTERFACE} |grep ${RKE2_VIP_IP} ; then echo 'VIP is up.' ; else echo 'VIP is not up yet...' ; fi\" ; echo -e '\nPlease wait. Ctrl+C to quit when all pods are Ready...'"
 echo
 sed -i "s/${HOSTS[0]}/${RKE2_VIP_FQDN}/" ~/.kube/config
 echo "${TXT_KUBECONFIG_KUBEVIP:=KUBECONFIG (~/.kube/config) modified to use VIP hostname: ${RKE2_VIP_FQDN}}"
