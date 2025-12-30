@@ -54,7 +54,7 @@ question_yn() {
 while true; do
    echo -e "${bold}---\n $1 ${normal}"
    echo
-   read -p " ${bold}${TXT_QUESTION_OPTIONS:=Choose an option:} ${normal}${TXT_QUESTION_EXECUTE:=[E]xecute} / ${TXT_QUESTION_SKIP:=[S]kip} / ${TXT_QUESTION_SHOW_CODE:=[C]ode} ${normal}" choice
+   read -p " ${bold}${TXT_QUESTION_OPTIONS:=Choose an option:} ${normal}${TXT_QUESTION_EXECUTE:=[E]xecute} / ${TXT_QUESTION_SKIP:=[P]asser} / ${TXT_QUESTION_SHOW_CODE:=[C]ode} ${normal}" choice
    echo
    case $choice in
       [Ee]* )
@@ -64,7 +64,7 @@ while true; do
         read -rsp "${TXT_PRESS_KEY_CONTINUE:=Press a key to continue...}" -n1 key
         echo
         break;;
-      [Ss]* ) 
+      [PpSs]* ) 
         echo "${TXT_STEP_SKIPPED:=Step skipped.}"
         echo
         break;;
@@ -74,7 +74,7 @@ while true; do
         echo
         continue;;
       * ) 
-        echo "${TXT_INVALID_CHOICE:=Invalid choice. Please answer E (Execute), S (Skip) or C (Code).}"
+        echo "${TXT_INVALID_CHOICE:=Invalid choice. Please answer E (Execute), P (Skip) or C (Code).}"
         echo;;
     esac
 done
