@@ -49,23 +49,33 @@ scp_host() {
     fi
 }
 
-# Generic yes/no function
+# Generic yes/no function with 3 options: Execute / Skip / Show code
 question_yn() {
 while true; do
    echo -e "${bold}---\n $1 ${normal}"
-   echo -e "${bold}---\n Command:\n ${normal}"
-   declare -f $2
    echo
-   read -p " ${bold}Execute? (y/n) ${normal}" yn
+   read -p " ${bold}${TXT_QUESTION_OPTIONS:=Choose an option:} ${normal}${TXT_QUESTION_EXECUTE:=[E]xecute} / ${TXT_QUESTION_SKIP:=[S]kip} / ${TXT_QUESTION_SHOW_CODE:=[C]ode} ${normal}" choice
    echo
-   case $yn in
-      [Yy]* )
+   case $choice in
+      [Ee]* )
+        echo -e "${bold}${TXT_EXECUTING:=Executing...}${normal}"
         $2
         echo
-        read -rsp $'Press a key to continue...\n' -n1 key
-      break;;
-      [Nn]* ) echo "Step canceled";break;;
-      * ) echo "Please answer yes (y) or no (n).";;
+        read -rsp "${TXT_PRESS_KEY_CONTINUE:=Press a key to continue...}" -n1 key
+        echo
+        break;;
+      [Ss]* ) 
+        echo "${TXT_STEP_SKIPPED:=Step skipped.}"
+        echo
+        break;;
+      [Cc]* )
+        echo -e "${bold}${TXT_COMMAND_CODE:=Command code:}${normal}"
+        declare -f $2
+        echo
+        continue;;
+      * ) 
+        echo "${TXT_INVALID_CHOICE:=Invalid choice. Please answer E (Execute), S (Skip) or C (Code).}"
+        echo;;
     esac
 done
 }
