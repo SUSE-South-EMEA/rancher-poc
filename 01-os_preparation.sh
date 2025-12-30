@@ -192,13 +192,21 @@ then
 	CHECK_CMD="dpkg-query -W"
 fi
 for h in "${HOSTS[@]}";do
-ssh_host "$h" "hostname -f && if sudo $CHECK_CMD $FIREWALL_SVC >/dev/null 2>&1 ; then echo '${TXT_FIREWALLD_STOP_DISABLE:=Stop and disable firewalld}' ; sudo systemctl stop $FIREWALL_SVC ; sudo systemctl disable $FIREWALL_SVC ; fi"
+  echo -e "\n${bold}$h${normal}"
+  ssh_host "$h" "hostname -f && if sudo $CHECK_CMD $FIREWALL_SVC >/dev/null 2>&1 ; then echo \"${TXT_FIREWALLD_FOUND:=Firewall service} $FIREWALL_SVC ${TXT_IS_PRESENT:=is present}.\" ; if sudo systemctl is-active --quiet $FIREWALL_SVC ; then echo \"${TXT_FIREWALLD_ACTIVE:=Firewall is active. Stopping and disabling...}\" ; sudo systemctl stop $FIREWALL_SVC && sudo systemctl disable $FIREWALL_SVC && echo \"${TXT_FIREWALLD_DISABLED:=Firewall has been stopped and disabled.}\" ; else echo \"${TXT_FIREWALLD_INACTIVE:=Firewall is already stopped. Disabling...}\" ; sudo systemctl disable $FIREWALL_SVC && echo \"${TXT_FIREWALLD_DISABLED:=Firewall has been disabled.}\" ; fi ; else echo \"${TXT_FIREWALLD_NOT_INSTALLED:=Firewall service} $FIREWALL_SVC ${TXT_NOT_PRESENT:=is absent}. ${TXT_FIREWALLD_NOT_INSTALLED_MSG:=Nothing to do.}\" ; fi"
 done
-hostname -f
+echo -e "\n${bold}$(hostname -f)${normal} (local node)"
 if sudo $CHECK_CMD $FIREWALL_SVC >/dev/null 2>&1 ; then
-  echo "${TXT_FIREWALLD_STOP_DISABLE:=Stop and disable firewalld}"
-  sudo systemctl stop $FIREWALL_SVC
-  sudo systemctl disable $FIREWALL_SVC
+  echo "${TXT_FIREWALLD_FOUND:=Firewall service} $FIREWALL_SVC ${TXT_IS_PRESENT:=is present}."
+  if sudo systemctl is-active --quiet $FIREWALL_SVC ; then
+    echo "${TXT_FIREWALLD_ACTIVE:=Firewall is active. Stopping and disabling...}"
+    sudo systemctl stop $FIREWALL_SVC && sudo systemctl disable $FIREWALL_SVC && echo "${TXT_FIREWALLD_DISABLED:=Firewall has been stopped and disabled.}"
+  else
+    echo "${TXT_FIREWALLD_INACTIVE:=Firewall is already stopped. Disabling...}"
+    sudo systemctl disable $FIREWALL_SVC && echo "${TXT_FIREWALLD_DISABLED:=Firewall has been disabled.}"
+  fi
+else
+  echo "${TXT_FIREWALLD_NOT_INSTALLED:=Firewall service} $FIREWALL_SVC ${TXT_NOT_PRESENT:=is absent}. ${TXT_FIREWALLD_NOT_INSTALLED_MSG:=Nothing to do.}"
 fi
 }
 

@@ -52,6 +52,12 @@ DESC_NO_SWAP="Désactivation du swap ?"
 DESC_K8S_TOOLS="Installation des outils Kubernetes en local ?"
 DESC_FIREWALL="Vérification de l'état du firewall (doit être désactivé) ?"
 TXT_FIREWALLD_STOP_DISABLE="Arrêt et désactivation de firewalld"
+TXT_FIREWALLD_FOUND="Le service de pare-feu"
+TXT_FIREWALLD_ACTIVE="Le pare-feu est actif. Arrêt et désactivation en cours..."
+TXT_FIREWALLD_INACTIVE="Le pare-feu est déjà arrêté. Désactivation en cours..."
+TXT_FIREWALLD_DISABLED="Le pare-feu a été arrêté et désactivé."
+TXT_FIREWALLD_NOT_INSTALLED="Le service de pare-feu"
+TXT_FIREWALLD_NOT_INSTALLED_MSG="Aucune action nécessaire."
 DESC_DEFAULT_GW="Vérification qu'une gateway par défaut existe ?"
 
 ### Script 02
