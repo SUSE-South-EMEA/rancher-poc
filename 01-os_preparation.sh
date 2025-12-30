@@ -251,16 +251,16 @@ then
 else
   question_yn "${DESC_CHECK_PACKAGE_RPM_LOCAL:=Local deployment system : check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_RPM_LOCAL curl expect sudo"
 fi
-##################### END PRE-CHECK LOCAL PACKAGES ####################################
-#
-#
+##################################################################################
+
+
 ##################### BEGIN SSH KEYS EXCHANGE ###################################
 question_yn "${DESC_SSH_KEYS:=Create a local SSH key pair?}" COMMAND_SSH_KEYS
 question_yn "${DESC_SSH_DEPLOY:=Push public key to nodes?}" COMMAND_SSH_DEPLOY
 question_yn "${DESC_SSH_CONNECT_TEST:=Test SSH connection to nodes?}" COMMAND_SSH_CONNECT_TEST
-##################### END SSH KEYS EXCHANGE #####################################
-#
-#
+##################################################################################
+
+
 ##################### BEGIN REPOS & BINARIES ####################################
 if [[ $pkg_mgr_type == 'zypper' ]]
 then 
@@ -278,47 +278,50 @@ then
 question_yn "$DESC_REPOS" COMMAND_REPOS_APT
 question_yn "$pkg_mgr_type - ${DESC_NODES_UPDATE:=Update all nodes?}" COMMAND_NODES_UPDATE_APT
 fi
+##################################################################################
 
-question_yn "${DESC_INSTALL_KUBECTL:=Install kubectl on local node?}" COMMAND_INSTALL_KUBECTL
-##################### END REPOS & BINARIES ######################################
-#
-#
-##################### BEGIN PRE-CHECK PACKAGES ##################################
+
+##################### BEGIN PRE-CHECK REMOTE PACKAGES ############################
 if [[ $pkg_mgr_type == 'apt' ]]
 then
-  question_yn "${DESC_CHECK_PACKAGE:=Check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_DPKG iptables apparmor sudo"
+	question_yn "${DESC_CHECK_PACKAGE:=Remote system(s): check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_DPKG iptables apparmor sudo"
 else
-  question_yn "${DESC_CHECK_PACKAGE_RPM:=Check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_RPM iptables apparmor-parser sudo lsof"
+	question_yn "${DESC_CHECK_PACKAGE_RPM:=Remote system(s): check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_RPM iptables apparmor-parser sudo lsof"
 fi
-##################### END PRE-CHECK PACKAGES ####################################
-#
-#
-##################### BEGIN PROXY ###############################################
+##################################################################################
+
+
+###################### BEGIN PROXY ###############################################
 if [[ $PROXY_DEPLOY == 1 ]]
 then
 question_yn "${DESC_SET_PROXY:=PROXY variables are set in ./00-vars.sh. Apply parameters ? \n _HTTP_PROXY=${_HTTP_PROXY} \n _HTTPS_PROXY=${_HTTPS_PROXY} \n _NO_PROXY=${_NO_PROXY}}" COMMAND_SET_PROXY
 fi
-##################### END PROXY #################################################
-#
-##################### BEGIN OS REQUIREMENTS #####################################
+##################################################################################
+
+
+###################### BEGIN OS CHECKS ###########################################
 question_yn "$pkg_mgr_type - ${DESC_FIREWALL:=Check firewalld status (must be disabled)?}" COMMAND_FIREWALL
 question_yn "${DESC_DEFAULT_GW:=Check for a defined default gateway?}" COMMAND_DEFAULT_GW
 question_yn "${DESC_CHECK_TIME:=Verify date and time on all nodes?}" COMMAND_CHECK_TIME
 question_yn "${DESC_IPFORWARD_ACTIVATE:=Enable IP forwarding?}" COMMAND_IPFORWARD_ACTIVATE
 #question_yn "${DESC_NO_SWAP:=Disable swap on target nodes?}" COMMAND_NO_SWAP
-##################### END OS REQUIREMENTS #######################################
-#
-#
-##################### BEGIN AIRGAP ##############################################
+##################################################################################
+
+
+###################### BEGIN AIRGAP ##############################################
 if [[ $AIRGAP_DEPLOY == 1 ]] ; then
   question_yn "Airgap - ${DESC_CHECK_ACCESS_REGISTRY:=Check ${AIRGAP_REGISTRY_URL} is accessible from all nodes?}" COMMAND_CHECK_ACCESS_REGISTRY
 fi
-##################### END AIRGAP ################################################
-#
-#
+##################################################################################
+
+
+##################### BEGIN K8S TOOLS ############################################
+question_yn "${DESC_INSTALL_KUBECTL:=Install kubectl on local node?}" COMMAND_INSTALL_KUBECTL
+
+
 ##################### BEGIN LONGHORN REQUIREMENTS ################################
 question_yn "${DESC_INSTALL_LONGHORN_PREREQ:=Install Longhorn pre-requisites (open-iscsi) on all nodes?}" COMMAND_INSTALL_LONGHORN_PREREQ
-##################### END LONGHORN REQUIREMENTS ##################################
+##################################################################################
 
 echo
 echo "-- ${TXT_END:=END} --"
