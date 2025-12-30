@@ -4,13 +4,13 @@ LANGUAGE="fr"
 ######################## HOSTS LIST ##############################
 ## Nodes to be handled by the script / FQDN
 ## Used by RKE2 when generating TLS certs
-HOST_LIST="ranch1.domain,ranch2.domain,ranch3.domain"
+HOST_LIST="rancher-manager-0.home.lo"
 
 ######################## SSH CONFIGURATION #######################
 ## SSH user to use for remote commands
 ## Leave empty to use current user or user from SSH config
 ## Example: SSH_USER="admin" or SSH_USER=""
-SSH_USER=""
+SSH_USER="rancher"
 
 ######################## IF AIRGAP SETUP #########################
 ## Airgap deployment
@@ -34,10 +34,10 @@ _NO_PROXY=127.0.0.0/8,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,cattle-system.svc,
 
 ######################## SELECT VERSIONS #########################
 ## RKE2, Rancher and Helm versions to deploy
-HELM_VERSION="3.8.2"
-RKE2_VERSION="v1.26.9+rke2r1"
-CERTMGR_VERSION="v1.12.5"
-RANCHER_VERSION="2.7.6"
+HELM_VERSION="4.0.1"
+RKE2_VERSION="v1.34.2+rke2r1"
+CERTMGR_VERSION="v1.19.1"
+RANCHER_VERSION="2.13.0"
 
 ######### RANCHER MGMT SERVER CERTIFICATE AND PRIVATE CA #########
 ## Rancher TLS configuration. Available options are [rancher,secret,external]
