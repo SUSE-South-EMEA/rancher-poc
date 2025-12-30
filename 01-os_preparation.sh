@@ -219,7 +219,7 @@ for h in "${HOSTS[@]}";do
   echo ${bold};ssh_host "$h" "hostname"|tr -d "\n";echo -n ${normal};echo -n ": default gateway is${bold} $CURRENT_GATEWAY"${normal};
 done
 echo
-echo "A Default Gateway should be set on all nodes (even if non-existent/non-working)"
+echo "Note: a Default Gateway should be set on all nodes (even if non-existent/non-working)"
 }
 
 ## LONGHORN
