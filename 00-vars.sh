@@ -40,6 +40,8 @@ CERTMGR_VERSION="v1.19.1"
 RANCHER_VERSION="2.13.1"
 ## RKE2 Community (https://github.com/rancher/rke2/releases/download) or Prime (https://prime.ribs.rancher.io/rke2)
 RKE2_REPO="https://prime.ribs.rancher.io/rke2"
+HELM_REPO_RANCHER="https://charts.rancher.com/server-charts/prime"
+HELM_REPO_CERTMANAGER="https://charts.jetstack.io"
 
 ######### RANCHER MGMT SERVER CERTIFICATE AND PRIVATE CA #########
 ## Rancher TLS configuration. Available options are [rancher,secret,external]
@@ -50,11 +52,14 @@ TLS_SOURCE="rancher"
 ## Private CA (cacerts.pem must be placed in working directory)
 PRIVATE_CA="0"
 
-######################## FQDNs & DOMAINs #########################
-## Rancher Management Load balancer FQDN (redirect to RKE nodes hosting Rancher)
-LB_RANCHER_FQDN="rancher.domain"
+######################## RKE2 KUBE-VIP ###########################
 ## RKE2 KUBE-VIP configuration (leave empty if you do not want to use kube-vip)
 ## RKE2_VIP_FQDN and RKE2_VIP_IP are both mandatory for kube-vip deployment.
 RKE2_VIP_IP=172.16.3.22
 RKE2_VIP_FQDN="ranchvip.home.lo"
 RKE2_VIP_INTERFACE="eth0"
+
+######################## FQDNs & DOMAINs #########################
+## Rancher Management Load balancer FQDN (redirect to RKE nodes hosting Rancher)
+LB_RANCHER_FQDN="rancher.home.lo"
+LB2_RANCHER_FQDN="rancher.home.zypp.fr"
