@@ -33,7 +33,7 @@ then
   echo "- no_proxy=${RANCHER_NO_PROXY}${normal}"
   echo
   # Add the Jetstack Helm repository
-  helm repo add jetstack https://charts.jetstack.io
+  helm repo add jetstack ${HELM_REPO_CERTMANAGER}
   # Update your local Helm chart repository cache
   helm repo update
   # Install Cert-Manager
@@ -50,7 +50,7 @@ else
   echo "Cert Manager deployment"
   echo
   # Add the Jetstack Helm repository
-  helm repo add jetstack https://charts.jetstack.io
+  helm repo add jetstack ${HELM_REPO_CERTMANAGER}
   # Update your local Helm chart repository cache
   helm repo update
   # Install Cert-Manager
