@@ -1,0 +1,30 @@
+==========================================
+COMMANDES POUR 172.16.3.23
+==========================================
+
+1. AJOUTER LA CLÉ PUBLIQUE SSH
+   ----------------------------
+   
+   Commande complète:
+   ssh rancher@172.16.3.23 "mkdir -p ~/.ssh && chmod 700 ~/.ssh && echo 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJFd0qtS/xQAMJ4JGD/SFyGkGO9D93dHB+XkkvIcQE42 root@admin2.home.lo' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
+
+   OU via ssh-copy-id:
+   ssh-copy-id -i ~/.ssh/id_ed25519.pub rancher@172.16.3.23
+
+2. TESTER LA CONNEXION SSH
+   ------------------------
+   
+   ssh -i ~/.ssh/id_ed25519 rancher@172.16.3.23 "hostname"
+
+3. INSTALLER LE CERTIFICAT CA RANCHER
+   -----------------------------------
+   
+   cd /root/rancher-poc
+   ./install-ca-172.16.3.23.sh
+
+   OU manuellement:
+   scp -i ~/.ssh/id_ed25519 rancher-ca.crt rancher@172.16.3.23:/tmp/
+   ssh -i ~/.ssh/id_ed25519 rancher@172.16.3.23 "sudo mkdir -p /etc/rancher/ssl && sudo mv /tmp/rancher-ca.crt /etc/rancher/ssl/cacerts.pem && sudo chmod 644 /etc/rancher/ssl/cacerts.pem && sudo systemctl restart rancher-agent"
+
+==========================================
+
