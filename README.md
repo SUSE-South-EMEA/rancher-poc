@@ -1,109 +1,166 @@
-# Rancher PoC - High Availability
+# Rancher PoC
 
-Rancher deployment based on RKE2 cluster.
+Déploiement de Rancher basé sur un cluster RKE2.
 
-## Objectives
+## Objectifs
 
-This set of scripts aims to simplify the deployment of a highly available Rancher Management Server on RKE2 cluster.
+Cet ensemble de scripts vise à simplifier le déploiement d'un serveur de gestion Rancher hautement disponible sur un cluster RKE2.
 
-It currently supports the following deployment options:
-- with direct access to Internet
-- Internet accessed via Proxy
+Il supporte actuellement les options de déploiement suivantes :
+- Accès direct à Internet
+- Internet accessible via Proxy
 - Airgap
-- zypper, yum or apt based operating systems (should work on SLES 15 SP2/SP3, CentOS/RHEL 8, Ubuntu 18.04/20.04)
+- Systèmes d'exploitation basés sur zypper, yum ou apt (devrait fonctionner sur SLES 15 SP2/SP3, CentOS/RHEL 8, Ubuntu 18.04/20.04)
 
-The following files are crucial for your experience:
-- `hosts.list` : List of target servers where RKE2 and Rancher will be deployed (generated)
-- `01-vars.sh` : Configuration variables
-- `00-prepare-airgap.sh` : Preparation for airgap deployment
-- `01-os_preparation.sh` : OS validations and preparation
-- `02-rke2_deploy.sh`    : RKE2 deployment
-- `03-rancher_install.sh`: Rancher Management Server deployment
-- `04-cleanup-destroy.sh`: Cleanup target servers to start over
+## Structure du projet
 
-## Pre-requisites
+### Scripts principaux
 
-### Systems
+Les scripts suivants sont essentiels pour votre expérience :
 
-- 1 admin server
- > The server you will use to execute the scripts
+- **`00-common.sh`** : Fonctions communes utilisées par tous les scripts
+- **`01-vars.sh`** : Variables de configuration
+- **`00-prepare-airgap_OPTIONAL.sh`** : Préparation pour le déploiement airgap (optionnel)
+- **`02-ssh-keys_create_exchange_check.sh`** : Création, déploiement et vérification des clés SSH
+- **`03-os_preparation_PACKAGES.sh`** : Validation et préparation des paquets système
+- **`04-os_preparation_NETWORKING.sh`** : Validation et préparation du réseau
+- **`05-rke2_deploy.sh`** : Déploiement RKE2
+- **`06-rancher_install.sh`** : Déploiement du serveur de gestion Rancher
+- **`08-cleanup-destroy.sh`** : Nettoyage des serveurs cibles pour recommencer
+- **`09-def_gw-ipv6.sh`** : Configuration de la passerelle par défaut IPv6 (optionnel)
 
-- 3 rancher management servers
- > These 3 machines will be used for a 3 nodes RKE2 cluster which will hold the Rancher Management UI
- > The 3 nodes will have: etcd, controlplane and worker roles
+### Répertoire `extra/`
 
-The servers are deployed using classic standards
- > Fixed network settings
- > Internet access (with or without proxy) or Airgap deployment (with or without proxy)
- > Time should be well set
- > DNS should be correct
- > Firewall should be deactivated
- > ... the scripts are here to try and validate that all your settings are good for deployment.
+Le répertoire `extra/` contient des scripts et de la documentation additionnels non essentiels au déploiement de base :
 
-### Network
+- **`extra/ssl/`** : Scripts et documentation pour la gestion SSL/TLS et des certificats CA
+- **`extra/traefik/`** : Scripts et configuration pour l'intégration Traefik
+- **`extra/docs/`** : Documentation additionnelle sur le projet
+- **`extra/examples/`** : Exemples de scripts spécifiques à des hôtes
 
-The Rancher UI will need a FQDN which load balances the connections toward the Rancher Management Server nodes.
+Voir [extra/README.md](extra/README.md) pour plus de détails.
 
-(optional) You may also need a wildcard FQDN to easily access your applications on the future K8S clusters you will then deploy.
+## Prérequis
 
-## Usage
+### Systèmes
 
-### Clone repository
+- 1 serveur admin
+  > Le serveur que vous utiliserez pour exécuter les scripts
+
+- 3 serveurs de gestion Rancher (ou plus)
+  > Ces machines seront utilisées pour un cluster RKE2 qui hébergera l'interface de gestion Rancher
+  > Les nœuds auront les rôles : etcd, controlplane et worker
+
+Les serveurs sont déployés en utilisant des standards classiques :
+- Configuration réseau fixe
+- Accès Internet (avec ou sans proxy) ou déploiement Airgap (avec ou sans proxy)
+- L'heure doit être correctement configurée
+- Le DNS doit être correct
+- Le pare-feu doit être désactivé
+- ... les scripts sont là pour essayer et valider que tous vos paramètres sont bons pour le déploiement.
+
+### Réseau
+
+L'interface Rancher nécessitera un FQDN qui équilibre la charge des connexions vers les nœuds du serveur de gestion Rancher.
+
+(optionnel) Vous pourriez également avoir besoin d'un FQDN générique pour accéder facilement à vos applications sur les futurs clusters K8S que vous déploierez.
+
+## Utilisation
+
+### Cloner le dépôt
 
 ```bash
 git clone https://github.com/SUSE-South-EMEA/rancher-poc.git
 cd rancher-poc
 ```
 
-### hosts.list - List target nodes
+### hosts.list - Liste des nœuds cibles
 
-This file contains the list of target nodes that will be members of the RKE2 cluster and host the Rancher Management Server.
+Ce fichier contient la liste des nœuds cibles qui seront membres du cluster RKE2 et hébergeront le serveur de gestion Rancher.
 
-1 FQDN or IP address by line.
+1 FQDN ou adresse IP par ligne. Le fichier est généré automatiquement à partir de la variable `HOST_LIST` dans `01-vars.sh`.
 
-### 01-vars.sh - Variables to be configured
+### 01-vars.sh - Variables à configurer
 
-The variables in this file will be used by the scripts.
+Les variables de ce fichier seront utilisées par les scripts.
 
-Edit this file and setup everything according to your environment and the required deployment scenario (normal, proxy, airgap).
+Éditez ce fichier et configurez tout selon votre environnement et le scénario de déploiement requis (normal, proxy, airgap).
 
-### 00-prepare-airgap.sh - Only for Airgap deployment
+### 00-prepare-airgap_OPTIONAL.sh - Uniquement pour le déploiement Airgap
 
-This script is only needed in case of an airgap deployment.
+Ce script est uniquement nécessaire en cas de déploiement airgap.
 
-It must be run on a node with Internet access and will download everything needed for the next steps.
+Il doit être exécuté sur un nœud avec accès Internet et téléchargera tout ce qui est nécessaire pour les étapes suivantes.
 
-Once executed, copy the entire rancher-poc directory to the admin server (deployment node) and move forward with next scripts.
+Une fois exécuté, copiez tout le répertoire rancher-poc vers le serveur admin (nœud de déploiement) et continuez avec les scripts suivants.
 
-### 01-os_preparation.sh - Validations and OS preparation
+### 02-ssh-keys_create_exchange_check.sh - Clés SSH
 
-Script to validate environment and setup pre-requisites.
-
-```bash
-./01-os_preparation.sh
-```
-
-### 02-rke2_deploy.sh - RKE Cluster installation
-
-Deploy a RKE2 cluster on target nodes.
+Script pour créer, déployer et vérifier les clés SSH sur les nœuds cibles.
 
 ```bash
-./02-rke2_deploy.sh
+./02-ssh-keys_create_exchange_check.sh
 ```
 
-### 03-rancher_install.sh - Rancher Management Server installation
+### 03-os_preparation_PACKAGES.sh - Préparation des paquets
 
-Deploy the Rancher Management Server on the previously deployed RKE2 cluster.
+Script pour valider l'environnement et installer les prérequis de paquets.
 
 ```bash
-./03-rancher_install.sh
+./03-os_preparation_PACKAGES.sh
 ```
 
-### 04-cleanup-destroy.sh - Cleanup (CAREFUL!)
+### 04-os_preparation_NETWORKING.sh - Préparation du réseau
 
-Cleanup everything. There's no turning back.
+Script pour valider et configurer les paramètres réseau (pare-feu, passerelle, synchronisation du temps, IP forwarding).
 
 ```bash
-./04-cleanup-destroy.sh
+./04-os_preparation_NETWORKING.sh
 ```
 
+### 05-rke2_deploy.sh - Installation du cluster RKE2
+
+Déploie un cluster RKE2 sur les nœuds cibles.
+
+```bash
+./05-rke2_deploy.sh
+```
+
+### 06-rancher_install.sh - Installation du serveur de gestion Rancher
+
+Déploie le serveur de gestion Rancher sur le cluster RKE2 précédemment déployé.
+
+```bash
+./06-rancher_install.sh
+```
+
+### 08-cleanup-destroy.sh - Nettoyage (ATTENTION!)
+
+Nettoie tout. Il n'y a pas de retour en arrière.
+
+```bash
+./08-cleanup-destroy.sh
+```
+
+## Ordre d'exécution recommandé
+
+1. Configurer `01-vars.sh` selon votre environnement
+2. (Optionnel) Exécuter `00-prepare-airgap_OPTIONAL.sh` si déploiement airgap
+3. Exécuter `02-ssh-keys_create_exchange_check.sh` pour configurer l'accès SSH
+4. Exécuter `03-os_preparation_PACKAGES.sh` pour préparer les paquets système
+5. Exécuter `04-os_preparation_NETWORKING.sh` pour préparer le réseau
+6. Exécuter `05-rke2_deploy.sh` pour déployer le cluster RKE2
+7. Exécuter `06-rancher_install.sh` pour installer Rancher
+8. (Optionnel) Utiliser les scripts dans `extra/` selon vos besoins spécifiques
+
+## Scripts additionnels
+
+Consultez le répertoire `extra/` pour des scripts additionnels :
+- Gestion SSL/TLS et certificats CA
+- Intégration Traefik
+- Documentation additionnelle
+- Exemples de scripts
+
+## Support
+
+Pour plus d'informations, consultez la documentation dans le répertoire `extra/docs/` et les README dans chaque sous-répertoire de `extra/`.
