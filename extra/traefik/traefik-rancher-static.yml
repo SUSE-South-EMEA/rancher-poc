@@ -1,0 +1,58 @@
+# Configuration Traefik statique pour Rancher
+# À ajouter dans votre fichier traefik.yml principal
+#
+# Cette configuration utilise le provider file pour charger les routes dynamiques
+
+# Dans votre traefik.yml principal, ajoutez:
+# providers:
+#   file:
+#     directory: /etc/traefik/dynamic
+#     watch: true
+
+# Et créez le fichier /etc/traefik/dynamic/rancher.yaml avec le contenu suivant:
+
+http:
+  routers:
+    rancher-zypp:
+      rule: "Host(`rancher.home.zypp.fr`)"
+      entryPoints:
+        - websecure
+      service: rancher-service
+      tls:
+        certResolver: letsencrypt
+        # Options TLS supplémentaires si nécessaire
+        options: default
+
+    rancher-lo:
+      rule: "Host(`rancher.home.lo`)"
+      entryPoints:
+        - websecure
+      service: rancher-service
+      tls:
+        certResolver: letsencrypt
+        options: default
+
+  services:
+    rancher-service:
+      loadBalancer:
+        servers:
+          - url: "http://rancher.home.lo:80"
+        passHostHeader: true
+        # Health check pour vérifier que Rancher répond
+        healthCheck:
+          path: "/ping"
+          interval: "10s"
+          timeout: "3s"
+          scheme: "http"
+        # Timeout pour les longues requêtes
+        responseForwarding:
+          flushInterval: "100ms"
+
+  middlewares:
+    # Middleware pour ajouter des headers si nécessaire
+    rancher-headers:
+      headers:
+        customRequestHeaders:
+          X-Forwarded-Proto: "https"
+          X-Forwarded-Port: "443"
+

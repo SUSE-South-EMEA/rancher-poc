@@ -1,0 +1,64 @@
+# Configuration Traefik pour Kubernetes (IngressRoute CRD)
+# À appliquer avec: kubectl apply -f traefik-rancher-kubernetes.yaml
+#
+# Nécessite Traefik avec les CRD IngressRoute activées
+
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: rancher-zypp
+  namespace: default
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`rancher.home.zypp.fr`)
+      kind: Rule
+      services:
+        - name: rancher-service
+          port: 80
+          scheme: http
+          passHostHeader: true
+  tls:
+    certResolver: letsencrypt
+    # Ou utiliser un secret TLS si vous avez un certificat statique
+    # secretName: rancher-tls
+
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: IngressRoute
+metadata:
+  name: rancher-lo
+  namespace: default
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`rancher.home.lo`)
+      kind: Rule
+      services:
+        - name: rancher-service
+          port: 80
+          scheme: http
+          passHostHeader: true
+  tls:
+    certResolver: letsencrypt
+    # Ou utiliser un secret TLS si vous avez un certificat statique
+    # secretName: rancher-tls
+
+---
+# Service Kubernetes pointant vers Rancher
+# Si Rancher est dans un autre namespace/cluster, utilisez un ExternalName
+apiVersion: v1
+kind: Service
+metadata:
+  name: rancher-service
+  namespace: default
+spec:
+  type: ExternalName
+  externalName: rancher.home.lo
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+

@@ -1,0 +1,44 @@
+# Configuration Traefik pour Rancher
+# À placer dans le répertoire de configuration Traefik sur rasp01
+# 
+# Pour Docker: /etc/traefik/dynamic/rancher.yaml
+# Pour Kubernetes: ConfigMap ou fichier de configuration
+# Pour fichier statique: inclure dans traefik.yml
+
+http:
+  routers:
+    # Route pour rancher.home.zypp.fr (accès utilisateur)
+    rancher-zypp:
+      rule: "Host(`rancher.home.zypp.fr`)"
+      entryPoints:
+        - websecure
+      service: rancher-service
+      tls:
+        certResolver: letsencrypt
+        # Ou utiliser un certificat statique si configuré
+        # certResolver: default
+
+    # Route pour rancher.home.lo (agents downstream)
+    rancher-lo:
+      rule: "Host(`rancher.home.lo`)"
+      entryPoints:
+        - websecure
+      service: rancher-service
+      tls:
+        certResolver: letsencrypt
+        # Ou utiliser un certificat statique si configuré
+        # certResolver: default
+
+  services:
+    rancher-service:
+      loadBalancer:
+        servers:
+          - url: "http://rancher.home.lo:80"
+        # Options pour la santé et le timeout
+        healthCheck:
+          path: "/ping"
+          interval: "10s"
+          timeout: "3s"
+        # Timeout pour les longues requêtes (Rancher peut être lent)
+        passHostHeader: true
+
