@@ -2,36 +2,35 @@
 
 Ce répertoire contient des scripts et de la documentation qui ne sont pas essentiels au déploiement de base de Rancher, mais qui peuvent être utiles pour des cas d'usage spécifiques.
 
-## Scripts SSL/TLS
+## Structure
 
-### Gestion des certificats CA
+### `ssl/` - Gestion SSL/TLS et certificats CA
 
-- **`get-rancher-ca.sh`** - Récupère le certificat CA de Rancher
-- **`install-ca-auto.sh`** - Installation automatique du certificat CA
-- **`install-ca-downstream.sh`** - Installation du CA pour les clusters downstream
-- **`install-rancher-ca-harvester.sh`** - Installation du certificat CA de Rancher sur un serveur Harvester
+Contient tous les scripts et la documentation pour la gestion des certificats SSL/TLS et CA :
+- Scripts d'installation du certificat CA
+- Scripts de correction des problèmes SSL
+- Documentation SSL/TLS
 
-### Correction des problèmes SSL
+Voir [ssl/README.md](ssl/README.md) pour plus de détails.
 
-- **`fix-ssl-certificate.sh`** - Corrige les problèmes de certificat SSL
-- **`fix-ssl-downstream.sh`** - Corrige les problèmes SSL pour les clusters downstream
-- **`fix-cloud-init-ssl.sh`** - Corrige les problèmes SSL dans cloud-init
+### `traefik/` - Intégration Traefik
 
-## Intégration Traefik
+Contient les scripts et fichiers de configuration pour intégrer Traefik avec Rancher :
+- Scripts d'installation et de configuration
+- Fichiers de configuration (Kubernetes, Docker Compose, etc.)
+- Documentation Traefik
 
-- **`install-traefik-rancher.sh`** - Installe Traefik pour Rancher
-- **`configure-traefik-dns-challenge.sh`** - Configure le défi DNS pour Traefik
+Voir [traefik/README.md](traefik/README.md) pour plus de détails.
 
-## Documentation
+### `docs/` - Documentation additionnelle
 
-- **`CODE_REVIEW.md`** - Analyse du code et suggestions d'amélioration
-- **`SSH_USER_CONFIG.md`** - Documentation sur la configuration de l'utilisateur SSH
-- **`INSTALL-TRAEFIK-RANCHER.md`** - Instructions d'installation de Traefik avec Rancher
-- **`INSTRUCTIONS-INSTALLATION-CA.md`** - Instructions pour l'installation du certificat CA
-- **`SOLUTION-SSL-DOWNSTREAM.md`** - Solutions pour les problèmes SSL avec les clusters downstream
-- **`README-SSL-FIX.md`** - Guide de correction des problèmes SSL
+Contient la documentation générale sur le projet :
+- Analyse du code
+- Documentation de configuration
+
+Voir [docs/README.md](docs/README.md) pour plus de détails.
 
 ## Utilisation
 
-Ces scripts sont optionnels et peuvent être utilisés selon vos besoins spécifiques. Consultez la documentation correspondante pour plus d'informations sur chaque script.
+Ces scripts sont optionnels et peuvent être utilisés selon vos besoins spécifiques. Consultez la documentation dans chaque sous-répertoire pour plus d'informations.
 
