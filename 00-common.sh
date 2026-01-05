@@ -158,3 +158,39 @@ for h in "${HOSTS[@]}"; do
   done
 done
 }
+
+# Function to propose next script execution
+# Usage: propose_next_script <next_script_name> [description]
+# Example: propose_next_script "03-os_preparation_PACKAGES.sh" "OS preparation and packages installation"
+propose_next_script() {
+    local next_script="$1"
+    local description="${2:-}"
+    
+    echo
+    echo "-- ${TXT_END:=END} --"
+    
+    if [[ -f "$next_script" ]]; then
+        if [[ -n "$description" ]]; then
+            echo "${TXT_NEXT_STEP:=Next step}: $next_script"
+            echo "  ${description}"
+        else
+            echo "${TXT_NEXT_STEP:=Next step}: $next_script"
+        fi
+        echo
+        read -p "Do you want to execute $next_script now? (Y/n): " execute_next
+        if [[ ! "$execute_next" =~ ^[Nn]$ ]]; then
+            echo
+            echo "${bold}Executing $next_script...${normal}"
+            echo
+            bash "$next_script"
+        else
+            echo
+            echo "You can execute it later with: bash $next_script"
+        fi
+    else
+        echo "${TXT_NEXT_STEP:=Next step}: $next_script"
+        echo "  (Script not found in current directory)"
+        echo
+        echo "You can execute it manually when ready."
+    fi
+}

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ### Source variables
-source ./00-vars.sh
+source ./01-vars.sh
 source ./lang/$LANGUAGE.sh
 source ./00-common.sh
 
@@ -157,6 +157,9 @@ if [[ $AIRGAP_DEPLOY != 1 ]]; then
   curl -sL kube-vip.io/k3s | sh | sudo tee kube-vip.yaml
   # Find/Replace all k3s entries to represent rke2
   sed -i 's/k3s/rke2/g' kube-vip.yaml
+  # Fix netmask format: ensure vip_subnet has "/" prefix (e.g., "/32" instead of "32")
+  sed -i 's/value: "32"/value: "\/32"/' kube-vip.yaml
+  sed -i 's/value: 32/value: \/32/' kube-vip.yaml
   # Verify the VIP address in the generated manifest
   if grep -q "${RKE2_VIP_IP}" kube-vip.yaml; then
     echo "VIP address ${RKE2_VIP_IP} found in kube-vip.yaml"
@@ -205,32 +208,6 @@ read -rsp "${TXT_RKE_DEPLOY_PRESS_KEY:=Press a key to monitor deployment...}" -n
 watch -n1 -d "kubectl get nodes,pods -A ; echo -e '\nPlease wait. Ctrl+C to quit when all pods are Ready...'"
 }
 
-## INSTALL HELM
-COMMAND_HELM_INSTALL() {
-if [[ $AIRGAP_DEPLOY == 1 ]]; then
-  tar zxvf helm-v${HELM_VERSION}-linux-amd64.tar.gz
-  sudo mv linux-amd64/helm /usr/local/bin/helm
-  rm -rf linux-amd64/
-else
-  curl -O https://get.helm.sh/helm-v${HELM_VERSION}-linux-amd64.tar.gz
-  tar zxvf helm-v${HELM_VERSION}-linux-amd64.tar.gz
-  sudo mv linux-amd64/helm /usr/local/bin/helm
-  rm -rf linux-amd64/
-  rm helm-v${HELM_VERSION}-linux-amd64.tar.gz
-fi
-echo -e "\nHelm installed.\n $(helm version)"
-}
-
-## REPOS HELM
-COMMAND_HELM_REPOS() {
-if [[ $AIRGAP_DEPLOY == 1 ]]; then
-  echo "${TXT_HELM_REPOS:=Helm charts must be previously synced with 00-prepare-airgap.sh and placed in current directory.}"
-else
-  helm repo add rancher ${HELM_REPO_RANCHER}
-  helm repo list
-fi
-}
-
 
 ##################### BEGIN RKE2 DEPLOYMENT ##################################
 question_yn "${DESC_RKE2_INSTALL:=Install RKE2 on cluster nodes? \n RKE2 version}: ${RKE2_VERSION}" COMMAND_RKE2_INSTALL
@@ -247,10 +224,6 @@ if [[ ! -z ${RKE2_VIP_FQDN} ]] && [[ ! -z ${RKE2_VIP_IP} ]]; then
   question_yn "${DESC_KUBEVIP_DEPLOY:=Deploy kube-vip in the rke2 cluster?}" COMMAND_KUBEVIP_DEPLOY
 fi
 question_yn "${DESC_RKE2_DEPLOY:=Deploy remaining rke2 server node?}" COMMAND_RKE2_DEPLOY
-question_yn "${DESC_HELM_INSTALL:=Install Helm binary? \n Helm Version: ${HELM_VERSION}}" COMMAND_HELM_INSTALL
-question_yn "${DESC_HELM_REPOS:=Add SUSE + Rancher Helm repositories (Internet!)?}" COMMAND_HELM_REPOS
 ##################### END RKE2 DEPLOYMENT ####################################
 
-echo
-echo "-- ${TXT_END:=END} --"
-echo "${TXT_NEXT_STEP:=Next step} 03-rancher_install.sh"
+propose_next_script "06-rancher_install.sh" "Rancher Management Server installation"

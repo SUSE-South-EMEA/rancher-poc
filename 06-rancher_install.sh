@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ### Source variables
-source ./00-vars.sh
+source ./01-vars.sh
 source ./lang/$LANGUAGE.sh
 source ./00-common.sh
 
@@ -9,6 +9,35 @@ source ./00-common.sh
 if [[ $PROXY_DEPLOY == 1 ]] ; then
   source /etc/profile.d/proxy.sh
 fi
+
+
+## INSTALL HELM
+COMMAND_HELM_INSTALL() {
+if [[ $AIRGAP_DEPLOY == 1 ]]; then
+  tar zxvf helm-v${HELM_VERSION}-linux-amd64.tar.gz
+  sudo mv linux-amd64/helm /usr/local/bin/helm
+  rm -rf linux-amd64/
+else
+  curl -O ${HELM_ARCHIVE}
+  tar zxvf helm-v${HELM_VERSION}-linux-amd64.tar.gz
+  sudo mv linux-amd64/helm /usr/local/bin/helm
+  rm -rf linux-amd64/
+  rm helm-v${HELM_VERSION}-linux-amd64.tar.gz
+fi
+echo -e "\nHelm installed.\n $(helm version)"
+}
+
+
+## REPOS HELM
+COMMAND_HELM_REPOS() {
+if [[ $AIRGAP_DEPLOY == 1 ]]; then
+  echo "${TXT_HELM_REPOS:=Helm charts must be previously synced with 00-prepare-airgap.sh and placed in current directory.}"
+else
+  helm repo add rancher ${HELM_REPO_RANCHER}
+  helm repo list
+fi
+}
+
 
 ## CERT MANAGER INSTALL
 COMMAND_CERTMGR_INSTALL() {
@@ -136,6 +165,8 @@ COMMAND_INIT_ADMIN() {
 kubectl -n cattle-system exec $(kubectl -n cattle-system get pods -l app=rancher | grep '1/1' | head -1 | awk '{ print $1 }') -- reset-password
 }
 
+question_yn "${DESC_HELM_INSTALL:=Install Helm binary? \n Helm Version: ${HELM_VERSION}}" COMMAND_HELM_INSTALL
+question_yn "${DESC_HELM_REPOS:=Add SUSE + Rancher Helm repositories (Internet!)?}" COMMAND_HELM_REPOS
 question_yn "${DESC_CERTMGR_INSTALL:=Install Cert Manager?}" COMMAND_CERTMGR_INSTALL
 question_yn "${DESC_TEST_FQDN:=Test DNS name ${LB_RANCHER_FQDN}?}" COMMAND_TEST_FQDN
 question_yn "${DESC_RANCHER_INSTALL:=Install Rancher Management Server (${LB_RANCHER_FQDN})?}" COMMAND_RANCHER_INSTALL
@@ -146,3 +177,7 @@ echo "Rancher Management server is available."
 echo "${bold}Url :${normal} https://${LB_RANCHER_FQDN}"
 echo
 echo "-- ${TXT_END:=END} --"
+echo
+echo "${bold}✓ Deployment completed successfully!${normal}"
+echo "Rancher is now available at: https://${LB_RANCHER_FQDN}"
+echo

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ### Source variables
-source ./00-vars.sh
+source ./01-vars.sh
 source ./lang/$LANGUAGE.sh
 source ./00-common.sh
 
@@ -25,29 +25,46 @@ while true; do
     esac
 done
 
-## SSH KEYS CREATION
-COMMAND_SSH_KEYS() {
-ssh-keygen
-}
-
-## SSH KEYS DEPLOY
-COMMAND_SSH_DEPLOY() {
-read -s -p "${TXT_ENTER_CLIENT_PWD:=Please enter target hosts SSH password}: " PASSWD
-for h in "${HOSTS[@]}";
-  do
-    if [[ -n "${SSH_USER:-}" ]]; then
-      expect -c "set timeout 2; spawn ssh-copy-id -o StrictHostKeyChecking=no ${SSH_USER}@$h; expect 'assword:'; send "$PASSWD\\r"; interact"
-    else
-      expect -c "set timeout 2; spawn ssh-copy-id -o StrictHostKeyChecking=no $h; expect 'assword:'; send "$PASSWD\\r"; interact"
-    fi
-done;
-unset PASSWD
-}
-
 ## SSH CONNECT TESTING
+## Tests SSH connection to all hosts without password
 COMMAND_SSH_CONNECT_TEST() {
-for h in "${HOSTS[@]}"; do ssh_host "$h" "hostname -f" ; done;
-echo "Domain in use must not be using *.local !!!"
+    local success_count=0
+    local fail_count=0
+    local failed_hosts=()
+    
+    echo "${bold}Testing SSH connections...${normal}"
+    echo
+    
+    for h in "${HOSTS[@]}"; do
+        echo -n "Testing $h... "
+        
+        if ssh_host "$h" "hostname -f" >/dev/null 2>&1; then
+            local hostname
+            hostname=$(ssh_host "$h" "hostname -f" 2>/dev/null)
+            echo "✓ Connected (hostname: $hostname)"
+            ((success_count++))
+        else
+            echo "✗ Failed"
+            ((fail_count++))
+            failed_hosts+=("$h")
+        fi
+    done
+    
+    echo
+    echo "${bold}=== Connection Test Summary ===${normal}"
+    echo "  Successful: $success_count"
+    echo "  Failed: $fail_count"
+    
+    if [[ $fail_count -gt 0 ]]; then
+        echo
+        echo "${bold}Failed hosts:${normal}"
+        printf '  - %s\n' "${failed_hosts[@]}"
+        return 1
+    fi
+    
+    echo
+    echo "Note: Domain in use must not be using *.local"
+    return 0
 }
 
 ## SET PROXY
@@ -75,55 +92,6 @@ source /etc/profile.d/proxy.sh
 echo "$(hostname -f) : Proxy parameters added to /etc/profile.d/proxy.sh"
 }
 
-## LIST REPOSITORIES
-COMMAND_REPOS_ZYPPER() {
-for h in "${HOSTS[@]}"
-  do ssh_host "$h" "echo && hostname -f && echo && sudo zypper lr"; 
-done
-}
-COMMAND_REPOS_YUM() {
-for h in "${HOSTS[@]}"
-  do ssh_host "$h" "echo && hostname -f && echo && sudo yum repolist all"; 
-done
-}
-COMMAND_REPOS_APT() {
-for h in "${HOSTS[@]}"
-  do ssh_host "$h" "echo && hostname -f && echo && sudo apt-cache policy"; 
-done
-}
-
-## ADDING REPOSITORIES
-COMMAND_ADDREPOS_ZYPPER() {
-for h in "${HOSTS[@]}"
-  do ssh_host "$h" "echo ; hostname -f ; echo ; sudo zypper ref ; 
-sudo zypper ar -G http://${REPO_SERVER}/ks/dist/child/sle-module-containers15-sp4-pool-x86_64/sles15sp4 containers_product ; 
-sudo zypper ar -G http://${REPO_SERVER}/ks/dist/child/sle-module-containers15-sp4-updates-x86_64/sles15sp4 containers_updates" 
-done
-sudo zypper ar -G http://${REPO_SERVER}/ks/dist/child/sle-module-containers15-sp4-pool-x86_64/sles15sp4 containers_product
-sudo zypper ar -G http://${REPO_SERVER}/ks/dist/child/sle-module-containers15-sp4-updates-x86_64/sles15sp4 containers_updates
-}
-
-## ALL NODES UPDATE 
-COMMAND_NODES_UPDATE_ZYPPER() {
-for h in "${HOSTS[@]}"
-  do ssh_host "$h" "echo ; hostname -f ; echo ; sudo zypper ref ; sudo zypper --non-interactive up"
-done;
-for h in "${HOSTS[@]}"
-  do ssh_host "$h" "echo ; sudo zypper ps" 
-done
-}
-
-COMMAND_NODES_UPDATE_YUM() {
-for h in "${HOSTS[@]}"
-  do ssh_host "$h" "echo ; hostname -f ; echo ; sudo yum -y update"
-done;
-}
-
-COMMAND_NODES_UPDATE_APT() {
-for h in "${HOSTS[@]}"
-  do ssh_host "$h" "echo ; hostname -f ; echo ; sudo apt-get -y upgrade"
-done;
-}
 
 ## CHECK TIME
 COMMAND_CHECK_TIME() {
@@ -165,14 +133,6 @@ done
 COMMAND_NO_SWAP() {
 for h in "${HOSTS[@]}";do ssh_host "$h" 'sudo sed -i "/swap/ s/defaults/&,noauto/" /etc/fstab';done
 for h in "${HOSTS[@]}";do ssh_host "$h" "echo; hostname -f; grep swap /etc/fstab; sudo swapoff -a; free -g";done
-}
-
-## OUTILS K8S
-COMMAND_INSTALL_KUBECTL() {
-if [[ $AIRGAP_DEPLOY != 1 ]] ; then
-curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-fi
-sudo install -v -o root -g root -m 0755 kubectl /usr/bin/kubectl
 }
 
 ## CHECK FIREWALLD
@@ -222,88 +182,36 @@ echo
 echo "Note: a Default Gateway should be set on all nodes (even if non-existent/non-working)"
 }
 
-## LONGHORN
-COMMAND_INSTALL_LONGHORN_PREREQ() {
-if [[ $pkg_mgr_type == 'zypper' ]] ; then
-  for h in "${HOSTS[@]}"; do
-    echo ; echo "${bold}${h}${normal}"
-    ssh_host "$h" "sudo zypper in -y open-iscsi nfs-client ; sudo systemctl enable --now iscsid.service"
-  done
-elif [[ $pkg_mgr_type == 'yum' ]] ; then
-  for h in "${HOSTS[@]}"; do
-    echo ; echo "${bold}${h}${normal}"
-    ssh_host "$h" "sudo yum install -y iscsi-initiator-utils nfs-utils"
-  done
-elif [[ $pkg_mgr_type == 'apt' ]] ; then
-  for h in "${HOSTS[@]}"; do
-    echo ; echo "${bold}${h}${normal}"
-    ssh_host "$h" "sudo apt-get install -y open-iscsi nfs-common ; sudo systemctl enable --now iscsid.service"
-  done
-else
-  echo "Unknow package manager type. Exiting..." && exit 1
-fi
-}
-
-##################### BEGIN PRE-CHECK LOCAL PACKAGES ##################################
-if [[ $pkg_mgr_type == 'apt' ]]
-then
-  question_yn "${DESC_CHECK_PACKAGE:=Local deployment system : check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_DPKG_LOCAL curl expect sudo"
-else
-  question_yn "${DESC_CHECK_PACKAGE_RPM_LOCAL:=Local deployment system : check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_RPM_LOCAL curl expect sudo"
-fi
-##################################################################################
-
 
 ##################### BEGIN SSH KEYS EXCHANGE ###################################
-question_yn "${DESC_SSH_KEYS:=Create a local SSH key pair?}" COMMAND_SSH_KEYS
-question_yn "${DESC_SSH_DEPLOY:=Push public key to nodes?}" COMMAND_SSH_DEPLOY
 question_yn "${DESC_SSH_CONNECT_TEST:=Test SSH connection to nodes?}" COMMAND_SSH_CONNECT_TEST
-##################################################################################
-
-
-##################### BEGIN REPOS & BINARIES ####################################
-if [[ $pkg_mgr_type == 'zypper' ]]
-then 
-question_yn "$pkg_mgr_type - ${DESC_REPOS:=List repositories on nodes}" COMMAND_REPOS_ZYPPER
-#question_yn "$pkg_mgr_type - ${DESC_ADDREPOS:=Add sle-module-containers repositories on target and local nodes?}" COMMAND_ADDREPOS_ZYPPER
-question_yn "${DESC_NODES_UPDATE:=Update all nodes?}" COMMAND_NODES_UPDATE_ZYPPER
-
-elif [[ $pkg_mgr_type == 'yum' ]]
-then
-question_yn "$DESC_REPOS" COMMAND_REPOS_YUM
-question_yn "$pkg_mgr_type - ${DESC_NODES_UPDATE:=Update all nodes?}" COMMAND_NODES_UPDATE_YUM
-
-elif [[ $pkg_mgr_type == 'apt' ]]
-then
-question_yn "$DESC_REPOS" COMMAND_REPOS_APT
-question_yn "$pkg_mgr_type - ${DESC_NODES_UPDATE:=Update all nodes?}" COMMAND_NODES_UPDATE_APT
-fi
-##################################################################################
-
-
-##################### BEGIN PRE-CHECK REMOTE PACKAGES ############################
-if [[ $pkg_mgr_type == 'apt' ]]
-then
-	question_yn "${DESC_CHECK_PACKAGE:=Remote system(s): check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_DPKG iptables apparmor sudo"
-else
-	question_yn "${DESC_CHECK_PACKAGE_RPM:=Remote system(s): check if required packages are installed?}" "COMMAND_CHECK_PACKAGE_RPM iptables apparmor-parser sudo lsof"
-fi
 ##################################################################################
 
 
 ###################### BEGIN PROXY ###############################################
 if [[ $PROXY_DEPLOY == 1 ]]
 then
-question_yn "${DESC_SET_PROXY:=PROXY variables are set in ./00-vars.sh. Apply parameters ? \n _HTTP_PROXY=${_HTTP_PROXY} \n _HTTPS_PROXY=${_HTTPS_PROXY} \n _NO_PROXY=${_NO_PROXY}}" COMMAND_SET_PROXY
+question_yn "${DESC_SET_PROXY:=PROXY variables are set in ./01-vars.sh. Apply parameters ? \n _HTTP_PROXY=${_HTTP_PROXY} \n _HTTPS_PROXY=${_HTTPS_PROXY} \n _NO_PROXY=${_NO_PROXY}}" COMMAND_SET_PROXY
 fi
-##################################################################################
 
 
-###################### BEGIN OS CHECKS ###########################################
+###################### BEGIN FIREWALL############################################
 question_yn "${DESC_FIREWALL:=Check firewall status (must be disabled)?}" COMMAND_FIREWALL
+
+
+###################### CHECK DEFAULT GATEWAY #####################################
 question_yn "${DESC_DEFAULT_GW:=Check for a defined default gateway?}" COMMAND_DEFAULT_GW
-question_yn "${DESC_CHECK_TIME:=Verify date and time on all nodes?}" COMMAND_CHECK_TIME
+
+
+###################### CHECK IP FORWARDING ENABLED ###############################
 question_yn "${DESC_IPFORWARD_ACTIVATE:=Enable IP forwarding?}" COMMAND_IPFORWARD_ACTIVATE
+
+
+###################### CHECK TIME SYNC ###########################################
+question_yn "${DESC_CHECK_TIME:=Verify date and time on all nodes?}" COMMAND_CHECK_TIME
+
+
+###################### DISABLE SWAP ##############################################
 #question_yn "${DESC_NO_SWAP:=Disable swap on target nodes?}" COMMAND_NO_SWAP
 ##################################################################################
 
@@ -314,15 +222,4 @@ if [[ $AIRGAP_DEPLOY == 1 ]] ; then
 fi
 ##################################################################################
 
-
-##################### BEGIN K8S TOOLS ############################################
-question_yn "${DESC_INSTALL_KUBECTL:=Install kubectl on local node?}" COMMAND_INSTALL_KUBECTL
-
-
-##################### BEGIN LONGHORN REQUIREMENTS ################################
-question_yn "${DESC_INSTALL_LONGHORN_PREREQ:=Install Longhorn pre-requisites (open-iscsi) on all nodes?}" COMMAND_INSTALL_LONGHORN_PREREQ
-##################################################################################
-
-echo
-echo "-- ${TXT_END:=END} --"
-echo "${TXT_NEXT_STEP:=Next step} 02-rke2_deploy.sh"
+propose_next_script "05-rke2_deploy.sh" "RKE2 cluster deployment"

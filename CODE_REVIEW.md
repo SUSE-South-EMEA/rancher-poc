@@ -106,7 +106,7 @@ done
 
 ### 🟡 Problèmes modérés (Bonnes pratiques)
 
-#### 8. **Versions potentiellement obsolètes** (`00-vars.sh`)
+#### 8. **Versions potentiellement obsolètes** (`01-vars.sh`)
 
 **Problème** :
 ```bash
@@ -225,7 +225,7 @@ COMMAND_RKE2_INSTALL() {
 set -euo pipefail  # Arrêt sur erreur, variables non définies, erreurs dans les pipes
 
 # Source variables
-source ./00-vars.sh
+source ./01-vars.sh
 source ./lang/$LANGUAGE.sh
 source ./00-common.sh
 

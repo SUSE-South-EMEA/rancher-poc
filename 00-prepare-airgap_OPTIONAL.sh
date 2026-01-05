@@ -1,17 +1,17 @@
 #!/bin/bash
 
 ### Source variables
-source ./00-vars.sh
+source ./01-vars.sh
 source ./lang/$LANGUAGE.sh
 source ./00-common.sh
 
 if [[ $AIRGAP_DEPLOY != 1 ]]; then
  echo
- echo -e "${bold}${TXT_AIRGAP_NOT_ENABLED:=Airgap mode not enabled.\nPlease set AIRGAP_DEPLOY=1 in 00-vars.sh and check that everything is properly configured in the AIRGAP SETUP section.}${normal}"
+ echo -e "${bold}${TXT_AIRGAP_NOT_ENABLED:=Airgap mode not enabled.\nPlease set AIRGAP_DEPLOY=1 in 01-vars.sh and check that everything is properly configured in the AIRGAP SETUP section.}${normal}"
  echo
  exit 1
 else
-  echo "${TXT_AIRGAP_INTRO:=Airgap configuration defined in} 00-vars.sh:"
+  echo "${TXT_AIRGAP_INTRO:=Airgap configuration defined in} 01-vars.sh:"
   echo
   echo "  AIRGAP_REGISTRY_URL: ${AIRGAP_REGISTRY_URL}"
   echo "  AIRGAP_REGISTRY_CACERT: ${AIRGAP_REGISTRY_CACERT}"
@@ -153,6 +153,18 @@ echo "${TXT_DL_KUBEVIP:=Download kube-vip deployment manifests and generate imag
 curl -sL kube-vip.io/manifests/rbac.yaml > kube-vip-rbac.yaml
 curl -sL kube-vip.io/k3s |  vipAddress=${RKE2_VIP_IP} vipInterface=${RKE2_VIP_INTERFACE} sh > kube-vip.yaml
 sed -i 's/k3s/rke2/g' kube-vip.yaml
+# Fix netmask format: replace vip_subnet and vip_address with vip_cidr (format: IP/subnet)
+if grep -q "vip_subnet" kube-vip.yaml && grep -q "vip_address" kube-vip.yaml; then
+  VIP_IP=$(grep -A 1 "vip_address" kube-vip.yaml | grep "value:" | sed 's/.*value: *//' | tr -d '"' | tr -d ' ')
+  VIP_SUBNET=$(grep -A 1 "vip_subnet" kube-vip.yaml | grep "value:" | sed 's/.*value: *//' | tr -d '"' | tr -d ' ')
+  VIP_SUBNET=$(echo "$VIP_SUBNET" | sed 's|^/||')
+  sed -i "/vip_subnet/,+1d" kube-vip.yaml
+  sed -i "/vip_address/,+1d" kube-vip.yaml
+  sed -i "/cp_enable/i\        - name: vip_cidr\n          value: \"${VIP_IP}/${VIP_SUBNET}\"" kube-vip.yaml
+else
+  sed -i 's/value: "32"/value: "\/32"/' kube-vip.yaml
+  sed -i 's/value: 32/value: \/32/' kube-vip.yaml
+fi
 grep "image:" kube-vip.yaml |awk '{print $2}' |tee kube-vip-images.txt
 }
 

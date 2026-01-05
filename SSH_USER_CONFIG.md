@@ -2,11 +2,11 @@
 
 ## Vue d'ensemble
 
-Les scripts ont été modifiés pour permettre l'exécution des commandes SSH avec un utilisateur spécifique configuré dans `00-vars.sh`. Cela permet de gérer les déploiements où l'utilisateur SSH n'est pas le même que l'utilisateur actuel.
+Les scripts ont été modifiés pour permettre l'exécution des commandes SSH avec un utilisateur spécifique configuré dans `01-vars.sh`. Cela permet de gérer les déploiements où l'utilisateur SSH n'est pas le même que l'utilisateur actuel.
 
 ## Configuration
 
-### Dans `00-vars.sh`
+### Dans `01-vars.sh`
 
 Ajoutez ou modifiez la variable `SSH_USER` :
 
@@ -102,7 +102,7 @@ done
 ## Exemple complet
 
 ```bash
-# Dans 00-vars.sh
+# Dans 01-vars.sh
 SSH_USER="deploy"
 
 # Les commandes suivantes utiliseront automatiquement deploy@hostname

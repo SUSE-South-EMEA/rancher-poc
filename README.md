@@ -14,7 +14,7 @@ It currently supports the following deployment options:
 
 The following files are crucial for your experience:
 - `hosts.list` : List of target servers where RKE2 and Rancher will be deployed (generated)
-- `00-vars.sh` : Configuration variables
+- `01-vars.sh` : Configuration variables
 - `00-prepare-airgap.sh` : Preparation for airgap deployment
 - `01-os_preparation.sh` : OS validations and preparation
 - `02-rke2_deploy.sh`    : RKE2 deployment
@@ -61,7 +61,7 @@ This file contains the list of target nodes that will be members of the RKE2 clu
 
 1 FQDN or IP address by line.
 
-### 00-vars.sh - Variables to be configured
+### 01-vars.sh - Variables to be configured
 
 The variables in this file will be used by the scripts.
 

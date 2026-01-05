@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ### Source variables
-source ./00-vars.sh
+source ./01-vars.sh
 source ./lang/$LANGUAGE.sh
 source ./00-common.sh
 
