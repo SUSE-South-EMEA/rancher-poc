@@ -4,116 +4,58 @@
 source ./01-vars.sh
 source ./lang/$LANGUAGE.sh
 source ./00-common.sh
+init_common
 
-# Select package manager to use for next steps
-while true; do
-   read -p "${bold}Package manager type? (zypper/yum/apt) ${normal}" pkg_mgr_type
-   case $pkg_mgr_type in
-      zypper )
-            echo "$pkg_mgr_type selected."
-            echo
-            break;;
-      yum ) 
-            echo "$pkg_mgr_type selected."
-            echo
-	    break;;
-      apt ) 
-            echo "$pkg_mgr_type selected."
-            echo
-	    break;;
-      * ) echo "Please answer: zypper or yum or apt.";;
-    esac
-done
+# Detect package manager (replaces manual while/read loop)
+detect_pkg_manager
 
-## SSH CONNECT TESTING
-## Tests SSH connection to all hosts without password
-COMMAND_SSH_CONNECT_TEST() {
-    local success_count=0
-    local fail_count=0
-    local failed_hosts=()
-    
-    echo "${bold}Testing SSH connections...${normal}"
-    echo
-    
-    for h in "${HOSTS[@]}"; do
-        echo -n "Testing $h... "
-        
-        if ssh_host "$h" "hostname -f" >/dev/null 2>&1; then
-            local hostname
-            hostname=$(ssh_host "$h" "hostname -f" 2>/dev/null)
-            echo "✓ Connected (hostname: $hostname)"
-            ((success_count++))
-        else
-            echo "✗ Failed"
-            ((fail_count++))
-            failed_hosts+=("$h")
-        fi
-    done
-    
-    echo
-    echo "${bold}=== Connection Test Summary ===${normal}"
-    echo "  Successful: $success_count"
-    echo "  Failed: $fail_count"
-    
-    if [[ $fail_count -gt 0 ]]; then
-        echo
-        echo "${bold}Failed hosts:${normal}"
-        printf '  - %s\n' "${failed_hosts[@]}"
-        return 1
-    fi
-    
-    echo
-    echo "Note: Domain in use must not be using *.local"
-    return 0
-}
-
-## LIST REPOSITORIES
+## LIST REPOSITORIES (informational — exit code 6 means no repos, not fatal)
 COMMAND_REPOS_ZYPPER() {
 for h in "${HOSTS[@]}"
-  do ssh_host "$h" "echo && hostname -f && echo && sudo zypper lr"; 
+  do ssh_host "$h" "echo && hostname && echo && sudo zypper lr || true";
 done
 }
 COMMAND_REPOS_YUM() {
 for h in "${HOSTS[@]}"
-  do ssh_host "$h" "echo && hostname -f && echo && sudo yum repolist all"; 
+  do ssh_host "$h" "echo && hostname && echo && sudo yum repolist all";
 done
 }
 COMMAND_REPOS_APT() {
 for h in "${HOSTS[@]}"
-  do ssh_host "$h" "echo && hostname -f && echo && sudo apt-cache policy"; 
+  do ssh_host "$h" "echo && hostname && echo && sudo apt-cache policy";
 done
 }
 
 ## ADDING REPOSITORIES
 COMMAND_ADDREPOS_ZYPPER() {
 for h in "${HOSTS[@]}"
-  do ssh_host "$h" "echo ; hostname -f ; echo ; sudo zypper ref ; 
-sudo zypper ar -G http://${REPO_SERVER}/ks/dist/child/sle-module-containers15-sp4-pool-x86_64/sles15sp4 containers_product ; 
-sudo zypper ar -G http://${REPO_SERVER}/ks/dist/child/sle-module-containers15-sp4-updates-x86_64/sles15sp4 containers_updates" 
+  do ssh_host "$h" "echo ; hostname ; echo ; sudo zypper ref ;
+sudo zypper ar -G http://${REPO_SERVER}/ks/dist/child/sle-module-containers15-sp4-pool-x86_64/sles15sp4 containers_product ;
+sudo zypper ar -G http://${REPO_SERVER}/ks/dist/child/sle-module-containers15-sp4-updates-x86_64/sles15sp4 containers_updates"
 done
 sudo zypper ar -G http://${REPO_SERVER}/ks/dist/child/sle-module-containers15-sp4-pool-x86_64/sles15sp4 containers_product
 sudo zypper ar -G http://${REPO_SERVER}/ks/dist/child/sle-module-containers15-sp4-updates-x86_64/sles15sp4 containers_updates
 }
 
-## ALL NODES UPDATE 
+## ALL NODES UPDATE
 COMMAND_NODES_UPDATE_ZYPPER() {
 for h in "${HOSTS[@]}"
-  do ssh_host "$h" "echo ; hostname -f ; echo ; sudo zypper ref ; sudo zypper --non-interactive up"
+  do ssh_host "$h" "echo ; hostname ; echo ; sudo zypper ref ; sudo zypper --non-interactive up ; rc=\$? ; [ \$rc -eq 0 ] || [ \$rc -eq 102 ] || exit \$rc"
 done;
 for h in "${HOSTS[@]}"
-  do ssh_host "$h" "echo ; sudo zypper ps" 
+  do ssh_host "$h" "echo ; sudo zypper ps ; rc=\$? ; [ \$rc -eq 0 ] || [ \$rc -eq 102 ] || exit \$rc"
 done
 }
 
 COMMAND_NODES_UPDATE_YUM() {
 for h in "${HOSTS[@]}"
-  do ssh_host "$h" "echo ; hostname -f ; echo ; sudo yum -y update"
+  do ssh_host "$h" "echo ; hostname ; echo ; sudo yum -y update"
 done;
 }
 
 COMMAND_NODES_UPDATE_APT() {
 for h in "${HOSTS[@]}"
-  do ssh_host "$h" "echo ; hostname -f ; echo ; sudo apt-get -y upgrade"
+  do ssh_host "$h" "echo ; hostname ; echo ; sudo apt-get -y upgrade"
 done;
 }
 
@@ -155,7 +97,7 @@ question_yn "${DESC_SSH_CONNECT_TEST:=Test SSH connection to nodes?}" COMMAND_SS
 
 ##################### BEGIN REPOS & BINARIES ####################################
 if [[ $pkg_mgr_type == 'zypper' ]]
-then 
+then
 question_yn "$pkg_mgr_type - ${DESC_REPOS:=List repositories on nodes}" COMMAND_REPOS_ZYPPER
 #question_yn "$pkg_mgr_type - ${DESC_ADDREPOS:=Add sle-module-containers repositories on target and local nodes?}" COMMAND_ADDREPOS_ZYPPER
 question_yn "${DESC_NODES_UPDATE:=Update all nodes?}" COMMAND_NODES_UPDATE_ZYPPER

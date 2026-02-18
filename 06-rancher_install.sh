@@ -4,6 +4,7 @@
 source ./01-vars.sh
 source ./lang/$LANGUAGE.sh
 source ./00-common.sh
+init_common
 
 # Detect and source Proxy configuration
 if [[ $PROXY_DEPLOY == 1 ]] ; then
@@ -91,8 +92,12 @@ else
 fi
 
 echo "${TXT_MONITOR_CERTMGR_INSTALL:=Monitor Cert Manager installation}"
-read -p "#> kubectl get all --namespace cert-manager"
-watch -d -c "kubectl get all -n cert-manager"
+if [[ "${AUTO_MODE:-0}" == "1" ]]; then
+    wait_for_pods "cert-manager" 300
+else
+    read -p "#> kubectl get all --namespace cert-manager"
+    watch -d -c "kubectl get all -n cert-manager"
+fi
 }
 
 ## TEST FQDN FOR RANCHER MGMT
@@ -102,6 +107,23 @@ ping -c 1 ${LB_RANCHER_FQDN}
 
 ## INSTALL RANCHER MANAGEMENT
 COMMAND_RANCHER_INSTALL() {
+### Wait for ingress controller webhook to be ready (avoids "no endpoints available" error)
+log_info "Waiting for ingress controller admission webhook to be ready..."
+local webhook_timeout=120
+local webhook_elapsed=0
+while (( webhook_elapsed < webhook_timeout )); do
+    if kubectl get endpoints -n kube-system rke2-ingress-nginx-controller-admission -o jsonpath='{.subsets[0].addresses[0].ip}' 2>/dev/null | grep -q .; then
+        log_info "Ingress controller webhook is ready"
+        break
+    fi
+    log_debug "Ingress webhook not ready yet (elapsed: ${webhook_elapsed}s)..."
+    sleep 5
+    webhook_elapsed=$((webhook_elapsed + 5))
+done
+if (( webhook_elapsed >= webhook_timeout )); then
+    log_warn "Ingress webhook not ready after ${webhook_timeout}s, proceeding anyway..."
+fi
+
 ### Install Rancher
 kubectl create namespace cattle-system
 # Private CA
@@ -138,7 +160,7 @@ then
   echo "- noProxy=${RANCHER_NO_PROXY}${normal}"
   echo
   helm repo update
-  helm upgrade --install rancher rancher-prime/rancher \
+  helm upgrade --install rancher rancher/rancher \
     --namespace cattle-system \
     --set hostname=${LB_RANCHER_FQDN} \
     --set global.cattle.psp.enabled=false \
@@ -149,20 +171,48 @@ then
 else
   echo "${bold}Rancher Management Server deployment${normal}"
   helm repo update
-  helm upgrade --install rancher rancher-prime/rancher \
+  helm upgrade --install rancher rancher/rancher \
     --namespace cattle-system \
     --set hostname=${LB_RANCHER_FQDN} \
     --set global.cattle.psp.enabled=false \
     --version ${RANCHER_VERSION} ${EXTRA_OPTS}
 fi
 echo "${TXT_MONITOR_RANCHER_INSTALL:=Monitor Rancher resources deployment}"
-read -p "#> kubectl -n cattle-system get all"
-watch -d -c "kubectl -n cattle-system get all"
+if [[ "${AUTO_MODE:-0}" == "1" ]]; then
+    wait_for_pods "cattle-system" 600
+else
+    read -p "#> kubectl -n cattle-system get all"
+    watch -d -c "kubectl -n cattle-system get all"
+fi
 }
 
 ## INIT ADMIN USER
 COMMAND_INIT_ADMIN() {
-kubectl -n cattle-system exec $(kubectl -n cattle-system get pods -l app=rancher | grep '1/1' | head -1 | awk '{ print $1 }') -- reset-password
+local timeout=300
+local interval=5
+local elapsed=0
+local pod_name=""
+
+log_info "Waiting for a Rancher pod to be Ready (1/1) before resetting admin password (timeout: ${timeout}s)..."
+
+while (( elapsed < timeout )); do
+    pod_name=$(kubectl -n cattle-system get pods -l app=rancher --no-headers 2>/dev/null \
+        | grep '1/1' | grep 'Running' | head -1 | awk '{ print $1 }')
+
+    if [[ -n "$pod_name" ]]; then
+        log_info "Rancher pod '$pod_name' is Ready. Running reset-password..."
+        kubectl -n cattle-system exec "$pod_name" -- reset-password
+        return $?
+    fi
+
+    log_debug "No Rancher pod Ready yet (elapsed: ${elapsed}s)..."
+    sleep "$interval"
+    elapsed=$((elapsed + interval))
+done
+
+log_error "Timeout: no Rancher pod became Ready after ${timeout}s"
+kubectl -n cattle-system get pods -l app=rancher 2>/dev/null || true
+return 1
 }
 
 question_yn "${DESC_HELM_INSTALL:=Install Helm binary? \n Helm Version: ${HELM_VERSION}}" COMMAND_HELM_INSTALL
@@ -178,6 +228,6 @@ echo "${bold}Url :${normal} https://${LB_RANCHER_FQDN}"
 echo
 echo "-- ${TXT_END:=END} --"
 echo
-echo "${bold}✓ Deployment completed successfully!${normal}"
+echo "${bold}Deployment completed successfully!${normal}"
 echo "Rancher is now available at: https://${LB_RANCHER_FQDN}"
 echo

@@ -4,15 +4,16 @@
 source ./01-vars.sh
 source ./lang/$LANGUAGE.sh
 source ./00-common.sh
+init_common
 
 COMMAND_RKE2_UNINSTALL() {
 for h in "${HOSTS[@]}"; do
-echo  
-echo "${bold}${TXT_NODE_UNINSTALL:=Uninstall rke2 on node} $h${normal}" 
+echo
+echo "${bold}${TXT_NODE_UNINSTALL:=Uninstall rke2 on node} $h${normal}"
 echo
 ssh_host "$h" "sudo /usr/local/bin/rke2-killall.sh ;
 sudo /usr/local/bin/rke2-uninstall.sh ;
-sudo systemctl stop rancher-system-agent.service ; 
+sudo systemctl stop rancher-system-agent.service ;
 sudo systemctl disable rancher-system-agent.service ;
 sudo rm -f /etc/systemd/system/rancher-system-agent.service ;
 sudo rm -f /etc/systemd/system/rancher-system-agent.env ;
@@ -26,8 +27,8 @@ done
 
 COMMAND_RKE2_NODES_REBOOT() {
 for h in "${HOSTS[@]}"; do
-echo  
-echo "${bold}${TXT_REBOOT_NODE:=Reboot node} $h${normal}" 
+echo
+echo "${bold}${TXT_REBOOT_NODE:=Reboot node} $h${normal}"
 echo
 ssh_host "$h" "sudo reboot"
 done

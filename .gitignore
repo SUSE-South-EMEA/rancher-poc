@@ -3,3 +3,24 @@ cluster.yml
 kube_config_cluster.yml
 kuberang-linux-amd64
 proxyCA.pem
+.rancher-poc.state
+*.log
+
+# Runtime configs (homelab-specific)
+configs/test-lab.sh
+config.yaml
+hosts.list
+
+# TLS keys and certificates (runtime artifacts)
+*.key
+*.crt
+*.pem
+cacerts.pem
+
+# Binaries and archives
+kubectl
+*.tar.gz
+
+# Kube-vip manifests (generated)
+kube-vip.yaml
+kube-vip-rbac.yaml

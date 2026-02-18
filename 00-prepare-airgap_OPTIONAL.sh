@@ -4,6 +4,7 @@
 source ./01-vars.sh
 source ./lang/$LANGUAGE.sh
 source ./00-common.sh
+init_common
 
 if [[ $AIRGAP_DEPLOY != 1 ]]; then
  echo
@@ -16,50 +17,38 @@ else
   echo "  AIRGAP_REGISTRY_URL: ${AIRGAP_REGISTRY_URL}"
   echo "  AIRGAP_REGISTRY_CACERT: ${AIRGAP_REGISTRY_CACERT}"
   echo "  AIRGAP_REGISTRY_INSECURE: ${AIRGAP_REGISTRY_INSECURE}"
-  echo "  AIRGAP_REGISTRY_USER: ${AIRGAP_REGISTRY_USER}"   
+  echo "  AIRGAP_REGISTRY_USER: ${AIRGAP_REGISTRY_USER}"
   echo "  AIRGAP_REGISTRY_PASSWD: <THIS_IS_A_SECRET>"
   echo
 fi
 
-# Select package manager to use for next steps
-while true; do
-   read -p "${bold}Package manager type? (zypper/yum/apt) ${normal}" pkg_mgr_type
-   case $pkg_mgr_type in
-      zypper )
-            echo "$pkg_mgr_type selected."
-            echo
-            break;;
-      yum )
-            echo "$pkg_mgr_type selected."
-            echo
-            break;;
-      apt )
-            echo "$pkg_mgr_type selected."
-            echo
-            break;;
-      * ) echo "Please answer: zypper or yum or apt.";;
-    esac
-done
+# Detect package manager (replaces manual while/read loop)
+detect_pkg_manager
 
 # Select server role to use for next steps
-while true; do
-   echo "Select the appropriate option. Note that option 1 is a prerequisites to option 2."
-   echo "  1. internet: the server is connected to Internet and will be responsible to download and cache all pre-requisites."
-   echo "  2. airgap: the server is airgap with no Internet access. It will be reponsible to push the images in the private registry and deploy rke2+rancher."
-   echo
-   read -p "${bold}Server role? (internet/airgap) ${normal}" option_role
-   case $option_role in
-      internet )
-            echo "$option_role selected."
-            echo
-            break;;
-      airgap )
-            echo "$option_role selected."
-            echo
-            break;;
-      * ) echo "Please answer: internet or airgap.";;
-    esac
-done
+if [[ "${AUTO_MODE:-0}" == "1" ]]; then
+    option_role="${AIRGAP_ROLE:-internet}"
+    log_info "Auto-mode: using role=$option_role"
+else
+    while true; do
+       echo "Select the appropriate option. Note that option 1 is a prerequisites to option 2."
+       echo "  1. internet: the server is connected to Internet and will be responsible to download and cache all pre-requisites."
+       echo "  2. airgap: the server is airgap with no Internet access. It will be reponsible to push the images in the private registry and deploy rke2+rancher."
+       echo
+       read -p "${bold}Server role? (internet/airgap) ${normal}" option_role
+       case $option_role in
+          internet )
+                echo "$option_role selected."
+                echo
+                break;;
+          airgap )
+                echo "$option_role selected."
+                echo
+                break;;
+          * ) echo "Please answer: internet or airgap.";;
+        esac
+    done
+fi
 
 
 COMMAND_INSTALL_YUM_UTILS() {
@@ -70,7 +59,7 @@ sudo yum install -y yum-utils
 COMMAND_CONFIG_ZYPPER_REPOS() {
 if SUSEConnect -s |grep "Not Registered" ; then
   echo "System is not registered, make sure Containers Module repositories are added."
-  echo 
+  echo
   echo "i.e: add containers module repos hosted in SUMA"
   echo "sudo zypper ar -G http://{REPO_SERVER}/ks/dist/child/sle-module-containers15-sp5-pool-x86_64/sles15sp5 containers_product"
   echo "sudo zypper ar -G http://{REPO_SERVER}/ks/dist/child/sle-module-containers15-sp5-updates-x86_64/sles15sp5 containers_updates"

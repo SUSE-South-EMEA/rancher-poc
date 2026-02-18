@@ -4,31 +4,15 @@
 source ./01-vars.sh
 source ./lang/$LANGUAGE.sh
 source ./00-common.sh
+init_common
 
-#Selection du package manager à utiliser pour les futures commandes
-while true; do
-   read -p "${bold}Package manager type? (zypper/yum/apt) ${normal}" pkg_mgr_type
-   case $pkg_mgr_type in
-      [zypper]* )
-            echo "$pkg_mgr_type selected."
-            echo
-            break;;
-      [yum]* )
-            echo "$pkg_mgr_type selected."
-            echo
-            break;;
-      [apt]* )
-            echo "$pkg_mgr_type selected."
-            echo
-            break;;
-      * ) echo "Please answer: zypper or yum or apt.";;
-    esac
-done
+# Detect package manager (replaces manual while/read loop)
+detect_pkg_manager
 
 ###
 # Remove default GATEWAY
 ###
-DESC_REMOVE_DEF_GW="Suppression de la gateway par défaut (tous les noeuds)?${bold}"
+DESC_REMOVE_DEF_GW="Suppression de la gateway par defaut (tous les noeuds)?${bold}"
 COMMAND_REMOVE_DEF_GW() {
 if [[ $pkg_mgr_type == 'zypper' ]]
 then
@@ -91,7 +75,7 @@ fi
 DESC_DISABLE_IPV6="Desactiver IPV6? (redemarrage necessaire!)${bold}"
 COMMAND_DISABLE_IPV6() {
 # remote hosts
-for h in ${HOSTS[*]};do 
+for h in ${HOSTS[*]};do
 ssh $h "hostname
 if grep ipv6.disable=1 /etc/default/grub ; then echo 'ipv6 already disabled'
 else

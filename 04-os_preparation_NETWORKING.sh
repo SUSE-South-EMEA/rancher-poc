@@ -4,68 +4,10 @@
 source ./01-vars.sh
 source ./lang/$LANGUAGE.sh
 source ./00-common.sh
+init_common
 
-# Select package manager to use for next steps
-while true; do
-   read -p "${bold}Package manager type? (zypper/yum/apt) ${normal}" pkg_mgr_type
-   case $pkg_mgr_type in
-      zypper )
-            echo "$pkg_mgr_type selected."
-            echo
-            break;;
-      yum ) 
-            echo "$pkg_mgr_type selected."
-            echo
-	    break;;
-      apt ) 
-            echo "$pkg_mgr_type selected."
-            echo
-	    break;;
-      * ) echo "Please answer: zypper or yum or apt.";;
-    esac
-done
-
-## SSH CONNECT TESTING
-## Tests SSH connection to all hosts without password
-COMMAND_SSH_CONNECT_TEST() {
-    local success_count=0
-    local fail_count=0
-    local failed_hosts=()
-    
-    echo "${bold}Testing SSH connections...${normal}"
-    echo
-    
-    for h in "${HOSTS[@]}"; do
-        echo -n "Testing $h... "
-        
-        if ssh_host "$h" "hostname -f" >/dev/null 2>&1; then
-            local hostname
-            hostname=$(ssh_host "$h" "hostname -f" 2>/dev/null)
-            echo "✓ Connected (hostname: $hostname)"
-            ((success_count++))
-        else
-            echo "✗ Failed"
-            ((fail_count++))
-            failed_hosts+=("$h")
-        fi
-    done
-    
-    echo
-    echo "${bold}=== Connection Test Summary ===${normal}"
-    echo "  Successful: $success_count"
-    echo "  Failed: $fail_count"
-    
-    if [[ $fail_count -gt 0 ]]; then
-        echo
-        echo "${bold}Failed hosts:${normal}"
-        printf '  - %s\n' "${failed_hosts[@]}"
-        return 1
-    fi
-    
-    echo
-    echo "Note: Domain in use must not be using *.local"
-    return 0
-}
+# Detect package manager (replaces manual while/read loop)
+detect_pkg_manager
 
 ## SET PROXY
 COMMAND_SET_PROXY() {
@@ -77,7 +19,7 @@ export http_proxy=http://${_HTTP_PROXY}
 export https_proxy=http://${_HTTPS_PROXY}
 export no_proxy=${_NO_PROXY}
 EOF
-hostname -f
+hostname
 echo 'Proxy parameters added to /etc/profile.d/proxy.sh'
 echo"
 done
@@ -89,7 +31,7 @@ export no_proxy=${_NO_PROXY}
 EOF
 sudo chmod 0755 /etc/profile.d/proxy.sh
 source /etc/profile.d/proxy.sh
-echo "$(hostname -f) : Proxy parameters added to /etc/profile.d/proxy.sh"
+echo "$(hostname) : Proxy parameters added to /etc/profile.d/proxy.sh"
 }
 
 
@@ -105,17 +47,17 @@ done
 COMMAND_CHECK_ACCESS_REGISTRY() {
 if [ "${AIRGAP_REGISTRY_INSECURE}" == "1" ] ; then
   for h in "${HOSTS[@]}"; do
-    ssh_host "$h" "echo && hostname -f && curl -k -s -o /dev/null -I https://${AIRGAP_REGISTRY_URL}  && echo '${AIRGAP_REGISTRY_URL}: OK' || echo '${AIRGAP_REGISTRY_URL}: FAIL'"
+    ssh_host "$h" "echo && hostname && curl -k -s -o /dev/null -I https://${AIRGAP_REGISTRY_URL}  && echo '${AIRGAP_REGISTRY_URL}: OK' || echo '${AIRGAP_REGISTRY_URL}: FAIL'"
   done
   echo
 elif [[ ! -z ${AIRGAP_REGISTRY_CACERT} ]] ; then
   for h in "${HOSTS[@]}"; do
-    ssh_host "$h" "echo && hostname -f && curl -s -o /dev/null -I --cacert /etc/docker/certs.d/${AIRGAP_REGISTRY_URL}/ca.crt  https://${AIRGAP_REGISTRY_URL}  && echo '${AIRGAP_REGISTRY_URL}: OK' || echo '${AIRGAP_REGISTRY_URL}: FAIL'"
+    ssh_host "$h" "echo && hostname && curl -s -o /dev/null -I --cacert /etc/docker/certs.d/${AIRGAP_REGISTRY_URL}/ca.crt  https://${AIRGAP_REGISTRY_URL}  && echo '${AIRGAP_REGISTRY_URL}: OK' || echo '${AIRGAP_REGISTRY_URL}: FAIL'"
   done
   echo
 else
   for h in "${HOSTS[@]}"; do
-    ssh_host "$h" "echo && hostname -f && curl -s -o /dev/null -I https://${AIRGAP_REGISTRY_URL}  && echo '${AIRGAP_REGISTRY_URL}: OK' || echo '${AIRGAP_REGISTRY_URL}: FAIL'"
+    ssh_host "$h" "echo && hostname && curl -s -o /dev/null -I https://${AIRGAP_REGISTRY_URL}  && echo '${AIRGAP_REGISTRY_URL}: OK' || echo '${AIRGAP_REGISTRY_URL}: FAIL'"
   done
   echo
 fi
@@ -123,7 +65,7 @@ fi
 
 ## ACTIVATION IP FORWARDING
 COMMAND_IPFORWARD_ACTIVATE() {
-for h in "${HOSTS[@]}";do 
+for h in "${HOSTS[@]}";do
   echo -e "\n${bold}$h${normal}"
   ssh_host "$h" "if [ -f /etc/sysctl.conf ] ; then sudo sed -i '/net.ipv4.ip_forward.*/d' /etc/sysctl.conf ; fi ; if [ -d /etc/sysctl.d ] && [ -n \"\$(ls -A /etc/sysctl.d/*.conf 2>/dev/null)\" ] ; then sudo sed -i '/net.ipv4.ip_forward.*/d' /etc/sysctl.d/*.conf ; fi ; if [ -f /etc/sysctl.conf ] ; then echo 'net.ipv4.ip_forward = 1' | sudo tee -a /etc/sysctl.conf >/dev/null ; else echo 'net.ipv4.ip_forward = 1' | sudo tee /etc/sysctl.conf >/dev/null ; fi ; sudo sysctl -p 2>/dev/null | grep -v '^$' || echo 'IP forwarding enabled'"
 done
@@ -132,7 +74,7 @@ done
 ## DESACTIVATION DU SWAP
 COMMAND_NO_SWAP() {
 for h in "${HOSTS[@]}";do ssh_host "$h" 'sudo sed -i "/swap/ s/defaults/&,noauto/" /etc/fstab';done
-for h in "${HOSTS[@]}";do ssh_host "$h" "echo; hostname -f; grep swap /etc/fstab; sudo swapoff -a; free -g";done
+for h in "${HOSTS[@]}";do ssh_host "$h" "echo; hostname; grep swap /etc/fstab; sudo swapoff -a; free -g";done
 }
 
 ## CHECK FIREWALLD
@@ -154,7 +96,7 @@ for h in "${HOSTS[@]}";do
   echo -e "\n${bold}$h${normal}"
   ssh_host "$h" "if sudo $CHECK_CMD $FIREWALL_SVC >/dev/null 2>&1 ; then echo \"${TXT_FIREWALLD_FOUND:=Firewall service} $FIREWALL_SVC ${TXT_IS_PRESENT:=is present}.\" ; if sudo systemctl is-active --quiet $FIREWALL_SVC ; then echo \"${TXT_FIREWALLD_ACTIVE:=Firewall is active. Stopping and disabling...}\" ; sudo systemctl stop $FIREWALL_SVC && sudo systemctl disable $FIREWALL_SVC && echo \"${TXT_FIREWALLD_DISABLED:=Firewall has been stopped and disabled.}\" ; else echo \"${TXT_FIREWALLD_INACTIVE:=Firewall is already stopped. Disabling...}\" ; sudo systemctl disable $FIREWALL_SVC && echo \"${TXT_FIREWALLD_DISABLED:=Firewall has been disabled.}\" ; fi ; else echo \"${TXT_FIREWALLD_NOT_INSTALLED:=Firewall service} $FIREWALL_SVC ${TXT_NOT_PRESENT:=is absent}. ${TXT_FIREWALLD_NOT_INSTALLED_MSG:=Nothing to do.}\" ; fi"
 done
-echo -e "\n${bold}$(hostname -f)${normal} (local node)"
+echo -e "\n${bold}$(hostname)${normal} (local node)"
 if sudo $CHECK_CMD $FIREWALL_SVC >/dev/null 2>&1 ; then
   echo "${TXT_FIREWALLD_FOUND:=Firewall service} $FIREWALL_SVC ${TXT_IS_PRESENT:=is present}."
   if sudo systemctl is-active --quiet $FIREWALL_SVC ; then
@@ -172,7 +114,7 @@ fi
 ## CHECK DEFAULT GW EXISTS
 COMMAND_DEFAULT_GW() {
 echo
-for h in "${HOSTS[@]}";do 
+for h in "${HOSTS[@]}";do
   ROUTE_TABLE=$(ssh_host "$h" "cat /proc/net/route" | awk '$2==00000000')
   CURRENT_GATEWAY=$(for i in `echo $ROUTE_TABLE | awk '{print $3}'| sed -E 's/(..)(..)(..)(..)/\4 \3 \2 \1/'`;do printf "%d." $((16#$i));done |sed 's/.$//';echo)
   #echo $CURRENT_GATEWAY
