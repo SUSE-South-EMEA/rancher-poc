@@ -12,6 +12,7 @@ source "$REPO_ROOT/00-common.sh" 2>/dev/null || true
 
 # Parse arguments
 REPLICAS=""
+set -a
 for arg in "$@"; do
     case "$arg" in
         --replicas=*) REPLICAS="${arg#*=}" ;;
@@ -23,6 +24,7 @@ for arg in "$@"; do
     esac
 done
 source "$SCRIPT_DIR/../configs/capi-vars.sh"
+set +a
 
 if ! declare -f log_info >/dev/null 2>&1; then
     log_info()  { echo "[$(date '+%H:%M:%S')] [INFO]  $*"; }
