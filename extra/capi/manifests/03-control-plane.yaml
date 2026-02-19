@@ -1,0 +1,48 @@
+apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+kind: RKE2ControlPlane
+metadata:
+  name: ${CAPI_CP_NAME}
+  namespace: ${CAPI_NAMESPACE}
+spec:
+  replicas: ${CAPI_CP_REPLICAS}
+  agentConfig: {}
+  serverConfig:
+    cloudProviderName: external
+    cni: ${CAPI_CNI}
+  infrastructureRef:
+    apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+    kind: HarvesterMachineTemplate
+    name: ${CAPI_CP_MACHINE}
+    namespace: ${CAPI_NAMESPACE}
+  rolloutStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+  version: ${CAPI_K8S_VERSION}
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: HarvesterMachineTemplate
+metadata:
+  name: ${CAPI_CP_MACHINE}
+  namespace: ${CAPI_NAMESPACE}
+spec:
+  template:
+    spec:
+      cpu: ${CAPI_CP_CPU}
+      memory: ${CAPI_CP_MEMORY}
+      networks:
+        - ${CAPI_NETWORK}
+      networkConfig:
+        address: ${CAPI_VM_ADDRESS}
+        gateway: ${CAPI_GATEWAY}
+        dnsServers:
+          - ${CAPI_DNS_SERVERS}
+        dnsSearch:
+          - ${CAPI_DNS_SEARCH}
+      sshKeyPair: ${CAPI_HV_SSH_KEYPAIR}
+      sshUser: ${CAPI_HV_SSH_USER}
+      volumes:
+        - volumeType: image
+          imageName: ${CAPI_HV_IMAGE}
+          volumeSize: ${CAPI_CP_DISK}
+          bootOrder: 1

@@ -158,6 +158,7 @@ Nettoie tout. Il n'y a pas de retour en arrière.
 Consultez le répertoire `extra/` pour des scripts additionnels :
 - Gestion SSL/TLS et certificats CA
 - Intégration Traefik
+- **CAPI Provider Harvester (CAPHV)** : Provisionnement de clusters downstream via Cluster API
 - Documentation additionnelle
 - Exemples de scripts
 

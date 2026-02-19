@@ -1,0 +1,29 @@
+# ConfigMap containing Calico HelmChartConfig for cloud-provider tolerations.
+# Applied once via ClusterResourceSet to allow Calico to schedule on
+# uninitialized nodes (before cloud-provider sets node addresses).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: calico-helm-config
+  namespace: ${CAPI_NAMESPACE}
+data:
+  calico-helm-config.yaml: |
+    apiVersion: helm.cattle.io/v1
+    kind: HelmChartConfig
+    metadata:
+      name: rke2-calico
+      namespace: kube-system
+    spec:
+      valuesContent: |-
+        installation:
+          controlPlaneTolerations:
+            - key: node-role.kubernetes.io/control-plane
+              operator: Exists
+              effect: NoSchedule
+            - key: node-role.kubernetes.io/etcd
+              operator: Exists
+              effect: NoExecute
+            - key: node.cloudprovider.kubernetes.io/uninitialized
+              operator: Equal
+              value: "true"
+              effect: NoSchedule

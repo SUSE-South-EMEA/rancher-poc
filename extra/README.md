@@ -22,13 +22,24 @@ Contient les scripts et fichiers de configuration pour intégrer Traefik avec Ra
 
 Voir [traefik/README.md](traefik/README.md) pour plus de détails.
 
+### `capi/` - Cluster API Provider Harvester (CAPHV)
+
+Contient les manifestes, scripts et documentation pour le provisionnement de clusters Kubernetes downstream sur Harvester via Cluster API :
+- Manifestes CAPI (Cluster, ControlPlane, MachineDeployment, ClusterResourceSets)
+- Scripts reproductibles de deploiement et scaling
+- Provider CAPHV (installation manifests)
+- Configuration parametrable
+
+Voir [capi/README.md](capi/README.md) pour plus de details.
+
 ### `docs/` - Documentation additionnelle
 
-Contient la documentation générale sur le projet :
+Contient la documentation generale sur le projet :
 - Analyse du code
 - Documentation de configuration
+- Guide de deploiement CAPI
 
-Voir [docs/README.md](docs/README.md) pour plus de détails.
+Voir [docs/README.md](docs/README.md) pour plus de details.
 
 ## Utilisation
 

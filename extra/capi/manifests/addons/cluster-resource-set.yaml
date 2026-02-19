@@ -1,0 +1,44 @@
+# ClusterResourceSets automatically deploy CCM, CSI, and Calico config
+# to downstream clusters matching the label selectors.
+---
+apiVersion: addons.cluster.x-k8s.io/v1beta2
+kind: ClusterResourceSet
+metadata:
+  name: crs-harvester-ccm
+  namespace: ${CAPI_NAMESPACE}
+spec:
+  clusterSelector:
+    matchLabels:
+      ccm: external
+  resources:
+    - kind: ConfigMap
+      name: harvester-ccm-addon
+  strategy: Reconcile
+---
+apiVersion: addons.cluster.x-k8s.io/v1beta2
+kind: ClusterResourceSet
+metadata:
+  name: crs-harvester-csi
+  namespace: ${CAPI_NAMESPACE}
+spec:
+  clusterSelector:
+    matchLabels:
+      csi: external
+  resources:
+    - kind: ConfigMap
+      name: harvester-csi-addon
+  strategy: Reconcile
+---
+apiVersion: addons.cluster.x-k8s.io/v1beta2
+kind: ClusterResourceSet
+metadata:
+  name: crs-calico-chart-config
+  namespace: ${CAPI_NAMESPACE}
+spec:
+  clusterSelector:
+    matchLabels:
+      cni: external
+  resources:
+    - kind: ConfigMap
+      name: calico-helm-config
+  strategy: ApplyOnce

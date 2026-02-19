@@ -1,0 +1,267 @@
+# ConfigMap containing Harvester CSI Driver manifests.
+# Deploys the CSI plugin DaemonSet, controller Deployment, RBAC,
+# CSIDriver resource, and default StorageClass.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: harvester-csi-addon
+  namespace: ${CAPI_NAMESPACE}
+data:
+  harvester-csi-deployment.yaml: |
+    apiVersion: v1
+    kind: ServiceAccount
+    metadata:
+      name: harvester-csi
+      namespace: kube-system
+    ---
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRoleBinding
+    metadata:
+      name: harvester-csi
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: cluster-admin
+    subjects:
+      - kind: ServiceAccount
+        name: harvester-csi
+        namespace: kube-system
+    ---
+    apiVersion: apps/v1
+    kind: DaemonSet
+    metadata:
+      name: harvester-csi-plugin
+      namespace: kube-system
+    spec:
+      selector:
+        matchLabels:
+          app: harvester-csi-plugin
+      template:
+        metadata:
+          labels:
+            app: harvester-csi-plugin
+        spec:
+          hostPID: true
+          serviceAccountName: harvester-csi
+          tolerations:
+            - key: node-role.kubernetes.io/control-plane
+              operator: Exists
+              effect: NoSchedule
+            - key: kubevirt.io/drain
+              operator: Exists
+              effect: NoSchedule
+          containers:
+            - name: node-driver-registrar
+              image: longhornio/csi-node-driver-registrar:v2.12.0
+              args:
+                - --v=5
+                - --csi-address=$(ADDRESS)
+                - --kubelet-registration-path=/var/lib/kubelet/harvester-plugins/driver.harvesterhci.io/csi.sock
+              env:
+                - name: ADDRESS
+                  value: /csi/csi.sock
+              lifecycle:
+                preStop:
+                  exec:
+                    command:
+                      - /bin/sh
+                      - -c
+                      - rm -rf /registration/driver.harvesterhci.io-reg.sock /csi//*
+              securityContext:
+                privileged: true
+              volumeMounts:
+                - name: socket-dir
+                  mountPath: /csi/
+                - name: registration-dir
+                  mountPath: /registration
+            - name: harvester-csi-plugin
+              image: rancher/harvester-csi-driver:v0.2.5
+              imagePullPolicy: Always
+              args:
+                - --nodeid=$(NODE_ID)
+                - --endpoint=$(CSI_ENDPOINT)
+                - --kubeconfig=/etc/csi/cloud-config
+              env:
+                - name: NODE_ID
+                  valueFrom:
+                    fieldRef:
+                      apiVersion: v1
+                      fieldPath: spec.nodeName
+                - name: CSI_ENDPOINT
+                  value: unix:///csi/csi.sock
+              lifecycle:
+                preStop:
+                  exec:
+                    command:
+                      - /bin/sh
+                      - -c
+                      - rm -f /csi//*
+              securityContext:
+                privileged: true
+                allowPrivilegeEscalation: true
+                capabilities:
+                  add:
+                    - SYS_ADMIN
+              volumeMounts:
+                - name: cloud-config
+                  mountPath: /etc/csi
+                  readOnly: true
+                - name: kubernetes-csi-dir
+                  mountPath: /var/lib/kubelet/plugins/kubernetes.io/csi
+                  mountPropagation: Bidirectional
+                - name: socket-dir
+                  mountPath: /csi/
+                - name: pods-mount-dir
+                  mountPath: /var/lib/kubelet/pods
+                  mountPropagation: Bidirectional
+                - name: host-dev
+                  mountPath: /dev
+                - name: host-sys
+                  mountPath: /sys
+                - name: host
+                  mountPath: /rootfs
+                  mountPropagation: Bidirectional
+                - name: lib-modules
+                  mountPath: /lib/modules
+                  readOnly: true
+          volumes:
+            - name: cloud-config
+              secret:
+                secretName: cloud-config
+            - name: kubernetes-csi-dir
+              hostPath:
+                path: /var/lib/kubelet/plugins/kubernetes.io/csi
+                type: DirectoryOrCreate
+            - name: registration-dir
+              hostPath:
+                path: /var/lib/kubelet/plugins_registry
+                type: Directory
+            - name: socket-dir
+              hostPath:
+                path: /var/lib/kubelet/harvester-plugins/driver.harvesterhci.io
+                type: DirectoryOrCreate
+            - name: pods-mount-dir
+              hostPath:
+                path: /var/lib/kubelet/pods
+                type: DirectoryOrCreate
+            - name: host-dev
+              hostPath:
+                path: /dev
+            - name: host-sys
+              hostPath:
+                path: /sys
+            - name: host
+              hostPath:
+                path: /
+            - name: lib-modules
+              hostPath:
+                path: /lib/modules
+    ---
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: csi-controller
+      namespace: kube-system
+    spec:
+      replicas: 1
+      selector:
+        matchLabels:
+          app: csi-controller
+      template:
+        metadata:
+          labels:
+            app: csi-controller
+        spec:
+          serviceAccountName: harvester-csi
+          tolerations:
+            - key: node-role.kubernetes.io/control-plane
+              operator: Exists
+              effect: NoSchedule
+            - key: kubevirt.io/drain
+              operator: Exists
+              effect: NoSchedule
+          containers:
+            - name: csi-resizer
+              image: longhornio/csi-resizer:v1.12.0
+              args:
+                - --v=5
+                - --csi-address=$(ADDRESS)
+                - --timeout=2m5s
+                - --leader-election
+                - --leader-election-namespace=$(POD_NAMESPACE)
+              env:
+                - name: ADDRESS
+                  value: /csi/csi.sock
+                - name: POD_NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      apiVersion: v1
+                      fieldPath: metadata.namespace
+              volumeMounts:
+                - name: socket-dir
+                  mountPath: /csi/
+            - name: csi-provisioner
+              image: longhornio/csi-provisioner:v5.1.0
+              args:
+                - --v=5
+                - --csi-address=$(ADDRESS)
+                - --timeout=2m5s
+                - --leader-election
+                - --leader-election-namespace=$(POD_NAMESPACE)
+              env:
+                - name: ADDRESS
+                  value: /csi/csi.sock
+                - name: POD_NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      apiVersion: v1
+                      fieldPath: metadata.namespace
+              volumeMounts:
+                - name: socket-dir
+                  mountPath: /csi/
+            - name: csi-attacher
+              image: longhornio/csi-attacher:v4.7.0
+              args:
+                - --v=5
+                - --csi-address=$(ADDRESS)
+                - --timeout=2m5s
+                - --leader-election
+                - --leader-election-namespace=$(POD_NAMESPACE)
+              env:
+                - name: ADDRESS
+                  value: /csi/csi.sock
+                - name: POD_NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      apiVersion: v1
+                      fieldPath: metadata.namespace
+              volumeMounts:
+                - name: socket-dir
+                  mountPath: /csi/
+          volumes:
+            - name: socket-dir
+              hostPath:
+                path: /var/lib/kubelet/harvester-plugins/driver.harvesterhci.io
+                type: DirectoryOrCreate
+    ---
+    apiVersion: storage.k8s.io/v1
+    kind: CSIDriver
+    metadata:
+      name: driver.harvesterhci.io
+    spec:
+      attachRequired: true
+      fsGroupPolicy: ReadWriteOnceWithFSType
+      podInfoOnMount: true
+      volumeLifecycleModes:
+        - Persistent
+    ---
+    apiVersion: storage.k8s.io/v1
+    kind: StorageClass
+    metadata:
+      name: harvester
+      annotations:
+        storageclass.kubernetes.io/is-default-class: "true"
+    allowVolumeExpansion: true
+    provisioner: driver.harvesterhci.io
+    reclaimPolicy: Delete
+    volumeBindingMode: Immediate

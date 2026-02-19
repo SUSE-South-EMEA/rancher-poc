@@ -10,6 +10,7 @@ proxyCA.pem
 configs/test-lab.sh
 config.yaml
 hosts.list
+extra/capi/configs/capi-homelab.sh
 
 # TLS keys and certificates (runtime artifacts)
 *.key

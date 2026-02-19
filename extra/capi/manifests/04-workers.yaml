@@ -1,0 +1,62 @@
+apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+kind: RKE2ConfigTemplate
+metadata:
+  name: ${CAPI_WORKER_CONFIG}
+  namespace: ${CAPI_NAMESPACE}
+spec:
+  template:
+    spec:
+      agentConfig: {}
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: HarvesterMachineTemplate
+metadata:
+  name: ${CAPI_WORKER_MACHINE}
+  namespace: ${CAPI_NAMESPACE}
+spec:
+  template:
+    spec:
+      cpu: ${CAPI_WORKER_CPU}
+      memory: ${CAPI_WORKER_MEMORY}
+      networks:
+        - ${CAPI_NETWORK}
+      networkConfig:
+        address: ${CAPI_VM_ADDRESS}
+        gateway: ${CAPI_GATEWAY}
+        dnsServers:
+          - ${CAPI_DNS_SERVERS}
+        dnsSearch:
+          - ${CAPI_DNS_SEARCH}
+      sshKeyPair: ${CAPI_HV_SSH_KEYPAIR}
+      sshUser: ${CAPI_HV_SSH_USER}
+      volumes:
+        - volumeType: image
+          imageName: ${CAPI_HV_IMAGE}
+          volumeSize: ${CAPI_WORKER_DISK}
+          bootOrder: 1
+---
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: MachineDeployment
+metadata:
+  name: ${CAPI_WORKER_NAME}
+  namespace: ${CAPI_NAMESPACE}
+spec:
+  clusterName: ${CAPI_CLUSTER_NAME}
+  replicas: ${CAPI_WORKER_REPLICAS}
+  selector:
+    matchLabels: {}
+  template:
+    spec:
+      clusterName: ${CAPI_CLUSTER_NAME}
+      version: ${CAPI_K8S_VERSION}
+      bootstrap:
+        configRef:
+          apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+          kind: RKE2ConfigTemplate
+          name: ${CAPI_WORKER_CONFIG}
+          namespace: ${CAPI_NAMESPACE}
+      infrastructureRef:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+        kind: HarvesterMachineTemplate
+        name: ${CAPI_WORKER_MACHINE}
+        namespace: ${CAPI_NAMESPACE}
