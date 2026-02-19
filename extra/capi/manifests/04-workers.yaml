@@ -21,7 +21,7 @@ spec:
       networks:
         - ${CAPI_NETWORK}
       networkConfig:
-        address: ${CAPI_VM_ADDRESS}
+        address: ${CAPI_WORKER_VM_ADDRESS}
         gateway: ${CAPI_GATEWAY}
         dnsServers:
           - ${CAPI_DNS_SERVERS}
