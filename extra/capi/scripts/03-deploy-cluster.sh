@@ -11,12 +11,14 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 
 source "$REPO_ROOT/00-common.sh" 2>/dev/null || true
 
+set -a
 for arg in "$@"; do
     case "$arg" in
         --config=*) source "${arg#*=}" ;;
     esac
 done
 source "$SCRIPT_DIR/../configs/capi-vars.sh"
+set +a
 
 if ! declare -f log_info >/dev/null 2>&1; then
     log_info()  { echo "[$(date '+%H:%M:%S')] [INFO]  $*"; }
