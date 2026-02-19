@@ -68,6 +68,9 @@ Cluster                    # Definition du cluster (labels ccm/csi/cni: external
 
 ### Addons via ClusterResourceSets
 
+**Important :** L'API ClusterResourceSet est `addons.cluster.x-k8s.io/v1beta1` sur CAPI
+Core v1.10.6. La version `v1beta2` n'est pas disponible.
+
 Les ClusterResourceSets (CRS) deploient automatiquement des ressources sur les
 clusters downstream qui matchent des labels specifiques :
 
@@ -154,17 +157,18 @@ Deploie le `MachineDeployment` avec le nombre de replicas configure.
 ## Scaling
 
 ```bash
-# Scale up
-./scripts/07-scale-workers.sh --replicas 3
+# Avec un config specifique
+./scripts/07-scale-workers.sh --config=configs/capi-test.sh --replicas 1
 
-# Scale down
-./scripts/07-scale-workers.sh --replicas 1
-
-# Supprimer tous les workers
-./scripts/07-scale-workers.sh --replicas 0
+# Supprimer tous les workers (~30s)
+./scripts/07-scale-workers.sh --config=configs/capi-test.sh --replicas 0
 ```
 
 Le MachineDeployment gere automatiquement la creation/suppression de VMs sur Harvester.
+
+**Note :** Apres un scale up, la nouvelle VM peut necessiter l'installation manuelle
+d'iptables (voir la section Limitations). Le worker met ~3.5 minutes a etre pret
+(creation VM + boot + cloud-init + bootstrap RKE2 + join cluster).
 
 ## Nettoyage
 
@@ -197,9 +201,23 @@ L'ordre de suppression est important :
 | `CAPI_WORKER_MEMORY` | `4Gi` | RAM par worker |
 | `CAPI_WORKER_DISK` | `40Gi` | Disque par worker |
 | `CAPI_NETWORK` | `default/production` | Reseau VM Harvester |
-| `CAPI_VM_ADDRESS` | `172.16.3.40/16` | Adresse IP statique VM |
+| `CAPI_VM_ADDRESS` | `172.16.3.40/16` | IP statique du CP |
+| `CAPI_WORKER_VM_ADDRESS` | `172.16.3.41/16` | IP statique du worker |
 | `CAPI_CNI` | `calico` | Plugin CNI |
 | `RANCHER_HOST` | `172.16.3.20` | IP du management cluster |
+
+## Resultats des tests (2026-02-19)
+
+| Test | Resultat | Duree |
+|------|----------|-------|
+| Prerequisites check | OK | ~5s |
+| Deploy addons CCM/CSI (CRS) | OK | ~1 min |
+| Deploy worker (MachineDeployment) | OK | ~3.5 min |
+| Scale down 1 -> 0 | OK | ~30s |
+| Scale up 0 -> 1 | OK | ~3.5 min |
+
+Cluster downstream final : 1 CP (172.16.3.40) + 1 Worker (172.16.3.41), RKE2 v1.31.6,
+tous les pods Running (CCM, CSI, Calico, ingress-nginx), auto-importe dans Rancher.
 
 ## Limitations connues
 
@@ -207,7 +225,19 @@ L'ordre de suppression est important :
   Configurer un pool IP statique pour la production.
 - **Single CP node** : Le PoC utilise 1 seul noeud control plane. Pour la HA,
   passer `CAPI_CP_REPLICAS=3` (necessite 3x les ressources).
-- **VM address statique unique** : Avec `networkConfig.address`, toutes les VMs
-  du meme template ont la meme IP. Pour plusieurs replicas, utiliser DHCP.
-- **Image SLES minimale** : L'image cloud n'a pas de repos. Les packages sont
-  limites a ce qui est dans l'image.
+- **Scaling limite a 1 worker** : Les IPs sont statiques car DHCP ne fonctionne pas
+  avec les images cloud SLES 15 SP7 sur Harvester bridge (cloud-init v1 `type: dhcp`
+  ne configure pas wicked correctement). Toutes les VMs d'un meme
+  HarvesterMachineTemplate partagent la meme `networkConfig`. Pour depasser cette
+  limite, il faudrait debugger le DHCP ou utiliser des MachineDeployments separes
+  avec des IPs differentes.
+- **iptables manquant** : L'image cloud SLES 15 SP7 minimale n'inclut pas iptables.
+  Chaque VM downstream (CP et workers) necessite une installation manuelle de
+  iptables + dependances apres le provisionnement. Sans iptables, kube-proxy et
+  le portmap CNI (Calico) ne fonctionnent pas, et ingress-nginx reste bloque.
+- **Image SLES minimale sans repos** : L'image cloud n'a pas de repos configures.
+  Les packages doivent etre transferes depuis une machine ayant des repos (ex: le
+  management cluster avec les repos MLM).
+- **Calico block affinity leak** : Sur la duree, Calico peut accumuler des block
+  affinities IPAM non utilisees, epuisant la limite par noeud (100 blocs). Nettoyer
+  manuellement via `kubectl delete blockaffinity`.

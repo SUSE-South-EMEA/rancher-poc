@@ -3,14 +3,15 @@
 Provisionnement automatise de clusters Kubernetes downstream sur Harvester
 via Cluster API (CAPI) avec le provider CAPHV.
 
-## Composants
+## Composants (versions testees)
 
-| Composant | Namespace | Role |
-|-----------|-----------|------|
-| Rancher Turtles | cattle-turtles-system | Integration CAPI dans Rancher |
-| CAPI Core | cattle-capi-system | Orchestration Cluster API |
-| RKE2 Bootstrap/CP | rke2-*-system | Bootstrap et control plane RKE2 |
-| CAPHV | caphv-system | Infrastructure provider Harvester |
+| Composant | Namespace | Version | Role |
+|-----------|-----------|---------|------|
+| Rancher Turtles | cattle-turtles-system | integre v2.13.1 | Integration CAPI dans Rancher |
+| CAPI Core | cattle-capi-system | v1.10.6 | Orchestration Cluster API |
+| RKE2 Bootstrap/CP | rke2-*-system | v0.21.1 | Bootstrap et control plane RKE2 |
+| CAPHV | caphv-system | v0.2.0-rc6 | Infrastructure provider Harvester |
+| ClusterResourceSet API | — | **v1beta1** | Addons CCM/CSI/Calico |
 
 ## Quick Start
 
@@ -83,12 +84,16 @@ scripts/
 ## Scaling
 
 ```bash
-# Scale a 2 workers
-./scripts/07-scale-workers.sh --replicas 2
+# Scale a zero (supprime les workers, ~30s)
+./scripts/07-scale-workers.sh --config=configs/capi-test.sh --replicas 0
 
-# Scale a zero (supprime les workers)
-./scripts/07-scale-workers.sh --replicas 0
+# Scale a 1 worker (~3.5 min pour le provisionnement complet)
+./scripts/07-scale-workers.sh --config=configs/capi-test.sh --replicas 1
 ```
+
+**Limitation :** Le scaling au-dela de 1 worker n'est pas possible avec des IPs statiques
+(toutes les VMs d'un meme HarvesterMachineTemplate partagent la meme networkConfig).
+DHCP ne fonctionne pas sur les images cloud SLES 15 SP7 via Harvester bridge.
 
 ## Nettoyage
 
@@ -136,7 +141,45 @@ scripts/
                    +-----------------------------------------+
 ```
 
-## Troubleshooting
+## Problemes connus et solutions
+
+### iptables manquant sur les VMs downstream
+
+L'image cloud SLES 15 SP7 minimale n'inclut pas iptables. Or kube-proxy et le portmap
+CNI (Calico) en ont besoin. Les pods ingress-nginx resteront en `ContainerCreating`
+avec l'erreur `"iptables": executable file not found in $PATH`.
+
+**Solution :** Installer iptables manuellement sur chaque VM downstream (CP et workers) :
+```bash
+# Telecharger les RPMs depuis le management cluster (qui a des repos MLM)
+ssh rancher@172.16.3.20 "sudo zypper --non-interactive --pkg-cache-dir /tmp/rpms download iptables"
+# Transferer et installer sur la VM downstream
+ssh rancher@172.16.3.20 "sudo find /tmp/rpms -name '*.rpm' -exec tar cf - {} +" \
+  | ssh sles@<VM_IP> "mkdir -p /tmp/rpms && cd / && tar xf - && find /tmp/rpms -name '*.rpm' -exec sudo rpm -ivh --nodeps {} +"
+# Supprimer le pod ingress bloque pour qu'il soit recree
+kubectl --kubeconfig /tmp/downstream.kubeconfig delete pod -n kube-system -l app.kubernetes.io/name=rke2-ingress-nginx
+```
+
+### DHCP ne fonctionne pas sur les VMs
+
+Cloud-init v1 `type: dhcp` ne configure pas correctement le reseau wicked sur SLES 15 SP7
+via le bridge Harvester. Les VMs n'obtiennent qu'une adresse IPv6 link-local.
+
+**Solution :** Utiliser des IPs statiques. Le CP et les workers ont des variables separees :
+`CAPI_VM_ADDRESS` (CP) et `CAPI_WORKER_VM_ADDRESS` (workers).
+
+### Calico : epuisement des block affinities IPAM
+
+Apres plusieurs jours, les block affinities Calico peuvent fuir (100 blocs /26 pour un
+seul noeud alors que ~13 IPs sont utilisees). Les nouveaux pods ne peuvent plus obtenir
+d'IPs.
+
+**Solution :**
+```bash
+kubectl --kubeconfig /tmp/downstream.kubeconfig get blockaffinities -o wide
+# Identifier et supprimer les blocs non utilises
+kubectl --kubeconfig /tmp/downstream.kubeconfig delete blockaffinity <name>
+```
 
 ### Le cluster reste en phase "Provisioning"
 ```bash
