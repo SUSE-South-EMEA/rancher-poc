@@ -17,10 +17,16 @@
             margin: 0 auto;
             padding: 30px 20px 120px;
         }
+        .header-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            margin-bottom: 8px;
+        }
         h1 {
             color: #fff;
             text-align: center;
-            margin-bottom: 8px;
             font-size: 1.8em;
         }
         .subtitle {
@@ -28,6 +34,22 @@
             text-align: center;
             margin-bottom: 30px;
             font-size: 0.95em;
+        }
+        .btn-doc-main {
+            background: rgba(255,255,255,0.2);
+            border: 2px solid rgba(255,255,255,0.5);
+            color: #fff;
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-size: 0.85em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s;
+            white-space: nowrap;
+        }
+        .btn-doc-main:hover {
+            background: rgba(255,255,255,0.35);
+            border-color: #fff;
         }
 
         /* Step cards */
@@ -68,7 +90,7 @@
             font-size: 0.8em; color: #718096; margin-top: 2px;
         }
 
-        .step-actions { display: flex; gap: 8px; flex-shrink: 0; }
+        .step-actions { display: flex; gap: 8px; flex-shrink: 0; align-items: center; }
 
         .btn {
             border: none; border-radius: 8px; padding: 8px 16px;
@@ -84,7 +106,22 @@
         .btn-details { background: #e2e8f0; color: #4a5568; }
         .btn-details:hover { background: #cbd5e0; }
 
-        /* Detail overlay */
+        .btn-help {
+            width: 28px; height: 28px;
+            border-radius: 50%;
+            background: #667eea;
+            color: #fff;
+            border: none;
+            font-size: 0.85em;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: background 0.2s, transform 0.1s;
+            flex-shrink: 0;
+        }
+        .btn-help:hover { background: #5a67d8; transform: scale(1.1); }
+
+        /* Detail overlay (existing) */
         .overlay {
             display: none;
             position: fixed; top: 0; left: 0; right: 0; bottom: 0;
@@ -123,6 +160,189 @@
             cursor: pointer; font-weight: 600;
         }
         .btn-close:hover { background: #cbd5e0; }
+
+        /* ===== Documentation overlay (resizable, draggable) ===== */
+        .doc-overlay {
+            display: none;
+            position: fixed;
+            z-index: 500;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.35), 0 0 0 1px rgba(0,0,0,0.08);
+            overflow: hidden;
+            min-width: 480px;
+            min-height: 320px;
+            resize: both;
+        }
+        .doc-overlay.visible { display: flex; flex-direction: column; }
+
+        .doc-overlay-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 16px;
+            background: #1a202c;
+            color: #e2e8f0;
+            cursor: move;
+            user-select: none;
+            flex-shrink: 0;
+        }
+        .doc-overlay-header h3 {
+            font-size: 0.95em;
+            font-weight: 600;
+            margin: 0;
+            color: #e2e8f0;
+        }
+        .doc-overlay-header-actions {
+            display: flex; gap: 8px; align-items: center;
+        }
+        .doc-overlay-header-actions button {
+            background: transparent;
+            border: none;
+            color: #a0aec0;
+            font-size: 1.1em;
+            cursor: pointer;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+        .doc-overlay-header-actions button:hover { color: #fff; background: rgba(255,255,255,0.1); }
+
+        .doc-overlay-body {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Sidebar / TOC */
+        .doc-sidebar {
+            width: 200px;
+            min-width: 160px;
+            background: #f7fafc;
+            border-right: 1px solid #e2e8f0;
+            overflow-y: auto;
+            flex-shrink: 0;
+            padding: 12px 0;
+        }
+        .doc-sidebar-title {
+            font-size: 0.75em;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #a0aec0;
+            padding: 0 14px 8px;
+        }
+        .doc-sidebar a {
+            display: block;
+            padding: 6px 14px;
+            font-size: 0.82em;
+            color: #4a5568;
+            text-decoration: none;
+            border-left: 3px solid transparent;
+            transition: background 0.15s, border-color 0.15s;
+        }
+        .doc-sidebar a:hover {
+            background: #edf2f7;
+            color: #2d3748;
+        }
+        .doc-sidebar a.active {
+            background: #ebf4ff;
+            color: #3182ce;
+            border-left-color: #3182ce;
+            font-weight: 600;
+        }
+
+        /* Content area */
+        .doc-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px 28px;
+            font-size: 0.92em;
+            line-height: 1.7;
+            color: #2d3748;
+        }
+        .doc-content h1 { font-size: 1.6em; margin: 0 0 16px; color: #1a202c; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
+        .doc-content h2 { font-size: 1.3em; margin: 28px 0 12px; color: #2d3748; border-bottom: 1px solid #edf2f7; padding-bottom: 6px; }
+        .doc-content h3 { font-size: 1.1em; margin: 20px 0 8px; color: #4a5568; }
+        .doc-content h4 { font-size: 1em; margin: 16px 0 6px; color: #4a5568; font-weight: 600; }
+        .doc-content p { margin-bottom: 12px; }
+        .doc-content ul, .doc-content ol { margin: 8px 0 12px 20px; }
+        .doc-content li { margin-bottom: 4px; }
+        .doc-content code {
+            display: block;
+            background: #1a202c;
+            color: #e2e8f0;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin: 6px 0 12px;
+            font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+            font-size: 0.88em;
+            overflow-x: auto;
+            white-space: pre;
+            line-height: 1.5;
+        }
+        .doc-content p code, .doc-content li code, .doc-content strong code {
+            display: inline;
+            background: #edf2f7;
+            color: #c53030;
+            padding: 1px 5px;
+            border-radius: 3px;
+            font-size: 0.9em;
+            margin: 0;
+            white-space: normal;
+        }
+        .doc-content pre {
+            background: #1a202c;
+            color: #e2e8f0;
+            padding: 16px 20px;
+            border-radius: 8px;
+            margin: 8px 0 16px;
+            font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+            font-size: 0.85em;
+            overflow-x: auto;
+            white-space: pre;
+            line-height: 1.5;
+        }
+        .doc-content pre code {
+            display: inline;
+            background: transparent;
+            color: inherit;
+            padding: 0;
+            margin: 0;
+            border-radius: 0;
+            font-size: inherit;
+        }
+        .doc-content hr { border: none; border-top: 1px solid #e2e8f0; margin: 20px 0; }
+        .doc-content blockquote {
+            border-left: 4px solid #667eea;
+            padding: 8px 16px;
+            margin: 8px 0 12px;
+            background: #f7fafc;
+            color: #4a5568;
+        }
+        .doc-content table {
+            border-collapse: collapse;
+            margin: 8px 0 16px;
+            width: 100%;
+        }
+        .doc-content th, .doc-content td {
+            border: 1px solid #e2e8f0;
+            padding: 6px 10px;
+            text-align: left;
+            font-size: 0.9em;
+        }
+        .doc-content th { background: #f7fafc; font-weight: 600; }
+
+        /* Step doc section divider */
+        .doc-content .step-section {
+            border-top: 2px solid #667eea;
+            padding-top: 20px;
+            margin-top: 28px;
+        }
+        .doc-content .step-section:first-child {
+            border-top: none;
+            margin-top: 0;
+            padding-top: 0;
+        }
 
         /* Console panel */
         .console-panel {
@@ -168,7 +388,10 @@
 </head>
 <body>
     <div class="container">
-        <h1>Keycloak + OpenLDAP</h1>
+        <div class="header-bar">
+            <h1>Keycloak + OpenLDAP</h1>
+            <button class="btn-doc-main" onclick="openDocOverlay()" title="Documentation complete">Documentation</button>
+        </div>
         <p class="subtitle">Rancher OIDC Authentication Setup</p>
 
         <div id="steps-list">
@@ -176,9 +399,25 @@
         </div>
     </div>
 
-    <!-- Detail overlay -->
+    <!-- Detail overlay (existing) -->
     <div class="overlay" id="overlay" onclick="if(event.target===this)closeOverlay()">
         <div class="overlay-content" id="overlay-content"></div>
+    </div>
+
+    <!-- Documentation overlay (new, resizable/draggable) -->
+    <div class="doc-overlay" id="doc-overlay">
+        <div class="doc-overlay-header" id="doc-overlay-header">
+            <h3 id="doc-overlay-title">Documentation</h3>
+            <div class="doc-overlay-header-actions">
+                <button onclick="closeDocOverlay()" title="Fermer">&times;</button>
+            </div>
+        </div>
+        <div class="doc-overlay-body">
+            <div class="doc-sidebar" id="doc-sidebar">
+                <div class="doc-sidebar-title">Sommaire</div>
+            </div>
+            <div class="doc-content" id="doc-content"></div>
+        </div>
     </div>
 
     <!-- Console panel -->
@@ -202,6 +441,8 @@
     let runningStep = null;
     let timerInterval = null;
     let startTime = null;
+
+    // ===== Steps =====
 
     async function loadStatus() {
         try {
@@ -228,6 +469,7 @@
                     <div class="step-status">${STEP_LABELS[state] || state}</div>
                 </div>
                 <div class="step-actions">
+                    <button class="btn-help" onclick="openStepDoc('${step.id}')" title="Documentation">?</button>
                     <button class="btn btn-details" onclick="showDetails('${step.id}')">Details</button>
                     <button class="btn btn-run" onclick="runStep('${step.id}')"
                         ${runningStep ? 'disabled' : ''}>Executer</button>
@@ -325,6 +567,8 @@
         }
     }
 
+    // ===== Console =====
+
     function openConsole(stepId) {
         const panel = document.getElementById('console-panel');
         const body = document.getElementById('console-body');
@@ -343,7 +587,6 @@
     function appendLine(text, cls) {
         const body = document.getElementById('console-body');
         const div = document.createElement('div');
-        // Auto-classify lines
         if (!cls) {
             if (/\[ERROR\]|\[FAIL\]/.test(text)) cls = 'line-err';
             else if (/\[WARN\]/.test(text)) cls = 'line-warn';
@@ -373,7 +616,342 @@
         return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     }
 
-    // Auto-refresh status every 30s
+    // ===== Documentation Overlay =====
+
+    let docDragState = null;
+
+    function initDocOverlayPosition() {
+        const el = document.getElementById('doc-overlay');
+        const saved = sessionStorage.getItem('docOverlayRect');
+        if (saved) {
+            try {
+                const r = JSON.parse(saved);
+                el.style.left = r.left + 'px';
+                el.style.top = r.top + 'px';
+                el.style.width = r.width + 'px';
+                el.style.height = r.height + 'px';
+                return;
+            } catch(e) { /* ignore */ }
+        }
+        // Default: centered, large
+        const w = Math.min(1000, window.innerWidth - 80);
+        const h = Math.min(700, window.innerHeight - 80);
+        el.style.width = w + 'px';
+        el.style.height = h + 'px';
+        el.style.left = ((window.innerWidth - w) / 2) + 'px';
+        el.style.top = ((window.innerHeight - h) / 2) + 'px';
+    }
+
+    function saveDocOverlayRect() {
+        const el = document.getElementById('doc-overlay');
+        const rect = {
+            left: el.offsetLeft,
+            top: el.offsetTop,
+            width: el.offsetWidth,
+            height: el.offsetHeight,
+        };
+        sessionStorage.setItem('docOverlayRect', JSON.stringify(rect));
+    }
+
+    // Draggable header
+    (function() {
+        const header = document.getElementById('doc-overlay-header');
+        const el = document.getElementById('doc-overlay');
+        let dragging = false, startX, startY, origLeft, origTop;
+
+        header.addEventListener('mousedown', function(e) {
+            if (e.target.tagName === 'BUTTON') return;
+            dragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            origLeft = el.offsetLeft;
+            origTop = el.offsetTop;
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', function(e) {
+            if (!dragging) return;
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            el.style.left = (origLeft + dx) + 'px';
+            el.style.top = (origTop + dy) + 'px';
+        });
+
+        document.addEventListener('mouseup', function() {
+            if (dragging) {
+                dragging = false;
+                saveDocOverlayRect();
+            }
+        });
+
+        // Save size on resize (CSS resize: both triggers this)
+        const observer = new ResizeObserver(() => {
+            if (el.classList.contains('visible')) {
+                saveDocOverlayRect();
+            }
+        });
+        observer.observe(el);
+    })();
+
+    async function openDocOverlay(scrollToStepId) {
+        const el = document.getElementById('doc-overlay');
+        const content = document.getElementById('doc-content');
+        const sidebar = document.getElementById('doc-sidebar');
+
+        initDocOverlayPosition();
+        el.classList.add('visible');
+        document.getElementById('doc-overlay-title').textContent = 'Documentation';
+
+        content.innerHTML = '<p style="color:#a0aec0;">Chargement...</p>';
+        sidebar.innerHTML = '<div class="doc-sidebar-title">Sommaire</div>';
+
+        // Fetch README
+        let readmeHtml = '';
+        try {
+            const resp = await fetch('/api/doc');
+            const data = await resp.json();
+            readmeHtml = renderMarkdown(data.content);
+        } catch(e) {
+            readmeHtml = '<p>Erreur de chargement du README.</p>';
+        }
+
+        // Fetch all step docs
+        let stepDocs = [];
+        try {
+            const statusResp = await fetch('/api/status');
+            const steps = await statusResp.json();
+            const docPromises = steps.map(s => fetch(`/api/steps/${s.id}/doc`).then(r => r.json()));
+            stepDocs = await Promise.all(docPromises);
+        } catch(e) { /* ignore */ }
+
+        // Build content
+        let html = '';
+        html += '<div id="doc-section-readme">' + readmeHtml + '</div>';
+        html += '<hr>';
+        html += '<h2 id="doc-section-steps">Documentation par etape</h2>';
+
+        stepDocs.forEach((sd, i) => {
+            html += `<div class="step-section" id="doc-section-${sd.id}">`;
+            html += `<h3>Etape ${i} : ${escapeHtml(sd.title)}</h3>`;
+            html += sd.doc || '<p>Pas de documentation detaillee.</p>';
+            html += '</div>';
+        });
+
+        content.innerHTML = html;
+
+        // Build sidebar TOC
+        let tocHtml = '<div class="doc-sidebar-title">Sommaire</div>';
+        tocHtml += `<a href="#" onclick="docScrollTo('doc-section-readme');return false;">README</a>`;
+        tocHtml += `<a href="#" onclick="docScrollTo('doc-section-steps');return false;">Etapes</a>`;
+        stepDocs.forEach((sd, i) => {
+            tocHtml += `<a href="#" data-section="doc-section-${sd.id}" onclick="docScrollTo('doc-section-${sd.id}');return false;">${i}. ${escapeHtml(sd.title)}</a>`;
+        });
+        sidebar.innerHTML = tocHtml;
+
+        // Highlight active TOC on scroll
+        content.addEventListener('scroll', updateTocHighlight);
+
+        // Scroll to step if requested
+        if (scrollToStepId) {
+            setTimeout(() => docScrollTo('doc-section-' + scrollToStepId), 100);
+        }
+    }
+
+    function docScrollTo(sectionId) {
+        const content = document.getElementById('doc-content');
+        const target = document.getElementById(sectionId);
+        if (target) {
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        // Highlight in sidebar
+        document.querySelectorAll('#doc-sidebar a').forEach(a => a.classList.remove('active'));
+        const link = document.querySelector(`#doc-sidebar a[data-section="${sectionId}"]`) ||
+                     document.querySelector(`#doc-sidebar a[onclick*="${sectionId}"]`);
+        if (link) link.classList.add('active');
+    }
+
+    function updateTocHighlight() {
+        const content = document.getElementById('doc-content');
+        const sections = content.querySelectorAll('[id^="doc-section-"]');
+        let activeId = null;
+        sections.forEach(sec => {
+            const rect = sec.getBoundingClientRect();
+            const contentRect = content.getBoundingClientRect();
+            if (rect.top - contentRect.top <= 60) {
+                activeId = sec.id;
+            }
+        });
+        if (activeId) {
+            document.querySelectorAll('#doc-sidebar a').forEach(a => a.classList.remove('active'));
+            const link = document.querySelector(`#doc-sidebar a[data-section="${activeId}"]`) ||
+                         document.querySelector(`#doc-sidebar a[onclick*="${activeId}"]`);
+            if (link) link.classList.add('active');
+        }
+    }
+
+    async function openStepDoc(stepId) {
+        await openDocOverlay(stepId);
+    }
+
+    function closeDocOverlay() {
+        const el = document.getElementById('doc-overlay');
+        saveDocOverlayRect();
+        el.classList.remove('visible');
+    }
+
+    // ===== Simple Markdown to HTML renderer =====
+
+    function renderMarkdown(md) {
+        if (!md) return '';
+        const lines = md.split('\n');
+        let html = '';
+        let inCodeBlock = false;
+        let codeContent = '';
+        let inList = false;
+        let listType = '';
+        let inTable = false;
+        let tableRows = [];
+
+        function flushList() {
+            if (inList) {
+                html += listType === 'ul' ? '</ul>' : '</ol>';
+                inList = false;
+            }
+        }
+
+        function flushTable() {
+            if (inTable && tableRows.length > 0) {
+                html += '<table>';
+                tableRows.forEach((row, ri) => {
+                    // Skip separator row (---|--)
+                    if (/^\s*\|?\s*[-:]+(\s*\|\s*[-:]+)*\s*\|?\s*$/.test(row)) return;
+                    const cells = row.replace(/^\|/, '').replace(/\|$/, '').split('|').map(c => c.trim());
+                    const tag = ri === 0 ? 'th' : 'td';
+                    html += '<tr>';
+                    cells.forEach(c => { html += `<${tag}>${inlineMarkdown(c)}</${tag}>`; });
+                    html += '</tr>';
+                });
+                html += '</table>';
+                tableRows = [];
+                inTable = false;
+            }
+        }
+
+        function inlineMarkdown(text) {
+            // Bold
+            text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+            text = text.replace(/__(.+?)__/g, '<strong>$1</strong>');
+            // Italic
+            text = text.replace(/\*(.+?)\*/g, '<em>$1</em>');
+            text = text.replace(/_(.+?)_/g, '<em>$1</em>');
+            // Inline code
+            text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
+            // Links
+            text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+            return text;
+        }
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+
+            // Code blocks
+            if (/^```/.test(line)) {
+                if (inCodeBlock) {
+                    html += '<pre><code>' + escapeHtml(codeContent) + '</code></pre>';
+                    codeContent = '';
+                    inCodeBlock = false;
+                } else {
+                    flushList();
+                    flushTable();
+                    inCodeBlock = true;
+                }
+                continue;
+            }
+            if (inCodeBlock) {
+                codeContent += (codeContent ? '\n' : '') + line;
+                continue;
+            }
+
+            // Table rows
+            if (/^\s*\|/.test(line)) {
+                flushList();
+                inTable = true;
+                tableRows.push(line);
+                continue;
+            } else {
+                flushTable();
+            }
+
+            // Empty line
+            if (/^\s*$/.test(line)) {
+                flushList();
+                continue;
+            }
+
+            // Headings
+            const headingMatch = line.match(/^(#{1,6})\s+(.+)$/);
+            if (headingMatch) {
+                flushList();
+                const level = headingMatch[1].length;
+                const text = headingMatch[2];
+                const id = 'md-' + text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+                html += `<h${level} id="${id}">${inlineMarkdown(text)}</h${level}>`;
+                continue;
+            }
+
+            // Horizontal rule
+            if (/^(-{3,}|_{3,}|\*{3,})\s*$/.test(line)) {
+                flushList();
+                html += '<hr>';
+                continue;
+            }
+
+            // Blockquote
+            if (/^>\s?/.test(line)) {
+                flushList();
+                html += '<blockquote>' + inlineMarkdown(line.replace(/^>\s?/, '')) + '</blockquote>';
+                continue;
+            }
+
+            // Unordered list
+            if (/^[\s]*[-*+]\s+/.test(line)) {
+                if (!inList || listType !== 'ul') {
+                    flushList();
+                    html += '<ul>';
+                    inList = true;
+                    listType = 'ul';
+                }
+                html += '<li>' + inlineMarkdown(line.replace(/^[\s]*[-*+]\s+/, '')) + '</li>';
+                continue;
+            }
+
+            // Ordered list
+            if (/^[\s]*\d+\.\s+/.test(line)) {
+                if (!inList || listType !== 'ol') {
+                    flushList();
+                    html += '<ol>';
+                    inList = true;
+                    listType = 'ol';
+                }
+                html += '<li>' + inlineMarkdown(line.replace(/^[\s]*\d+\.\s+/, '')) + '</li>';
+                continue;
+            }
+
+            // Paragraph
+            flushList();
+            html += '<p>' + inlineMarkdown(line) + '</p>';
+        }
+
+        flushList();
+        flushTable();
+        if (inCodeBlock) {
+            html += '<pre><code>' + escapeHtml(codeContent) + '</code></pre>';
+        }
+
+        return html;
+    }
+
+    // ===== Init =====
     loadStatus();
     setInterval(loadStatus, 30000);
     </script>
