@@ -276,31 +276,47 @@
         document.getElementById('overlay').classList.remove('visible');
     }
 
-    function runStep(stepId) {
+    async function runStep(stepId) {
         if (runningStep) return;
         runningStep = stepId;
         renderSteps();
         openConsole(stepId);
 
-        const sse = new EventSource(`/api/steps/${stepId}/run`);
-        sse.onmessage = (e) => {
-            if (e.data.startsWith('__DONE_OK__')) {
-                appendLine('[OK] Termine avec succes', 'line-ok');
-                sse.close();
+        try {
+            const resp = await fetch(`/api/steps/${stepId}/run`, { method: 'POST' });
+            if (!resp.ok) {
+                const err = await resp.json().catch(() => ({ error: `HTTP ${resp.status}` }));
+                appendLine('[INFO] ' + (err.error || 'Etape non automatisable'), 'line-warn');
                 finish();
-            } else if (e.data.startsWith('__DONE_FAIL__')) {
-                appendLine('[ERREUR] ' + e.data, 'line-err');
-                sse.close();
-                finish();
-            } else {
-                appendLine(e.data);
+                return;
             }
-        };
-        sse.onerror = () => {
-            appendLine('[ERREUR] Connexion SSE perdue', 'line-err');
-            sse.close();
-            finish();
-        };
+
+            const reader = resp.body.getReader();
+            const decoder = new TextDecoder();
+            let buf = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buf += decoder.decode(value, { stream: true });
+                const lines = buf.split('\n');
+                buf = lines.pop();
+                for (const line of lines) {
+                    if (!line.startsWith('data: ')) continue;
+                    const msg = line.slice(6);
+                    if (msg.startsWith('__DONE_OK__')) {
+                        appendLine('[OK] Termine avec succes', 'line-ok');
+                    } else if (msg.startsWith('__DONE_FAIL__')) {
+                        appendLine('[ERREUR] ' + msg, 'line-err');
+                    } else {
+                        appendLine(msg);
+                    }
+                }
+            }
+        } catch (e) {
+            appendLine('[ERREUR] ' + e.message, 'line-err');
+        }
+        finish();
 
         function finish() {
             runningStep = null;
