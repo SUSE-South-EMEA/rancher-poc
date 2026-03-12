@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Keycloak + OpenLDAP — Rancher OIDC Setup</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 30px 20px 120px;
+        }
+        h1 {
+            color: #fff;
+            text-align: center;
+            margin-bottom: 8px;
+            font-size: 1.8em;
+        }
+        .subtitle {
+            color: rgba(255,255,255,0.8);
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 0.95em;
+        }
+
+        /* Step cards */
+        .step-card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 20px 24px;
+            margin-bottom: 14px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            transition: box-shadow 0.2s;
+        }
+        .step-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
+
+        .step-num {
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            background: #e2e8f0;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 0.95em; color: #4a5568;
+            flex-shrink: 0;
+        }
+        .step-card.ok .step-num { background: #48bb78; color: #fff; }
+        .step-card.not_ready .step-num { background: #e2e8f0; color: #4a5568; }
+        .step-card.unknown .step-num { background: #ecc94b; color: #744210; }
+        .step-card.running .step-num { background: #667eea; color: #fff; animation: pulse 1s infinite; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .step-info { flex: 1; }
+        .step-title { font-weight: 600; font-size: 1.05em; }
+        .step-status {
+            font-size: 0.8em; color: #718096; margin-top: 2px;
+        }
+
+        .step-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+        .btn {
+            border: none; border-radius: 8px; padding: 8px 16px;
+            font-size: 0.85em; font-weight: 600; cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+        }
+        .btn:hover { transform: translateY(-1px); }
+        .btn:active { transform: translateY(0); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        .btn-run { background: #48bb78; color: #fff; }
+        .btn-run:hover { background: #38a169; }
+        .btn-details { background: #e2e8f0; color: #4a5568; }
+        .btn-details:hover { background: #cbd5e0; }
+
+        /* Detail overlay */
+        .overlay {
+            display: none;
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 100;
+            justify-content: center; align-items: center;
+        }
+        .overlay.visible { display: flex; }
+        .overlay-content {
+            background: #fff; border-radius: 16px;
+            max-width: 700px; width: 90%; max-height: 80vh;
+            overflow-y: auto; padding: 28px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .overlay-content h2 { margin-bottom: 12px; font-size: 1.3em; }
+        .overlay-content p { margin-bottom: 12px; line-height: 1.6; color: #4a5568; }
+        .overlay-content h3 { margin: 16px 0 8px; font-size: 1em; color: #2d3748; }
+        .overlay-content code {
+            display: block; background: #1a202c; color: #e2e8f0;
+            padding: 12px 16px; border-radius: 8px; margin: 4px 0 8px;
+            font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+            font-size: 0.85em; overflow-x: auto; white-space: pre;
+        }
+        .overlay-content .var-list {
+            list-style: none; padding: 0;
+        }
+        .overlay-content .var-list li {
+            padding: 4px 0; font-size: 0.9em; color: #4a5568;
+        }
+        .overlay-content .var-list li::before {
+            content: "\2022"; color: #667eea; font-weight: bold; margin-right: 8px;
+        }
+        .btn-close {
+            float: right; background: #e2e8f0; color: #4a5568;
+            border: none; border-radius: 8px; padding: 6px 14px;
+            cursor: pointer; font-weight: 600;
+        }
+        .btn-close:hover { background: #cbd5e0; }
+
+        /* Console panel */
+        .console-panel {
+            display: none;
+            position: fixed; bottom: 0; left: 0; right: 0;
+            height: 280px;
+            background: #1a202c;
+            border-top: 3px solid #667eea;
+            z-index: 200;
+            flex-direction: column;
+        }
+        .console-panel.visible { display: flex; }
+        .console-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 8px 16px;
+            background: #2d3748;
+            color: #e2e8f0;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+        .console-header .timer { color: #a0aec0; font-weight: 400; }
+        .console-body {
+            flex: 1; overflow-y: auto;
+            padding: 12px 16px;
+            font-family: 'SF Mono', 'Fira Code', Consolas, monospace;
+            font-size: 0.8em;
+            color: #e2e8f0;
+            line-height: 1.5;
+        }
+        .console-body .line-ok { color: #48bb78; }
+        .console-body .line-err { color: #fc8181; }
+        .console-body .line-warn { color: #ecc94b; }
+        .console-body .line-info { color: #63b3ed; }
+        .btn-console-close {
+            background: transparent; border: none; color: #a0aec0;
+            cursor: pointer; font-size: 1.1em; padding: 4px 8px;
+        }
+        .btn-console-close:hover { color: #fff; }
+
+        /* Loading */
+        .loading { text-align: center; color: rgba(255,255,255,0.7); padding: 40px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Keycloak + OpenLDAP</h1>
+        <p class="subtitle">Rancher OIDC Authentication Setup</p>
+
+        <div id="steps-list">
+            <div class="loading">Chargement...</div>
+        </div>
+    </div>
+
+    <!-- Detail overlay -->
+    <div class="overlay" id="overlay" onclick="if(event.target===this)closeOverlay()">
+        <div class="overlay-content" id="overlay-content"></div>
+    </div>
+
+    <!-- Console panel -->
+    <div class="console-panel" id="console-panel">
+        <div class="console-header">
+            <span id="console-title">Console</span>
+            <span>
+                <span class="timer" id="console-timer"></span>
+                <button class="btn-console-close" onclick="closeConsole()" title="Fermer">&times;</button>
+            </span>
+        </div>
+        <div class="console-body" id="console-body"></div>
+    </div>
+
+    <script>
+    const STEP_LABELS = {
+        ok: 'OK', not_ready: 'Non deploye', unknown: 'A verifier', running: 'En cours...'
+    };
+
+    let stepsData = [];
+    let runningStep = null;
+    let timerInterval = null;
+    let startTime = null;
+
+    async function loadStatus() {
+        try {
+            const resp = await fetch('/api/status');
+            stepsData = await resp.json();
+            renderSteps();
+        } catch (e) {
+            document.getElementById('steps-list').innerHTML =
+                '<div class="loading">Erreur de connexion au serveur</div>';
+        }
+    }
+
+    function renderSteps() {
+        const list = document.getElementById('steps-list');
+        list.innerHTML = '';
+        stepsData.forEach((step, i) => {
+            const state = runningStep === step.id ? 'running' : step.status;
+            const card = document.createElement('div');
+            card.className = `step-card ${state}`;
+            card.innerHTML = `
+                <div class="step-num">${i}</div>
+                <div class="step-info">
+                    <div class="step-title">${step.title}</div>
+                    <div class="step-status">${STEP_LABELS[state] || state}</div>
+                </div>
+                <div class="step-actions">
+                    <button class="btn btn-details" onclick="showDetails('${step.id}')">Details</button>
+                    <button class="btn btn-run" onclick="runStep('${step.id}')"
+                        ${runningStep ? 'disabled' : ''}>Executer</button>
+                </div>
+            `;
+            list.appendChild(card);
+        });
+    }
+
+    async function showDetails(stepId) {
+        try {
+            const resp = await fetch(`/api/steps/${stepId}/details`);
+            const data = await resp.json();
+            const overlay = document.getElementById('overlay');
+            const content = document.getElementById('overlay-content');
+
+            let html = `<button class="btn-close" onclick="closeOverlay()">Fermer</button>`;
+            html += `<h2>${data.title}</h2>`;
+            html += `<p>${data.description}</p>`;
+
+            if (data.script) {
+                html += `<h3>Script</h3><code>${data.script}</code>`;
+            }
+
+            if (data.variables && data.variables.length) {
+                html += `<h3>Variables</h3><ul class="var-list">`;
+                data.variables.forEach(v => { html += `<li>${v}</li>`; });
+                html += `</ul>`;
+            }
+
+            if (data.manual_commands && data.manual_commands.length) {
+                html += `<h3>Commandes manuelles</h3>`;
+                data.manual_commands.forEach(cmd => {
+                    html += `<code>${escapeHtml(cmd)}</code>`;
+                });
+            }
+
+            content.innerHTML = html;
+            overlay.classList.add('visible');
+        } catch (e) {
+            alert('Erreur: ' + e.message);
+        }
+    }
+
+    function closeOverlay() {
+        document.getElementById('overlay').classList.remove('visible');
+    }
+
+    function runStep(stepId) {
+        if (runningStep) return;
+        runningStep = stepId;
+        renderSteps();
+        openConsole(stepId);
+
+        const sse = new EventSource(`/api/steps/${stepId}/run`);
+        sse.onmessage = (e) => {
+            if (e.data.startsWith('__DONE_OK__')) {
+                appendLine('[OK] Termine avec succes', 'line-ok');
+                sse.close();
+                finish();
+            } else if (e.data.startsWith('__DONE_FAIL__')) {
+                appendLine('[ERREUR] ' + e.data, 'line-err');
+                sse.close();
+                finish();
+            } else {
+                appendLine(e.data);
+            }
+        };
+        sse.onerror = () => {
+            appendLine('[ERREUR] Connexion SSE perdue', 'line-err');
+            sse.close();
+            finish();
+        };
+
+        function finish() {
+            runningStep = null;
+            stopTimer();
+            setTimeout(loadStatus, 1000);
+        }
+    }
+
+    function openConsole(stepId) {
+        const panel = document.getElementById('console-panel');
+        const body = document.getElementById('console-body');
+        const title = document.getElementById('console-title');
+        body.innerHTML = '';
+        title.textContent = 'Console — ' + stepId;
+        panel.classList.add('visible');
+        startTimer();
+    }
+
+    function closeConsole() {
+        document.getElementById('console-panel').classList.remove('visible');
+        stopTimer();
+    }
+
+    function appendLine(text, cls) {
+        const body = document.getElementById('console-body');
+        const div = document.createElement('div');
+        // Auto-classify lines
+        if (!cls) {
+            if (/\[ERROR\]|\[FAIL\]/.test(text)) cls = 'line-err';
+            else if (/\[WARN\]/.test(text)) cls = 'line-warn';
+            else if (/\[INFO\]|\[PASS\]/.test(text)) cls = 'line-info';
+        }
+        if (cls) div.className = cls;
+        div.textContent = text;
+        body.appendChild(div);
+        body.scrollTop = body.scrollHeight;
+    }
+
+    function startTimer() {
+        startTime = Date.now();
+        const el = document.getElementById('console-timer');
+        timerInterval = setInterval(() => {
+            const s = Math.floor((Date.now() - startTime) / 1000);
+            const m = Math.floor(s / 60);
+            el.textContent = `${m}:${String(s % 60).padStart(2, '0')}`;
+        }, 1000);
+    }
+
+    function stopTimer() {
+        if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+    }
+
+    function escapeHtml(str) {
+        return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    // Auto-refresh status every 30s
+    loadStatus();
+    setInterval(loadStatus, 30000);
+    </script>
+</body>
+</html>

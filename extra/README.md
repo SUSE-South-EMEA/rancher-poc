@@ -22,15 +22,15 @@ Contient les scripts et fichiers de configuration pour intégrer Traefik avec Ra
 
 Voir [traefik/README.md](traefik/README.md) pour plus de détails.
 
-### `capi/` - Cluster API Provider Harvester (CAPHV)
+### `keycloak/` - Keycloak + OpenLDAP pour Rancher OIDC
 
-Contient les manifestes, scripts et documentation pour le provisionnement de clusters Kubernetes downstream sur Harvester via Cluster API :
-- Manifestes CAPI (Cluster, ControlPlane, MachineDeployment, ClusterResourceSets)
-- Scripts reproductibles de deploiement et scaling
-- Provider CAPHV (installation manifests)
-- Configuration parametrable
+Deploie Keycloak et OpenLDAP sur une VM dediee (172.16.3.12) et configure l'authentification OIDC dans Rancher Manager :
+- Scripts de deploiement pas a pas (OpenLDAP, Keycloak, DNS, OIDC)
+- Templates LDIF configurables (OUs, groupes, utilisateurs)
+- Interface web Flask pour piloter le deploiement
+- Module Terraform associe : `TERRAFORM/KEYCLOAK/`
 
-Voir [capi/README.md](capi/README.md) pour plus de details.
+Voir [keycloak/README.md](keycloak/README.md) pour plus de details.
 
 ### `docs/` - Documentation additionnelle
 
