@@ -38,10 +38,24 @@ else
     log_warn "Could not login to Rancher API — OIDC may need to be disabled manually"
 fi
 
-# --- 2. Remove CA cert from Rancher VM ---
-log_info "Removing Keycloak CA from Rancher VM trust store..."
+# --- 2. Remove CA cert and revert Helm privateCA ---
+log_info "Removing Keycloak CA from Rancher..."
 SSH_RANCHER="ssh -o StrictHostKeyChecking=accept-new ${RANCHER_VM_SSH_USER}@${RANCHER_VM_HOST}"
-$SSH_RANCHER "sudo rm -f /etc/pki/trust/anchors/keycloak-ca.crt && sudo update-ca-certificates" 2>/dev/null || log_warn "Could not remove CA cert"
+KUBECTL="sudo /var/lib/rancher/rke2/bin/kubectl --kubeconfig /etc/rancher/rke2/rke2.yaml"
+HELM="sudo KUBECONFIG=/etc/rancher/rke2/rke2.yaml /usr/local/bin/helm"
+
+$SSH_RANCHER "sudo rm -f /etc/pki/trust/anchors/keycloak-ca.crt && sudo update-ca-certificates" 2>/dev/null || log_warn "Could not remove CA cert from VM"
+$SSH_RANCHER "$KUBECTL -n cattle-system delete secret tls-ca" 2>/dev/null || log_warn "Could not delete tls-ca secret"
+
+# Revert Helm to remove privateCA
+$SSH_RANCHER "$HELM upgrade rancher rancher-prime/rancher -n cattle-system \
+    --set hostname=rancher.home.zypp.fr \
+    --set tls=external \
+    --set replicas=1 \
+    --set systemDefaultRegistry=registry.rancher.com \
+    --set global.cattle.psp.enabled=false \
+    --set startupProbe.failureThreshold=60" 2>/dev/null || log_warn "Could not revert Helm values"
+log_info "CA and privateCA reverted"
 
 # --- 3. Stop and remove containers on IDP VM ---
 log_info "Stopping containers on IDP VM..."

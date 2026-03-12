@@ -22,10 +22,13 @@ OIDC_CLIENT_SECRET=$(vault_get "$VAULT_KC_SECRET_PATH" oidc_client_secret)
 RANCHER_PASSWORD=$(vault_get "secret/services/rancher" password)
 
 KC_BASE="https://${KC_FQDN}:${KC_HTTPS_PORT}"
+SSH_RANCHER="ssh -o StrictHostKeyChecking=accept-new ${RANCHER_VM_SSH_USER}@${RANCHER_VM_HOST}"
+KUBECTL="sudo /var/lib/rancher/rke2/bin/kubectl --kubeconfig /etc/rancher/rke2/rke2.yaml"
+HELM="sudo KUBECONFIG=/etc/rancher/rke2/rke2.yaml /usr/local/bin/helm"
 
 log_info "=== Step 5: Configure Rancher OIDC authentication ==="
 
-# --- 1. Install self-signed CA on Rancher VM ---
+# --- 1. Install self-signed CA on Rancher VM trust store ---
 log_info "Installing Keycloak CA certificate on Rancher VM..."
 
 CERT_FILE="$SCRIPT_DIR/.certs/keycloak-ca.crt"
@@ -35,42 +38,76 @@ if [[ ! -f "$CERT_FILE" ]]; then
     exit 1
 fi
 
-SSH_RANCHER="ssh -o StrictHostKeyChecking=accept-new ${RANCHER_VM_SSH_USER}@${RANCHER_VM_HOST}"
-
-# Transfer cert to Rancher VM
+# Transfer cert to Rancher VM (host-level trust)
 $SSH_RANCHER "cat > /tmp/keycloak-ca.crt" < "$CERT_FILE"
 $SSH_RANCHER "sudo cp /tmp/keycloak-ca.crt /etc/pki/trust/anchors/keycloak-ca.crt && sudo update-ca-certificates"
-log_info "CA certificate installed on Rancher VM"
+log_info "CA certificate installed on Rancher VM trust store"
 
-# --- 2. Restart Rancher pods to pick up new CA (only if cert changed) ---
-KUBECTL="sudo /var/lib/rancher/rke2/bin/kubectl --kubeconfig /etc/rancher/rke2/rke2.yaml"
+# --- 2. Inject CA into Rancher pods via tls-ca secret + Helm privateCA ---
+log_info "Creating tls-ca secret for Rancher pods..."
 
-# Check if Rancher can already reach Keycloak with the CA
-CAN_REACH=$($SSH_RANCHER "curl -sf https://${KC_FQDN}:${KC_HTTPS_PORT}/realms/master 2>/dev/null | head -c 20" || echo "")
-if echo "$CAN_REACH" | grep -q "realm"; then
-    log_info "Rancher VM can already reach Keycloak (CA already trusted)"
+# Check if secret already exists with correct content
+EXISTING_CA=$($SSH_RANCHER "$KUBECTL -n cattle-system get secret tls-ca -o jsonpath='{.data.cacerts\.pem}'" 2>/dev/null | base64 -d 2>/dev/null || echo "")
+LOCAL_CA=$(cat "$CERT_FILE")
+
+if [[ "$EXISTING_CA" == "$LOCAL_CA" ]]; then
+    log_info "tls-ca secret already up to date"
 else
-    log_info "Restarting Rancher deployment to trust new CA..."
-    $SSH_RANCHER "$KUBECTL rollout restart deployment/rancher -n cattle-system"
-
-    log_info "Waiting for Rancher rollout to complete..."
-    $SSH_RANCHER "$KUBECTL rollout status deployment/rancher -n cattle-system --timeout=300s" 2>/dev/null || true
+    # Delete if exists with wrong content
+    $SSH_RANCHER "$KUBECTL -n cattle-system delete secret tls-ca 2>/dev/null || true"
+    # Create secret with Keycloak CA
+    cat "$CERT_FILE" | $SSH_RANCHER "cat > /tmp/keycloak-ca.pem"
+    $SSH_RANCHER "$KUBECTL -n cattle-system create secret generic tls-ca --from-file=cacerts.pem=/tmp/keycloak-ca.pem"
+    $SSH_RANCHER "rm -f /tmp/keycloak-ca.pem"
+    log_info "tls-ca secret created"
 fi
 
+# --- 3. Helm upgrade with privateCA=true (injects CA into pods) ---
+# Check current Helm values
+CURRENT_PCA=$($SSH_RANCHER "$HELM get values rancher -n cattle-system" 2>/dev/null | grep "privateCA:" || echo "")
+if echo "$CURRENT_PCA" | grep -q "true"; then
+    log_info "privateCA already enabled in Helm"
+else
+    log_info "Enabling privateCA in Rancher Helm release..."
+    $SSH_RANCHER "$HELM upgrade rancher rancher-prime/rancher -n cattle-system \
+        --set hostname=rancher.home.zypp.fr \
+        --set tls=external \
+        --set privateCA=true \
+        --set replicas=1 \
+        --set systemDefaultRegistry=registry.rancher.com \
+        --set global.cattle.psp.enabled=false \
+        --set startupProbe.failureThreshold=60"
+    log_info "Helm upgrade complete"
+fi
+
+# --- 4. Wait for Rancher to be ready ---
+log_info "Waiting for Rancher rollout..."
+$SSH_RANCHER "$KUBECTL -n cattle-system rollout status deploy/rancher --timeout=300s" 2>/dev/null || true
+
 log_info "Waiting for Rancher API to respond..."
-for i in $(seq 1 60); do
+for i in $(seq 1 90); do
     HTTP_CODE=$(curl -sk -o /dev/null -w "%{http_code}" "${RANCHER_URL}/ping" 2>/dev/null || echo "000")
     if [[ "$HTTP_CODE" == "200" ]]; then
         log_info "Rancher API is responding"
         break
     fi
-    if [[ $i -eq 60 ]]; then
-        log_warn "Rancher API still not responding after 120s, continuing anyway..."
+    if [[ $i -eq 90 ]]; then
+        log_warn "Rancher API still not responding after 180s, continuing anyway..."
     fi
     sleep 2
 done
 
-# --- 3. Login to Rancher API ---
+# --- 5. Verify pod can reach Keycloak ---
+log_info "Verifying Keycloak reachability from Rancher pod..."
+POD_CHECK=$($SSH_RANCHER "$KUBECTL exec -n cattle-system deploy/rancher -- curl -sf https://${KC_FQDN}:${KC_HTTPS_PORT}/realms/${KC_REALM}/.well-known/openid-configuration 2>/dev/null | head -c 50" || echo "")
+if echo "$POD_CHECK" | grep -q "issuer"; then
+    log_info "Rancher pod can reach Keycloak OIDC (TLS validated)"
+else
+    log_warn "Rancher pod cannot reach Keycloak — OIDC login may fail"
+    log_warn "Check that tls-ca secret is mounted and DNS resolves inside the pod"
+fi
+
+# --- 6. Login to Rancher API ---
 log_info "Logging in to Rancher API..."
 LOGIN_RESPONSE=$(curl -sk -X POST "${RANCHER_URL}/v3-public/localProviders/local?action=login" \
     -H "Content-Type: application/json" \
@@ -85,7 +122,7 @@ if [[ -z "$RANCHER_TOKEN" ]]; then
 fi
 log_info "Rancher API login successful"
 
-# --- 4. Configure Keycloak OIDC via PUT ---
+# --- 7. Configure Keycloak OIDC via PUT ---
 log_info "Configuring Keycloak OIDC auth provider..."
 
 OIDC_CONFIG=$(cat <<JSONEOF
