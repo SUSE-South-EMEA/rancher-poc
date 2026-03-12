@@ -5,7 +5,7 @@
 
 # VM
 KC_VM_HOST="172.16.3.12"
-KC_VM_SSH_USER="sles"
+KC_VM_SSH_USER="opensuse"
 
 # OpenLDAP
 LDAP_CONTAINER_NAME="openldap"

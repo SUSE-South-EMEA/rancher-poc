@@ -8,7 +8,7 @@ l'authentification OIDC dans Rancher Manager.
 ```
                   +--------------------------+
                   |  VM idp (172.16.3.12)    |
-                  |  SLES 15 SP7 / Podman    |
+                  |  openSUSE Leap 15.6 / Podman    |
                   |                          |
                   |  +--------+  +--------+  |
                   |  |OpenLDAP|  |Keycloak|  |
@@ -39,7 +39,7 @@ l'authentification OIDC dans Rancher Manager.
 
 ## Pre-requis
 
-- Harvester HCI operationnel avec image SLES 15 SP7 (`default/image-nhtf9`)
+- Harvester HCI operationnel avec image openSUSE Leap 15.6 (`default/opensuse-leap-cloud`)
 - Terraform installe avec le provider Harvester
 - HashiCorp Vault accessible avec les secrets configures :
   - `secret/services/keycloak` : `admin_password`, `ldap_admin_password`, `oidc_client_secret`
@@ -69,12 +69,12 @@ terraform apply
 Verifier :
 
 ```bash
-ssh sles@172.16.3.12 hostname
+ssh opensuse@172.16.3.12 hostname
 # idp
-ssh sles@172.16.3.12 podman --version
+ssh opensuse@172.16.3.12 podman --version
 ```
 
-Specs VM : 2 vCPU, 4 Gi RAM, 40 Gi disque, SLES 15 SP7
+Specs VM : 2 vCPU, 4 Gi RAM, 40 Gi disque, openSUSE Leap 15.6
 
 ## Etape 1 : Deployer OpenLDAP
 
@@ -92,7 +92,7 @@ Le script :
 Verification :
 
 ```bash
-ssh sles@172.16.3.12 "ldapsearch -x -H ldap://127.0.0.1:1389 \
+ssh opensuse@172.16.3.12 "ldapsearch -x -H ldap://127.0.0.1:1389 \
     -D 'cn=admin,dc=home,dc=lo' -w <vault> -b 'dc=home,dc=lo' '(uid=*)'"
 ```
 
@@ -189,10 +189,10 @@ Ou manuellement :
 
 ```bash
 # 1. VM et conteneurs
-ssh sles@172.16.3.12 "sudo podman ps"
+ssh opensuse@172.16.3.12 "sudo podman ps"
 
 # 2. LDAP
-ssh sles@172.16.3.12 "ldapsearch -x -H ldap://127.0.0.1:1389 \
+ssh opensuse@172.16.3.12 "ldapsearch -x -H ldap://127.0.0.1:1389 \
     -D 'cn=admin,dc=home,dc=lo' -w <vault> -b 'dc=home,dc=lo' '(uid=*)'"
 
 # 3. OIDC discovery
@@ -246,7 +246,7 @@ Les tokens expirent apres 60 secondes. Le script 04 rafraichit le token entre ch
 Verifier la connectivite LDAP depuis le conteneur Keycloak :
 
 ```bash
-ssh sles@172.16.3.12 "sudo podman exec keycloak curl -s ldap://openldap:1389"
+ssh opensuse@172.16.3.12 "sudo podman exec keycloak curl -s ldap://openldap:1389"
 ```
 
 Le nom `openldap` est resolu via le reseau Podman `keycloak-net`.

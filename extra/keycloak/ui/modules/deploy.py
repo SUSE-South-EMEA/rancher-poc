@@ -15,7 +15,7 @@ STEPS = [
         "id": "terraform",
         "title": "Provisionner la VM",
         "script": None,
-        "check": "ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=5 sles@172.16.3.12 hostname",
+        "check": "ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=5 opensuse@172.16.3.12 hostname",
         "description": "Cree la VM 'idp' (172.16.3.12) sur Harvester via Terraform. "
                        "2 vCPU, 4 Gi RAM, 40 Gi disque, SLES 15 SP7.",
         "manual_commands": [
@@ -23,7 +23,7 @@ STEPS = [
             "terraform init",
             "terraform plan",
             "terraform apply",
-            "ssh sles@172.16.3.12 hostname",
+            "ssh opensuse@172.16.3.12 hostname",
         ],
         "variables": ["VM IP: 172.16.3.12", "Image: SLES 15 SP7 (image-nhtf9)", "Reseau: default/production"],
     },
@@ -31,11 +31,11 @@ STEPS = [
         "id": "openldap",
         "title": "Deployer OpenLDAP",
         "script": "01-deploy-openldap.sh",
-        "check": "ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=5 sles@172.16.3.12 'sudo podman ps --format {{.Names}} | grep openldap'",
+        "check": "ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=5 opensuse@172.16.3.12 'sudo podman ps --format {{.Names}} | grep openldap'",
         "description": "Deploie le conteneur OpenLDAP (bitnami/openldap:2.6) sur la VM. "
                        "Cree les OUs, groupes et utilisateurs de demo via LDIF.",
         "manual_commands": [
-            "# Sur la VM (ssh sles@172.16.3.12) :",
+            "# Sur la VM (ssh opensuse@172.16.3.12) :",
             "sudo podman network create keycloak-net",
             "sudo podman run -d --name openldap --network keycloak-net "
             "-p 127.0.0.1:1389:1389 -e LDAP_ROOT='dc=home,dc=lo' "
@@ -125,7 +125,7 @@ STEPS = [
         "description": "Execute tous les checks de verification : VM, conteneurs, LDAP, "
                        "Keycloak health, OIDC discovery, DNS, Rancher OIDC status.",
         "manual_commands": [
-            "ssh sles@172.16.3.12 'sudo podman ps'",
+            "ssh opensuse@172.16.3.12 'sudo podman ps'",
             "curl -sk https://keycloak.home.lo:8443/realms/rancher/.well-known/openid-configuration",
             "curl -sk https://rancher.home.zypp.fr/v3/keyCloakOIDCConfig | grep enabled",
         ],
