@@ -9,7 +9,7 @@ KC_VM_SSH_USER="opensuse"
 
 # OpenLDAP
 LDAP_CONTAINER_NAME="openldap"
-LDAP_IMAGE="docker.io/bitnami/openldap:2.6"
+LDAP_IMAGE="docker.io/osixia/openldap:1.5.0"
 LDAP_PORT=1389
 LDAP_DOMAIN="home.lo"
 LDAP_BASE_DN="dc=home,dc=lo"

@@ -54,6 +54,7 @@ $SSH_CMD "sudo podman run -d \
     --name ${KC_CONTAINER_NAME} \
     --network ${KC_PODMAN_NETWORK} \
     -p 0.0.0.0:${KC_HTTPS_PORT}:8443 \
+    -p 127.0.0.1:9000:9000 \
     -e KC_BOOTSTRAP_ADMIN_USERNAME='${KC_ADMIN_USER}' \
     -e KC_BOOTSTRAP_ADMIN_PASSWORD='${KC_ADMIN_PASSWORD}' \
     -e KC_HTTPS_CERTIFICATE_FILE=/opt/keycloak/conf/tls.crt \
@@ -68,8 +69,8 @@ $SSH_CMD "sudo podman run -d \
 # --- Wait for Keycloak to be ready ---
 log_info "Waiting for Keycloak to be ready (may take 30-60 seconds)..."
 for i in $(seq 1 90); do
-    HEALTH=$($SSH_CMD "curl -sk https://127.0.0.1:${KC_HTTPS_PORT}/health/ready 2>/dev/null" || echo "")
-    if echo "$HEALTH" | grep -q '"status":"UP"'; then
+    HEALTH=$($SSH_CMD "curl -sk https://127.0.0.1:${KC_HTTPS_PORT}/realms/master 2>/dev/null" || echo "")
+    if echo "$HEALTH" | grep -q '"realm":"master"'; then
         log_info "Keycloak is ready"
         break
     fi

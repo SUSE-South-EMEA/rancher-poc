@@ -42,20 +42,30 @@ $SSH_RANCHER "cat > /tmp/keycloak-ca.crt" < "$CERT_FILE"
 $SSH_RANCHER "sudo cp /tmp/keycloak-ca.crt /etc/pki/trust/anchors/keycloak-ca.crt && sudo update-ca-certificates"
 log_info "CA certificate installed on Rancher VM"
 
-# --- 2. Restart Rancher pods to pick up new CA ---
-log_info "Restarting Rancher deployment to trust new CA..."
+# --- 2. Restart Rancher pods to pick up new CA (only if cert changed) ---
 KUBECTL="sudo /var/lib/rancher/rke2/bin/kubectl --kubeconfig /etc/rancher/rke2/rke2.yaml"
-$SSH_RANCHER "$KUBECTL rollout restart deployment/rancher -n cattle-system"
 
-log_info "Waiting for Rancher pods to be ready..."
+# Check if Rancher can already reach Keycloak with the CA
+CAN_REACH=$($SSH_RANCHER "curl -sf https://${KC_FQDN}:${KC_HTTPS_PORT}/realms/master 2>/dev/null | head -c 20" || echo "")
+if echo "$CAN_REACH" | grep -q "realm"; then
+    log_info "Rancher VM can already reach Keycloak (CA already trusted)"
+else
+    log_info "Restarting Rancher deployment to trust new CA..."
+    $SSH_RANCHER "$KUBECTL rollout restart deployment/rancher -n cattle-system"
+
+    log_info "Waiting for Rancher rollout to complete..."
+    $SSH_RANCHER "$KUBECTL rollout status deployment/rancher -n cattle-system --timeout=300s" 2>/dev/null || true
+fi
+
+log_info "Waiting for Rancher API to respond..."
 for i in $(seq 1 60); do
-    READY=$($SSH_RANCHER "$KUBECTL get deploy rancher -n cattle-system -o jsonpath='{.status.readyReplicas}'" 2>/dev/null || echo "0")
-    if [[ "$READY" -ge 1 ]]; then
-        log_info "Rancher deployment ready (${READY} replicas)"
+    HTTP_CODE=$(curl -sk -o /dev/null -w "%{http_code}" "${RANCHER_URL}/ping" 2>/dev/null || echo "000")
+    if [[ "$HTTP_CODE" == "200" ]]; then
+        log_info "Rancher API is responding"
         break
     fi
     if [[ $i -eq 60 ]]; then
-        log_warn "Rancher pods still not ready after 120s, continuing anyway..."
+        log_warn "Rancher API still not responding after 120s, continuing anyway..."
     fi
     sleep 2
 done
@@ -75,13 +85,12 @@ if [[ -z "$RANCHER_TOKEN" ]]; then
 fi
 log_info "Rancher API login successful"
 
-# --- 4. Configure Keycloak OIDC ---
+# --- 4. Configure Keycloak OIDC via PUT ---
 log_info "Configuring Keycloak OIDC auth provider..."
 
 OIDC_CONFIG=$(cat <<JSONEOF
 {
     "accessMode": "unrestricted",
-    "allowedPrincipalIds": [],
     "enabled": true,
     "type": "keyCloakOIDCConfig",
     "rancherUrl": "${RANCHER_URL}/verify-auth",
@@ -90,13 +99,13 @@ OIDC_CONFIG=$(cat <<JSONEOF
     "issuer": "${KC_BASE}/realms/${KC_REALM}",
     "authEndpoint": "${KC_BASE}/realms/${KC_REALM}/protocol/openid-connect/auth",
     "tokenEndpoint": "${KC_BASE}/realms/${KC_REALM}/protocol/openid-connect/token",
-    "scope": "openid profile email groups",
+    "scope": "openid profile email",
     "groupSearchEnabled": true
 }
 JSONEOF
 )
 
-RESPONSE=$(curl -sk -X PUT "${RANCHER_URL}/v3/keyCloakOIDCConfig" \
+RESPONSE=$(curl -sk -X PUT "${RANCHER_URL}/v3/keyCloakOIDCConfigs/keycloakoidc" \
     -H "Authorization: Bearer ${RANCHER_TOKEN}" \
     -H "Content-Type: application/json" \
     -d "$OIDC_CONFIG")

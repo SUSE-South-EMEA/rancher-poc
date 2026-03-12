@@ -16,31 +16,38 @@ log_info "=== Step 3: Configure DNS entries in Pi-hole ==="
 log_info "Reading current Pi-hole DNS hosts..."
 CURRENT_HOSTS=$($SSH_PIHOLE "docker exec ${PIHOLE_CONTAINER} pihole-FTL --config dns.hosts" 2>/dev/null || echo "[]")
 
-log_info "Current hosts: $CURRENT_HOSTS"
-
-# --- Build new hosts list ---
-# Parse current hosts into array, add new entries if not present
-NEW_HOSTS="$CURRENT_HOSTS"
-
+# --- Build new hosts list using Python (avoids JSON quoting issues) ---
+NEW_ENTRIES=""
 for entry in "${DNS_ENTRIES[@]}"; do
-    ENTRY_HOST=$(echo "$entry" | awk '{print $2}')
-    if echo "$NEW_HOSTS" | grep -q "$ENTRY_HOST"; then
-        log_info "DNS entry '$ENTRY_HOST' already exists, skipping"
-    else
-        log_info "Adding DNS entry: $entry"
-        # Append to JSON array
-        NEW_HOSTS=$(echo "$NEW_HOSTS" | sed "s/\]/, \"${entry}\"\]/")
-        # Fix case where array was empty
-        NEW_HOSTS=$(echo "$NEW_HOSTS" | sed 's/\[, /[/')
-    fi
+    NEW_ENTRIES+="${entry};"
 done
 
-# --- Apply new DNS configuration ---
+NEW_HOSTS_JSON=$(python3 -c "
+import json, re
+
+raw = '''${CURRENT_HOSTS}'''
+# pihole-FTL outputs: [ ip host, ip host, ... ] — not valid JSON
+inner = raw.strip('[] \n')
+entries = [e.strip() for e in inner.split(',') if e.strip()]
+
+new_entries = '${NEW_ENTRIES}'.rstrip(';').split(';')
+for ne in new_entries:
+    ne = ne.strip()
+    host = ne.split()[-1] if ne else ''
+    if not any(host in e for e in entries):
+        entries.append(ne)
+
+print(json.dumps(entries))
+")
+
 log_info "Applying DNS configuration..."
-$SSH_PIHOLE "docker exec ${PIHOLE_CONTAINER} pihole-FTL --config dns.hosts '${NEW_HOSTS}'"
+# Write JSON to a temp file on rasp01, then apply (avoids shell quoting)
+echo "$NEW_HOSTS_JSON" | $SSH_PIHOLE "cat > /tmp/pihole-dns-update.json"
+$SSH_PIHOLE "docker exec ${PIHOLE_CONTAINER} pihole-FTL --config dns.hosts \"\$(cat /tmp/pihole-dns-update.json)\" && rm -f /tmp/pihole-dns-update.json"
 
 # --- Verify DNS resolution ---
 log_info "Verifying DNS resolution..."
+sleep 2
 ERRORS=0
 for entry in "${DNS_ENTRIES[@]}"; do
     ENTRY_IP=$(echo "$entry" | awk '{print $1}')

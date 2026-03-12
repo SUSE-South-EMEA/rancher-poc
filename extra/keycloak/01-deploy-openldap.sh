@@ -34,29 +34,40 @@ log_info "Generating LDIF files..."
 TMPDIR=$(mktemp -d)
 trap "rm -rf $TMPDIR" EXIT
 
-# Generate groups block
-GROUPS_BLOCK=""
+# Generate base LDIF (OUs + groups)
+cat > "$TMPDIR/00-base.ldif" <<LDIFEOF
+# Base LDIF — OUs and Groups for Rancher OIDC
+
+dn: ou=People,${LDAP_BASE_DN}
+objectClass: organizationalUnit
+ou: People
+
+dn: ou=Groups,${LDAP_BASE_DN}
+objectClass: organizationalUnit
+ou: Groups
+
+LDIFEOF
+
 for group in "${LDAP_GROUPS[@]}"; do
-    GROUPS_BLOCK+="dn: cn=${group},ou=Groups,${LDAP_BASE_DN}
+    cat >> "$TMPDIR/00-base.ldif" <<LDIFEOF
+dn: cn=${group},ou=Groups,${LDAP_BASE_DN}
 objectClass: groupOfNames
 cn: ${group}
 member: cn=placeholder
 
-"
+LDIFEOF
 done
 
-# Generate base LDIF
-sed -e "s|__LDAP_BASE_DN__|${LDAP_BASE_DN}|g" \
-    -e "/__GROUPS__/{
-r /dev/stdin
-d
-}" "$SCRIPT_DIR/templates/00-base.ldif.tpl" <<< "$GROUPS_BLOCK" > "$TMPDIR/00-base.ldif"
+# Generate users LDIF
+cat > "$TMPDIR/01-users.ldif" <<LDIFEOF
+# Users LDIF — Demo users for Rancher OIDC
+LDIFEOF
 
-# Generate users block
-USERS_BLOCK=""
 for user_entry in "${LDAP_DEMO_USERS[@]}"; do
     IFS=':' read -r uid first last group <<< "$user_entry"
-    USERS_BLOCK+="dn: uid=${uid},ou=People,${LDAP_BASE_DN}
+    cat >> "$TMPDIR/01-users.ldif" <<LDIFEOF
+
+dn: uid=${uid},ou=People,${LDAP_BASE_DN}
 objectClass: inetOrgPerson
 objectClass: posixAccount
 objectClass: shadowAccount
@@ -71,10 +82,8 @@ gidNumber: 10000
 homeDirectory: /home/${uid}
 userPassword: changeme
 
-"
+LDIFEOF
 done
-
-sed "s|__USERS__|${USERS_BLOCK}|" "$SCRIPT_DIR/templates/01-users.ldif.tpl" > "$TMPDIR/01-users.ldif"
 
 # Generate group membership LDIF (modify operations to add real members)
 cat > "$TMPDIR/02-memberships.ldif" <<LDIFEOF
@@ -114,18 +123,16 @@ $SSH_CMD "sudo podman rm -f ${LDAP_CONTAINER_NAME} 2>/dev/null || true"
 $SSH_CMD "sudo podman run -d \
     --name ${LDAP_CONTAINER_NAME} \
     --network ${KC_PODMAN_NETWORK} \
-    -p 127.0.0.1:${LDAP_PORT}:1389 \
-    -e LDAP_ROOT='${LDAP_BASE_DN}' \
-    -e LDAP_ADMIN_USERNAME='${LDAP_ADMIN_USER}' \
+    -p 127.0.0.1:${LDAP_PORT}:389 \
+    -e LDAP_ORGANISATION='${LDAP_ORG_NAME}' \
+    -e LDAP_DOMAIN='${LDAP_DOMAIN}' \
     -e LDAP_ADMIN_PASSWORD='${LDAP_ADMIN_PASSWORD}' \
-    -e LDAP_CUSTOM_LDIF_DIR=/ldifs \
-    -v /tmp/ldap-init:/ldifs:Z \
-    ${LDAP_IMAGE}"
+    ${LDAP_IMAGE} --copy-service"
 
 # --- Wait for OpenLDAP to be ready ---
 log_info "Waiting for OpenLDAP to be ready..."
 for i in $(seq 1 30); do
-    if $SSH_CMD "ldapsearch -x -H ldap://127.0.0.1:${LDAP_PORT} -D 'cn=${LDAP_ADMIN_USER},${LDAP_BASE_DN}' -w '${LDAP_ADMIN_PASSWORD}' -b '${LDAP_BASE_DN}' '(objectClass=organizationalUnit)'" >/dev/null 2>&1; then
+    if $SSH_CMD "ldapsearch -x -H ldap://127.0.0.1:${LDAP_PORT} -D 'cn=${LDAP_ADMIN_USER},${LDAP_BASE_DN}' -w '${LDAP_ADMIN_PASSWORD}' -b '${LDAP_BASE_DN}' '(objectClass=*)'" >/dev/null 2>&1; then
         log_info "OpenLDAP is ready"
         break
     fi
@@ -134,17 +141,32 @@ for i in $(seq 1 30); do
         $SSH_CMD "sudo podman logs ${LDAP_CONTAINER_NAME}" || true
         exit 1
     fi
-    sleep 1
+    sleep 2
 done
+
+# Wait a bit more for slapd to fully initialize
+sleep 3
+
+# --- Apply LDIF seed files ---
+log_info "Importing OUs, groups and users..."
+for attempt in 1 2 3; do
+    if $SSH_CMD "ldapadd -x -c -H ldap://127.0.0.1:${LDAP_PORT} -D 'cn=${LDAP_ADMIN_USER},${LDAP_BASE_DN}' -w '${LDAP_ADMIN_PASSWORD}' -f /tmp/ldap-init/00-base.ldif" 2>&1; then
+        log_info "Base LDIF imported successfully"
+        break
+    fi
+    log_warn "Base LDIF import attempt $attempt failed, retrying in 3s..."
+    sleep 3
+done
+$SSH_CMD "ldapadd -x -c -H ldap://127.0.0.1:${LDAP_PORT} -D 'cn=${LDAP_ADMIN_USER},${LDAP_BASE_DN}' -w '${LDAP_ADMIN_PASSWORD}' -f /tmp/ldap-init/01-users.ldif" 2>&1 || log_warn "Users LDIF import had errors (entries may already exist)"
 
 # --- Apply membership modifications ---
 log_info "Applying group memberships..."
-$SSH_CMD "ldapmodify -x -H ldap://127.0.0.1:${LDAP_PORT} -D 'cn=${LDAP_ADMIN_USER},${LDAP_BASE_DN}' -w '${LDAP_ADMIN_PASSWORD}' -f /tmp/ldap-init/02-memberships.ldif" || log_warn "Some membership modifications may have failed (expected if already applied)"
+$SSH_CMD "ldapmodify -x -H ldap://127.0.0.1:${LDAP_PORT} -D 'cn=${LDAP_ADMIN_USER},${LDAP_BASE_DN}' -w '${LDAP_ADMIN_PASSWORD}' -f /tmp/ldap-init/02-memberships.ldif" 2>&1 || log_warn "Some membership modifications may have failed (expected if already applied)"
 
 # --- Verify ---
 log_info "Verifying LDAP entries..."
-USERS_FOUND=$($SSH_CMD "ldapsearch -x -H ldap://127.0.0.1:${LDAP_PORT} -D 'cn=${LDAP_ADMIN_USER},${LDAP_BASE_DN}' -w '${LDAP_ADMIN_PASSWORD}' -b 'ou=People,${LDAP_BASE_DN}' '(uid=*)' uid" 2>/dev/null | grep -c "^uid:" || echo 0)
-GROUPS_FOUND=$($SSH_CMD "ldapsearch -x -H ldap://127.0.0.1:${LDAP_PORT} -D 'cn=${LDAP_ADMIN_USER},${LDAP_BASE_DN}' -w '${LDAP_ADMIN_PASSWORD}' -b 'ou=Groups,${LDAP_BASE_DN}' '(objectClass=groupOfNames)' cn" 2>/dev/null | grep -c "^cn:" || echo 0)
+USERS_FOUND=$($SSH_CMD "ldapsearch -x -H ldap://127.0.0.1:${LDAP_PORT} -D 'cn=${LDAP_ADMIN_USER},${LDAP_BASE_DN}' -w '${LDAP_ADMIN_PASSWORD}' -b 'ou=People,${LDAP_BASE_DN}' '(uid=*)' uid 2>/dev/null | grep -c '^uid:' || echo 0" 2>/dev/null | tr -d '[:space:]')
+GROUPS_FOUND=$($SSH_CMD "ldapsearch -x -H ldap://127.0.0.1:${LDAP_PORT} -D 'cn=${LDAP_ADMIN_USER},${LDAP_BASE_DN}' -w '${LDAP_ADMIN_PASSWORD}' -b 'ou=Groups,${LDAP_BASE_DN}' '(objectClass=groupOfNames)' cn 2>/dev/null | grep -c '^cn:' || echo 0" 2>/dev/null | tr -d '[:space:]')
 
 log_info "Found ${USERS_FOUND} users and ${GROUPS_FOUND} groups in LDAP"
 

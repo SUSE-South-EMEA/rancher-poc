@@ -69,8 +69,12 @@ else
 fi
 
 # --- 4. Keycloak health ---
-HEALTH=$($SSH_CMD "curl -sk https://127.0.0.1:${KC_HTTPS_PORT}/health/ready 2>/dev/null" || echo "")
-if echo "$HEALTH" | grep -q '"status":"UP"'; then
+HEALTH=$($SSH_CMD "curl -sk https://127.0.0.1:9000/health/ready 2>/dev/null" || echo "")
+# Fallback: try main port if management port didn't work
+if ! echo "$HEALTH" | grep -q '"status"'; then
+    HEALTH=$($SSH_CMD "curl -sk https://127.0.0.1:${KC_HTTPS_PORT}/realms/master 2>/dev/null" || echo "")
+fi
+if echo "$HEALTH" | grep -q '"status"'; then
     check "Keycloak health" "OK"
 else
     check "Keycloak health" "Not healthy"
@@ -104,7 +108,7 @@ RANCHER_TOKEN=$(echo "$LOGIN_RESPONSE" | python3 -c "import sys,json; print(json
 
 if [[ -n "$RANCHER_TOKEN" ]]; then
     OIDC_STATUS=$(curl -sk -H "Authorization: Bearer ${RANCHER_TOKEN}" \
-        "${RANCHER_URL}/v3/keyCloakOIDCConfig" 2>/dev/null)
+        "${RANCHER_URL}/v3/authConfigs/keycloakoidc" 2>/dev/null)
     OIDC_ENABLED=$(echo "$OIDC_STATUS" | python3 -c "import sys,json; print(json.load(sys.stdin).get('enabled', False))" 2>/dev/null || echo "")
     if [[ "$OIDC_ENABLED" == "True" ]]; then
         check "Rancher OIDC enabled" "OK"

@@ -84,10 +84,10 @@ bash 01-deploy-openldap.sh
 ```
 
 Le script :
-- Genere les fichiers LDIF a partir des templates (`templates/`)
+- Genere les fichiers LDIF via heredoc
 - Cree le reseau Podman `keycloak-net`
-- Deploie bitnami/openldap:2.6 sur `127.0.0.1:1389`
-- Injecte les OUs, groupes et utilisateurs
+- Deploie osixia/openldap:1.5.0 sur `127.0.0.1:1389`
+- Injecte les OUs, groupes et utilisateurs via `ldapadd`
 
 Verification :
 

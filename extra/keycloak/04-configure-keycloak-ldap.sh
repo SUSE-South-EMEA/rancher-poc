@@ -96,7 +96,7 @@ else
             \"providerType\": \"org.keycloak.storage.UserStorageProvider\",
             \"config\": {
                 \"vendor\": [\"other\"],
-                \"connectionUrl\": [\"ldap://${LDAP_CONTAINER_NAME}:1389\"],
+                \"connectionUrl\": [\"ldap://${LDAP_CONTAINER_NAME}:389\"],
                 \"bindDn\": [\"cn=${LDAP_ADMIN_USER},${LDAP_BASE_DN}\"],
                 \"bindCredential\": [\"${LDAP_ADMIN_PASSWORD}\"],
                 \"usersDn\": [\"ou=People,${LDAP_BASE_DN}\"],
@@ -213,7 +213,7 @@ else
             \"redirectUris\": [\"${RANCHER_URL}/verify-auth\"],
             \"webOrigins\": [\"${RANCHER_URL}\"],
             \"standardFlowEnabled\": true,
-            \"directAccessGrantsEnabled\": false,
+            \"directAccessGrantsEnabled\": true,
             \"serviceAccountsEnabled\": false,
             \"authorizationServicesEnabled\": false
         }"

@@ -104,7 +104,7 @@ STEPS = [
         "id": "rancher-oidc",
         "title": "Integrer Rancher OIDC",
         "script": "05-configure-rancher-oidc.sh",
-        "check": "curl -sk https://rancher.home.zypp.fr/v3/keyCloakOIDCConfig 2>/dev/null | python3 -c 'import sys,json; exit(0 if json.load(sys.stdin).get(\"enabled\") else 1)' 2>/dev/null",
+        "check": "curl -sk https://rancher.home.zypp.fr/v3/authConfigs/keycloakoidc 2>/dev/null | python3 -c 'import sys,json; exit(0 if json.load(sys.stdin).get(\"enabled\") else 1)' 2>/dev/null",
         "description": "Installe le CA self-signed sur la VM Rancher, redémarre les pods, "
                        "puis configure l'authentification OIDC via l'API Rancher v3.",
         "manual_commands": [
@@ -127,7 +127,7 @@ STEPS = [
         "manual_commands": [
             "ssh opensuse@172.16.3.12 'sudo podman ps'",
             "curl -sk https://keycloak.home.lo:8443/realms/rancher/.well-known/openid-configuration",
-            "curl -sk https://rancher.home.zypp.fr/v3/keyCloakOIDCConfig | grep enabled",
+            "curl -sk https://rancher.home.zypp.fr/v3/authConfigs/keycloakoidc | grep enabled",
         ],
         "variables": [],
     },

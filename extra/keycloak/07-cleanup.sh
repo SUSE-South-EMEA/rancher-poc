@@ -29,10 +29,10 @@ LOGIN_RESPONSE=$(curl -sk -X POST "${RANCHER_URL}/v3-public/localProviders/local
 RANCHER_TOKEN=$(echo "$LOGIN_RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin).get('token',''))" 2>/dev/null || echo "")
 
 if [[ -n "$RANCHER_TOKEN" ]]; then
-    curl -sk -X PUT "${RANCHER_URL}/v3/keyCloakOIDCConfig" \
+    curl -sk -X POST "${RANCHER_URL}/v3/keyCloakOIDCConfigs/keycloakoidc?action=disable" \
         -H "Authorization: Bearer ${RANCHER_TOKEN}" \
         -H "Content-Type: application/json" \
-        -d '{"enabled": false, "type": "keyCloakOIDCConfig"}' >/dev/null 2>&1 || true
+        -d '{}' >/dev/null 2>&1 || true
     log_info "OIDC disabled in Rancher"
 else
     log_warn "Could not login to Rancher API — OIDC may need to be disabled manually"
@@ -59,19 +59,28 @@ SSH_PIHOLE="ssh -o StrictHostKeyChecking=accept-new ${PIHOLE_SSH_USER}@${PIHOLE_
 
 CURRENT_HOSTS=$($SSH_PIHOLE "docker exec ${PIHOLE_CONTAINER} pihole-FTL --config dns.hosts" 2>/dev/null || echo "[]")
 
-# Remove our entries
-NEW_HOSTS="$CURRENT_HOSTS"
+# Build list of hosts to remove
+REMOVE_HOSTS=""
 for entry in "${DNS_ENTRIES[@]}"; do
     ENTRY_HOST=$(echo "$entry" | awk '{print $2}')
-    NEW_HOSTS=$(echo "$NEW_HOSTS" | python3 -c "
-import sys, json
-data = json.load(sys.stdin)
-filtered = [h for h in data if '${ENTRY_HOST}' not in h]
-print(json.dumps(filtered))
-" 2>/dev/null || echo "$NEW_HOSTS")
+    REMOVE_HOSTS+="${ENTRY_HOST};"
 done
 
-$SSH_PIHOLE "docker exec ${PIHOLE_CONTAINER} pihole-FTL --config dns.hosts '${NEW_HOSTS}'" 2>/dev/null || log_warn "Could not update Pi-hole DNS"
+NEW_HOSTS_JSON=$(python3 -c "
+import json, re
+
+raw = '''${CURRENT_HOSTS}'''
+inner = raw.strip('[] \n')
+entries = [e.strip() for e in inner.split(',') if e.strip()]
+
+remove = '${REMOVE_HOSTS}'.rstrip(';').split(';')
+filtered = [e for e in entries if not any(h in e for h in remove)]
+
+print(json.dumps(filtered))
+")
+
+echo "$NEW_HOSTS_JSON" | $SSH_PIHOLE "cat > /tmp/pihole-dns-update.json"
+$SSH_PIHOLE "docker exec ${PIHOLE_CONTAINER} pihole-FTL --config dns.hosts \"\$(cat /tmp/pihole-dns-update.json)\" && rm -f /tmp/pihole-dns-update.json" 2>/dev/null || log_warn "Could not update Pi-hole DNS"
 log_info "DNS entries removed"
 
 # --- 5. Clean local files ---
