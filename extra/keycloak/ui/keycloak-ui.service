@@ -1,0 +1,14 @@
+[Unit]
+Description=Keycloak + OpenLDAP Deployment UI
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/ju/workspace/rancher-poc/extra/keycloak/ui
+ExecStart=/usr/bin/python3 /home/ju/workspace/rancher-poc/extra/keycloak/ui/app.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
