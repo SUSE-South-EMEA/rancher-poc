@@ -1396,3 +1396,289 @@ Toutes les variables sont dans `keycloak-vars.sh`. Les secrets sont dans Vault
 | `admin_password` | Mot de passe admin Keycloak |
 | `ldap_admin_password` | Mot de passe admin OpenLDAP |
 | `oidc_client_secret` | Secret du client OIDC (UUID, partage entre Keycloak et Rancher) |
+
+---
+
+## Filtrage des groupes et controle d'acces
+
+### Problematique
+
+Par defaut, Keycloak synchronise **tous** les groupes LDAP et les expose dans le token JWT.
+Dans un environnement de production, il est souhaitable de :
+
+1. **Ne synchroniser que les groupes pertinents** depuis LDAP vers Keycloak
+2. **Restreindre l'acces Rancher** aux seuls groupes autorises
+3. **Ne pas exposer l'ensemble des groupes** existants dans Keycloak lors de l'ajout de membres
+
+### Architecture du filtrage (3 niveaux)
+
+```
+LDAP (OpenLDAP)                 Keycloak                        Rancher
++------------------+   filtre   +------------------+   token    +------------------+
+| ou=Groups        | ---------> | Realm rancher    | ---------> | OIDC restricted  |
+|   rancher-admins |  (cn=      |   rancher-admins |  (JWT      |   allowedPrinci- |
+|   rancher-users  |  rancher-*)|   rancher-users  |  groups    |   palIds filtre  |
+|   rancher-readonly            |   rancher-readonly  claim)    |   les groupes    |
+|   app-team       |  FILTRE    |                  |            |   autorises      |
+|   dev-ops        | --------X  |                  |            |                  |
+|   other-group    |  (rejete)  |                  |            |                  |
++------------------+            +------------------+            +------------------+
+```
+
+### Niveau 1 : Filtre LDAP sur le group mapper Keycloak
+
+Le group mapper LDAP dans Keycloak possede un parametre `groups.ldap.filter` qui permet
+de ne synchroniser que les groupes matchant un filtre LDAP.
+
+**Configuration actuelle :**
+
+```
+groups.ldap.filter: (cn=rancher-*)
+```
+
+Seuls les groupes dont le `cn` commence par `rancher-` sont synchronises depuis LDAP.
+Les autres groupes LDAP sont ignores par Keycloak.
+
+**Mise en oeuvre via l'API Admin Keycloak :**
+
+```bash
+# Recuperer le token admin
+ADMIN_TOKEN=$(curl -sk -X POST "https://keycloak.home.lo:8443/realms/master/protocol/openid-connect/token" \
+  -d "grant_type=password&client_id=admin-cli&username=admin&password=<VAULT>" | \
+  python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
+
+# Recuperer l'ID de la federation LDAP
+FEDERATION_ID=$(curl -sk -H "Authorization: Bearer $ADMIN_TOKEN" \
+  "https://keycloak.home.lo:8443/admin/realms/rancher/components?type=org.keycloak.storage.UserStorageProvider" | \
+  python3 -c "import sys,json; print(json.load(sys.stdin)[0]['id'])")
+
+# Recuperer l'ID du group mapper
+GROUP_MAPPER_ID=$(curl -sk -H "Authorization: Bearer $ADMIN_TOKEN" \
+  "https://keycloak.home.lo:8443/admin/realms/rancher/components?parent=${FEDERATION_ID}" | \
+  python3 -c "
+import sys,json
+for c in json.load(sys.stdin):
+    if 'group' in c.get('providerId',''):
+        print(c['id'])
+        break
+")
+
+# Mettre a jour le mapper avec le filtre
+curl -sk -X PUT "https://keycloak.home.lo:8443/admin/realms/rancher/components/${GROUP_MAPPER_ID}" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "'${GROUP_MAPPER_ID}'",
+    "name": "group-mapper",
+    "providerId": "group-ldap-mapper",
+    "providerType": "org.keycloak.storage.ldap.mappers.LDAPStorageMapper",
+    "parentId": "'${FEDERATION_ID}'",
+    "config": {
+      "mode": ["READ_ONLY"],
+      "membership.attribute.type": ["DN"],
+      "user.roles.retrieve.strategy": ["LOAD_GROUPS_BY_MEMBER_ATTRIBUTE"],
+      "group.name.ldap.attribute": ["cn"],
+      "membership.user.ldap.attribute": ["uid"],
+      "membership.ldap.attribute": ["member"],
+      "groups.dn": ["ou=Groups,dc=home,dc=lo"],
+      "group.object.classes": ["groupOfNames"],
+      "groups.path": ["/"],
+      "drop.non.existing.groups.during.sync": ["true"],
+      "groups.ldap.filter": ["(cn=rancher-*)"]
+    }
+  }'
+
+# Re-synchroniser pour appliquer le filtre
+curl -sk -X POST "https://keycloak.home.lo:8443/admin/realms/rancher/user-storage/${FEDERATION_ID}/sync?action=triggerFullSync" \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+**Option `drop.non.existing.groups.during.sync`** : activee (`true`), cette option supprime de Keycloak
+les groupes qui ne matchent plus le filtre LDAP apres une synchronisation. Utile pour nettoyer
+les groupes obsoletes.
+
+**Exemples de filtres LDAP courants :**
+
+| Filtre | Effet |
+|--------|-------|
+| `(cn=rancher-*)` | Groupes commencant par `rancher-` |
+| `(\|(cn=rancher-admins)(cn=rancher-users))` | Uniquement ces 2 groupes |
+| `(!(cn=internal-*))` | Tous sauf ceux commencant par `internal-` |
+| `(&(cn=*)(description=rancher))` | Groupes ayant `description=rancher` |
+
+**Via l'interface Keycloak :** Realm Settings > User Federation > openldap > Mappers >
+group-mapper > "LDAP Groups Filter"
+
+### Niveau 2 : Protocol mapper (filtrage dans le token JWT)
+
+Le protocol mapper `oidc-group-membership-mapper` sur le client OIDC `rancher` injecte
+les groupes de l'utilisateur dans le claim `groups` du token JWT.
+
+Par defaut, **tous** les groupes Keycloak de l'utilisateur sont inclus.
+Comme on a deja filtre au niveau LDAP (niveau 1), seuls les groupes `rancher-*` sont presents.
+
+Si besoin d'un filtrage supplementaire (ex: l'utilisateur a aussi des groupes Keycloak locaux),
+on peut :
+
+1. **Utiliser des sous-groupes** : creer un groupe parent `/rancher` dans Keycloak et mettre
+   les groupes `rancher-*` comme enfants. Le mapper avec `full.path: false` n'envoie que le nom.
+
+2. **Utiliser un mapper de type `Script`** (Keycloak 26+) : mapper JavaScript qui filtre
+   les groupes par regex avant injection dans le token.
+
+**Verifier le contenu du token JWT :**
+
+```bash
+# Obtenir un token pour un utilisateur
+TOKEN_RESP=$(curl -sk -X POST "https://keycloak.home.lo:8443/realms/rancher/protocol/openid-connect/token" \
+  -d "grant_type=password&client_id=rancher&client_secret=<VAULT>" \
+  -d "username=jniedergang&password=changeme&scope=openid profile email")
+
+# Decoder le payload JWT
+echo "$TOKEN_RESP" | python3 -c "
+import sys,json,base64
+token = json.load(sys.stdin)['access_token']
+payload = token.split('.')[1]
+payload += '=' * (4 - len(payload) % 4)
+data = json.loads(base64.urlsafe_b64decode(payload))
+print('groups:', data.get('groups', []))
+print('preferred_username:', data.get('preferred_username'))
+"
+```
+
+**Sortie attendue :**
+
+```
+groups: ['rancher-admins']
+preferred_username: jniedergang
+```
+
+### Niveau 3 : Mode restricted dans Rancher
+
+Le mode `accessMode` de la configuration OIDC Rancher controle qui peut se connecter :
+
+| Mode | Comportement |
+|------|-------------|
+| `unrestricted` | Tout utilisateur Keycloak peut se connecter (dangereux en production) |
+| `restricted` | Seuls les principalIds dans `allowedPrincipalIds` peuvent se connecter |
+| `required` | L'authentification externe est obligatoire (pas de login local) |
+
+**Configuration actuelle (restricted) :**
+
+```json
+{
+  "accessMode": "restricted",
+  "allowedPrincipalIds": [
+    "local://user-kk67j",
+    "keycloakoidc_group://rancher-admins",
+    "keycloakoidc_group://rancher-users",
+    "keycloakoidc_group://rancher-readonly"
+  ]
+}
+```
+
+- `local://user-kk67j` : conserve l'acces admin local (important pour le recovery)
+- Les 3 groupes Keycloak sont les seuls autorises a se connecter via OIDC
+- Un utilisateur Keycloak qui n'est dans aucun de ces groupes sera **refuse** par Rancher
+
+**Modifier les groupes autorises via l'API :**
+
+```bash
+# Login admin Rancher
+RANCHER_TOKEN=$(curl -sk -X POST "https://rancher.home.zypp.fr/v3-public/localProviders/local?action=login" \
+  -H "Content-Type: application/json" \
+  -d '{"username": "admin", "password": "<VAULT>"}' | \
+  python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
+
+# Mettre a jour la config OIDC
+curl -sk -X PUT "https://rancher.home.zypp.fr/v3/keyCloakOIDCConfigs/keycloakoidc" \
+  -H "Authorization: Bearer ${RANCHER_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "accessMode": "restricted",
+    "allowedPrincipalIds": [
+      "local://user-kk67j",
+      "keycloakoidc_group://rancher-admins",
+      "keycloakoidc_group://rancher-users"
+    ],
+    "enabled": true,
+    "type": "keyCloakOIDCConfig",
+    ... (autres champs inchanges)
+  }'
+```
+
+### Limitation : recherche de groupes dans l'UI Rancher
+
+Le provider Keycloak OIDC dans Rancher **ne supporte pas la recherche de groupes** en backend.
+Contrairement aux providers AD/LDAP natifs, le protocol OIDC ne fournit pas d'API de recherche.
+
+**Consequences :**
+
+- La recherche dans "Users & Authentication > Groups" retourne vide
+- L'ajout de membres via l'UI affiche "Unable to fetch principal info" pour les groupes OIDC
+- Les bindings fonctionnent quand meme (les permissions sont bien appliquees)
+
+**Contournement :** les bindings groupe/role se font via l'API Rancher :
+
+```bash
+# GlobalRoleBinding (role global)
+curl -sk -X POST "https://rancher.home.zypp.fr/v3/globalRoleBindings" \
+  -H "Authorization: Bearer ${RANCHER_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "globalRoleId": "admin",
+    "groupPrincipalId": "keycloakoidc_group://rancher-admins"
+  }'
+
+# ClusterRoleTemplateBinding (role au niveau cluster)
+curl -sk -X POST "https://rancher.home.zypp.fr/v3/clusterRoleTemplateBindings" \
+  -H "Authorization: Bearer ${RANCHER_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "clusterId": "local",
+    "groupPrincipalId": "keycloakoidc_group://rancher-admins",
+    "roleTemplateId": "cluster-owner"
+  }'
+```
+
+**Format des principalIds :**
+
+| Type | Format | Exemple |
+|------|--------|---------|
+| Utilisateur OIDC | `keycloakoidc_user://<UUID>` | `keycloakoidc_user://f10b74d8-...` |
+| Groupe OIDC | `keycloakoidc_group://<nom>` | `keycloakoidc_group://rancher-admins` |
+| Utilisateur local | `local://<user-id>` | `local://user-kk67j` |
+
+### Roles appliques par defaut
+
+Le script `05-configure-rancher-oidc.sh` cree automatiquement :
+
+**GlobalRoleBindings (roles globaux) :**
+
+| Groupe | Role | Permissions |
+|--------|------|-------------|
+| `rancher-admins` | `admin` | Administration globale Rancher |
+| `rancher-users` | `user` | Creation de clusters, gestion de ses projets |
+| `rancher-readonly` | `user-base` | Login uniquement, acces minimal |
+
+**ClusterRoleTemplateBindings (cluster local) :**
+
+| Groupe | Role | Permissions |
+|--------|------|-------------|
+| `rancher-admins` | `cluster-owner` | Gestion complete du cluster |
+| `rancher-users` | `cluster-member` | Acces aux workloads de ses projets |
+| `rancher-readonly` | `cluster-member` | Acces en lecture aux workloads |
+
+### Ajouter un nouveau groupe
+
+Pour ajouter un nouveau groupe LDAP autorise dans Rancher :
+
+1. **Creer le groupe dans LDAP** (ou verifier qu'il existe et matche le filtre `cn=rancher-*`)
+2. **Synchroniser LDAP dans Keycloak** :
+   ```bash
+   curl -sk -X POST ".../user-storage/${FEDERATION_ID}/sync?action=triggerFullSync" \
+     -H "Authorization: Bearer $ADMIN_TOKEN"
+   ```
+3. **Ajouter le groupe dans `allowedPrincipalIds`** de la config OIDC Rancher
+4. **Creer les GlobalRoleBinding et ClusterRoleTemplateBinding** pour le nouveau groupe
+5. **Verifier** : un utilisateur du groupe se connecte et recoit les permissions

@@ -394,7 +394,7 @@ Forcer avec <code>dig @172.16.3.6</code>.</li>
             "-d '{\"realm\":\"rancher\",\"enabled\":true}'",
             "# 3. LDAP federation, group mapper, OIDC client...",
         ],
-        "variables": ["Realm: rancher", "Client ID: rancher", "LDAP: ldap://openldap:1389"],
+        "variables": ["Realm: rancher", "Client ID: rancher", "LDAP: ldap://openldap:389", "Group filter: (cn=rancher-*)"],
         "doc": """
 <h4>Description</h4>
 <p>Configure Keycloak via l'<strong>API Admin REST</strong> pour integrer l'annuaire LDAP et preparer
@@ -402,9 +402,10 @@ l'authentification OIDC pour Rancher. Les operations effectuees :</p>
 <ol>
 <li><strong>Realm "rancher"</strong> : cree un realm dedie (separe du realm master)</li>
 <li><strong>Federation LDAP</strong> : connecte Keycloak a OpenLDAP via le reseau Podman interne
-(<code>ldap://openldap:1389</code>), configure le bind DN, le user DN et le search filter</li>
-<li><strong>Group mapper</strong> : mappe les groupes LDAP (rancher-admins, rancher-users, rancher-readonly)
-vers des groupes Keycloak</li>
+(<code>ldap://openldap:389</code>), configure le bind DN, le user DN et le search filter</li>
+<li><strong>Group mapper</strong> : mappe les groupes LDAP vers des groupes Keycloak avec un
+<strong>filtre LDAP <code>(cn=rancher-*)</code></strong> pour ne synchroniser que les groupes pertinents.
+Les groupes non-rancher dans LDAP sont ignores.</li>
 <li><strong>Client OIDC "rancher"</strong> : cree le client avec les redirect URIs vers Rancher,
 active le client authentication (confidential), et configure le mapper de groupes dans le token</li>
 <li><strong>Sync LDAP</strong> : declenche une synchronisation complete des utilisateurs et groupes</li>
@@ -415,7 +416,8 @@ active le client authentication (confidential), et configure le mapper de groupe
 <li><strong>Realm</strong> : rancher</li>
 <li><strong>Client ID</strong> : rancher</li>
 <li><strong>Client Secret</strong> : genere automatiquement par Keycloak, recupere via l'API</li>
-<li><strong>LDAP Connection URL</strong> : ldap://openldap:1389 (reseau Podman interne)</li>
+<li><strong>LDAP Connection URL</strong> : ldap://openldap:389 (port interne container, pas 1389 host)</li>
+<li><strong>Group LDAP Filter</strong> : <code>(cn=rancher-*)</code> — ne synchronise que les groupes rancher-*</li>
 <li><strong>LDAP Bind DN</strong> : cn=admin,dc=home,dc=lo</li>
 <li><strong>LDAP Users DN</strong> : ou=People,dc=home,dc=lo</li>
 <li><strong>LDAP Groups DN</strong> : ou=Groups,dc=home,dc=lo</li>
@@ -526,9 +528,24 @@ et l'ajoute au trust store systeme (<code>/etc/pki/trust/anchors/</code>)</li>
 <li><strong>Redemarrage</strong> : effectue un rollout restart du deployment Rancher pour qu'il prenne
 en compte le nouveau CA</li>
 <li><strong>Attend la disponibilite</strong> : attend que Rancher soit de nouveau UP (health check)</li>
-<li><strong>Configure OIDC</strong> : envoie la configuration keycloakoidc via <code>PUT /v3/authConfigs/keycloakoidc</code>
+<li><strong>Configure OIDC</strong> : envoie la configuration keycloakoidc via <code>PUT /v3/keyCloakOIDCConfigs/keycloakoidc</code>
 avec l'issuer, le client ID, le client secret, et les endpoints</li>
+<li><strong>Mode restricted</strong> : active le mode <code>accessMode: restricted</code> avec une liste de
+groupes autorises (<code>allowedPrincipalIds</code>) pour ne pas exposer tous les groupes Keycloak</li>
+<li><strong>GlobalRoleBindings</strong> : cree les bindings groupe &rarr; role global
+(rancher-admins &rarr; admin, rancher-users &rarr; user, rancher-readonly &rarr; user-base)</li>
+<li><strong>ClusterRoleTemplateBindings</strong> : cree les bindings groupe &rarr; role cluster local
+(rancher-admins &rarr; cluster-owner, rancher-users/readonly &rarr; cluster-member)</li>
 </ol>
+
+<h4>Filtrage des groupes</h4>
+<p>Le script configure Rancher en mode <strong>restricted</strong> : seuls les groupes explicitement listes
+dans <code>allowedPrincipalIds</code> peuvent se connecter. Les utilisateurs Keycloak qui ne sont dans
+aucun de ces groupes seront refuses par Rancher.</p>
+<p><strong>Limitation OIDC</strong> : le provider Keycloak OIDC dans Rancher ne supporte pas la recherche
+de groupes/utilisateurs. L'ajout de membres dans l'UI affiche "Unable to fetch principal info".
+C'est cosmétique — les bindings fonctionnent. Voir la section "Filtrage des groupes" dans la
+documentation complete.</p>
 
 <h4>Variables utilisees</h4>
 <ul>
@@ -571,8 +588,26 @@ curl -sk -X PUT 'https://rancher.home.zypp.fr/v3/authConfigs/keycloakoidc' \\
     "clientId": "rancher",
     "clientSecret": "***",
     "rancherUrl": "https://rancher.home.zypp.fr/verify-auth",
-    "accessMode": "unrestricted"
-  }'</code>
+    "accessMode": "restricted",
+    "allowedPrincipalIds": [
+      "local://user-kk67j",
+      "keycloakoidc_group://rancher-admins",
+      "keycloakoidc_group://rancher-users",
+      "keycloakoidc_group://rancher-readonly"
+    ]
+  }'
+
+# 7. GlobalRoleBinding (groupe -> role global)
+curl -sk -X POST 'https://rancher.home.zypp.fr/v3/globalRoleBindings' \\
+  -H "Authorization: Bearer $TOKEN" \\
+  -H 'Content-Type: application/json' \\
+  -d '{"globalRoleId":"admin","groupPrincipalId":"keycloakoidc_group://rancher-admins"}'
+
+# 8. ClusterRoleTemplateBinding (groupe -> role cluster)
+curl -sk -X POST 'https://rancher.home.zypp.fr/v3/clusterRoleTemplateBindings' \\
+  -H "Authorization: Bearer $TOKEN" \\
+  -H 'Content-Type: application/json' \\
+  -d '{"clusterId":"local","groupPrincipalId":"keycloakoidc_group://rancher-admins","roleTemplateId":"cluster-owner"}'</code>
 
 <h4>Verification</h4>
 <code># Verifier que OIDC est active

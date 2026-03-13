@@ -127,7 +127,13 @@ log_info "Configuring Keycloak OIDC auth provider..."
 
 OIDC_CONFIG=$(cat <<JSONEOF
 {
-    "accessMode": "unrestricted",
+    "accessMode": "restricted",
+    "allowedPrincipalIds": [
+        "local://user-kk67j",
+        "keycloakoidc_group://rancher-admins",
+        "keycloakoidc_group://rancher-users",
+        "keycloakoidc_group://rancher-readonly"
+    ],
     "enabled": true,
     "type": "keyCloakOIDCConfig",
     "rancherUrl": "${RANCHER_URL}/verify-auth",
@@ -150,11 +156,74 @@ RESPONSE=$(curl -sk -X PUT "${RANCHER_URL}/v3/keyCloakOIDCConfigs/keycloakoidc" 
 ENABLED=$(echo "$RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin).get('enabled', False))" 2>/dev/null || echo "")
 
 if [[ "$ENABLED" == "True" ]]; then
-    log_info "Keycloak OIDC authentication enabled in Rancher"
+    log_info "Keycloak OIDC authentication enabled in Rancher (restricted mode)"
 else
     log_warn "OIDC config response: $(echo "$RESPONSE" | head -c 300)"
     log_warn "Check Rancher UI to verify OIDC configuration"
 fi
+
+# --- 8. Create GlobalRoleBindings for OIDC groups ---
+log_info "Creating GlobalRoleBindings for Keycloak groups..."
+
+create_grb() {
+    local GROUP_ID="$1"
+    local ROLE_ID="$2"
+    # Check if binding already exists
+    EXISTING=$(curl -sk -H "Authorization: Bearer ${RANCHER_TOKEN}" \
+        "${RANCHER_URL}/v3/globalRoleBindings" | \
+        python3 -c "
+import sys,json
+d=json.load(sys.stdin)
+for b in d.get('data',[]):
+    if b.get('groupPrincipalId') == 'keycloakoidc_group://${GROUP_ID}' and b.get('globalRoleId') == '${ROLE_ID}':
+        print(b['id'])
+        break
+" 2>/dev/null || echo "")
+    if [[ -n "$EXISTING" ]]; then
+        log_info "  GlobalRoleBinding ${GROUP_ID} -> ${ROLE_ID} already exists ($EXISTING)"
+    else
+        curl -sk -X POST "${RANCHER_URL}/v3/globalRoleBindings" \
+            -H "Authorization: Bearer ${RANCHER_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "{\"globalRoleId\": \"${ROLE_ID}\", \"groupPrincipalId\": \"keycloakoidc_group://${GROUP_ID}\"}" >/dev/null
+        log_info "  GlobalRoleBinding ${GROUP_ID} -> ${ROLE_ID} created"
+    fi
+}
+
+create_grb "rancher-admins" "admin"
+create_grb "rancher-users" "user"
+create_grb "rancher-readonly" "user-base"
+
+# --- 9. Create ClusterRoleTemplateBindings for local cluster ---
+log_info "Creating ClusterRoleTemplateBindings for local cluster..."
+
+create_crtb() {
+    local GROUP_ID="$1"
+    local ROLE_ID="$2"
+    EXISTING=$(curl -sk -H "Authorization: Bearer ${RANCHER_TOKEN}" \
+        "${RANCHER_URL}/v3/clusterRoleTemplateBindings?clusterId=local" | \
+        python3 -c "
+import sys,json
+d=json.load(sys.stdin)
+for b in d.get('data',[]):
+    if b.get('groupPrincipalId') == 'keycloakoidc_group://${GROUP_ID}' and b.get('roleTemplateId') == '${ROLE_ID}':
+        print(b['id'])
+        break
+" 2>/dev/null || echo "")
+    if [[ -n "$EXISTING" ]]; then
+        log_info "  CRTB ${GROUP_ID} -> ${ROLE_ID} already exists ($EXISTING)"
+    else
+        curl -sk -X POST "${RANCHER_URL}/v3/clusterRoleTemplateBindings" \
+            -H "Authorization: Bearer ${RANCHER_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "{\"clusterId\": \"local\", \"groupPrincipalId\": \"keycloakoidc_group://${GROUP_ID}\", \"roleTemplateId\": \"${ROLE_ID}\"}" >/dev/null
+        log_info "  CRTB ${GROUP_ID} -> ${ROLE_ID} created"
+    fi
+}
+
+create_crtb "rancher-admins" "cluster-owner"
+create_crtb "rancher-users" "cluster-member"
+create_crtb "rancher-readonly" "cluster-member"
 
 log_info "=== Step 5 complete ==="
 log_info ""
@@ -162,6 +231,8 @@ log_info "Users can now log in to Rancher via:"
 log_info "  ${RANCHER_URL} -> 'Log in with Keycloak'"
 log_info ""
 log_info "Test credentials:"
-log_info "  jniedergang / changeme (group: rancher-admins)"
-log_info "  demouser / changeme (group: rancher-users)"
-log_info "  viewer / changeme (group: rancher-readonly)"
+log_info "  jniedergang / changeme (group: rancher-admins -> admin + cluster-owner)"
+log_info "  demouser / changeme (group: rancher-users -> user + cluster-member)"
+log_info "  viewer / changeme (group: rancher-readonly -> user-base + cluster-member)"
+log_info ""
+log_info "Access mode: restricted (only allowed groups can login)"

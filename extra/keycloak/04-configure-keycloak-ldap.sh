@@ -165,7 +165,8 @@ else
                 \"membership.user.ldap.attribute\": [\"uid\"],
                 \"mode\": [\"READ_ONLY\"],
                 \"user.roles.retrieve.strategy\": [\"LOAD_GROUPS_BY_MEMBER_ATTRIBUTE\"],
-                \"drop.non.existing.groups.during.sync\": [\"false\"]
+                \"groups.ldap.filter\": [\"(cn=rancher-*)\"],
+                \"drop.non.existing.groups.during.sync\": [\"true\"]
             }
         }"
     log_info "Group mapper created"
